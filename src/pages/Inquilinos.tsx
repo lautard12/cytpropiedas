@@ -3,23 +3,26 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  inquilinos, contratos, liquidaciones, getPropiedad, getContrato,
-  formatCurrency,
-} from '@/data/mockData';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useInquilinos, useContratos, useLiquidaciones, usePropiedades, findById, formatCurrency } from '@/hooks/useSupabaseData';
 import { Eye } from 'lucide-react';
 
 export default function Inquilinos() {
   const navigate = useNavigate();
+  const { data: inquilinos = [], isLoading } = useInquilinos();
+  const { data: contratos = [] } = useContratos();
+  const { data: liquidaciones = [] } = useLiquidaciones();
+  const { data: propiedades = [] } = usePropiedades();
+
+  if (isLoading) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
 
   const data = inquilinos.map(inq => {
-    const ct = contratos.find(c => c.inquilinoId === inq.id && (c.estado === 'Activo' || c.estado === 'Por vencer'));
-    const prop = ct ? getPropiedad(ct.propiedadId) : null;
+    const ct = contratos.find(c => c.inquilino_id === inq.id && (c.estado === 'Activo' || c.estado === 'Por vencer'));
+    const prop = ct ? findById(propiedades, ct.propiedad_id) : undefined;
     const deuda = liquidaciones
-      .filter(l => l.contratoId === ct?.id && l.pendiente > 0)
+      .filter(l => l.contrato_id === ct?.id && l.pendiente > 0)
       .reduce((s, l) => s + l.pendiente, 0);
     const estadoPago = deuda > 0 ? 'Con deuda' : 'Al día';
-
     return { ...inq, contrato: ct, propiedad: prop, deuda, estadoPago };
   });
 
@@ -29,7 +32,6 @@ export default function Inquilinos() {
         <h1 className="text-2xl font-bold tracking-tight">Inquilinos</h1>
         <p className="text-muted-foreground">Gestión de inquilinos y estado de pagos</p>
       </div>
-
       <Card>
         <CardContent className="p-0">
           <Table>

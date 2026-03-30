@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { propiedades, propietarios, contratos, inquilinos, getPropietario, getContrato, getInquilino } from '@/data/mockData';
-import { Search, Building2, Eye } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { usePropiedades, usePropietarios, useContratos, useInquilinos, findById } from '@/hooks/useSupabaseData';
+import { Search, Eye } from 'lucide-react';
 
 export default function Propiedades() {
   const navigate = useNavigate();
@@ -15,12 +16,19 @@ export default function Propiedades() {
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [filtroPropietario, setFiltroPropietario] = useState('todos');
 
+  const { data: propiedades = [], isLoading } = usePropiedades();
+  const { data: propietarios = [] } = usePropietarios();
+  const { data: contratos = [] } = useContratos();
+  const { data: inquilinos = [] } = useInquilinos();
+
   const filtered = propiedades.filter(p => {
     if (search && !p.direccion.toLowerCase().includes(search.toLowerCase()) && !p.unidad.toLowerCase().includes(search.toLowerCase())) return false;
     if (filtroEstado !== 'todos' && p.estado !== filtroEstado) return false;
-    if (filtroPropietario !== 'todos' && p.propietarioId !== filtroPropietario) return false;
+    if (filtroPropietario !== 'todos' && p.propietario_id !== filtroPropietario) return false;
     return true;
   });
+
+  if (isLoading) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
 
   return (
     <div className="space-y-6">
@@ -29,7 +37,6 @@ export default function Propiedades() {
         <p className="text-muted-foreground">Gestión de unidades inmobiliarias</p>
       </div>
 
-      {/* Filters */}
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-3">
@@ -57,7 +64,6 @@ export default function Propiedades() {
         </CardContent>
       </Card>
 
-      {/* Table */}
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -75,9 +81,9 @@ export default function Propiedades() {
             </TableHeader>
             <TableBody>
               {filtered.map(p => {
-                const owner = getPropietario(p.propietarioId);
-                const ct = p.contratoActivoId ? getContrato(p.contratoActivoId) : null;
-                const inq = ct ? getInquilino(ct.inquilinoId) : null;
+                const owner = findById(propietarios, p.propietario_id);
+                const ct = findById(contratos, p.contrato_activo_id);
+                const inq = ct ? findById(inquilinos, ct.inquilino_id) : undefined;
                 const estadoBadge = p.estado === 'Ocupada'
                   ? 'bg-status-success text-status-success-foreground'
                   : p.estado === 'Vacante'
@@ -92,9 +98,7 @@ export default function Propiedades() {
                     <TableCell><Badge className={estadoBadge}>{p.estado}</Badge></TableCell>
                     <TableCell>{ct ? <Badge variant="outline">{ct.codigo}</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>
                     <TableCell>{inq?.nombre || <span className="text-muted-foreground">—</span>}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm"><Eye className="h-4 w-4" /></Button>
-                    </TableCell>
+                    <TableCell><Button variant="ghost" size="sm"><Eye className="h-4 w-4" /></Button></TableCell>
                   </TableRow>
                 );
               })}

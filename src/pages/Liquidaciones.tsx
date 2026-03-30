@@ -4,15 +4,22 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { liquidaciones, getContrato, getPropiedad, getPropietario, getInquilino, formatCurrency } from '@/data/mockData';
-import { Search, Eye } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useLiquidaciones, useContratos, usePropiedades, useInquilinos, findById, formatCurrency } from '@/hooks/useSupabaseData';
+import { Eye } from 'lucide-react';
 
 export default function Liquidaciones() {
   const navigate = useNavigate();
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [filtroPeriodo, setFiltroPeriodo] = useState('todos');
+
+  const { data: liquidaciones = [], isLoading } = useLiquidaciones();
+  const { data: contratos = [] } = useContratos();
+  const { data: propiedades = [] } = usePropiedades();
+  const { data: inquilinos = [] } = useInquilinos();
+
+  if (isLoading) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
 
   const filtered = liquidaciones.filter(l => {
     if (filtroEstado !== 'todos' && l.estado !== filtroEstado) return false;
@@ -84,19 +91,19 @@ export default function Liquidaciones() {
             </TableHeader>
             <TableBody>
               {filtered.map(l => {
-                const ct = getContrato(l.contratoId);
-                const prop = ct ? getPropiedad(ct.propiedadId) : null;
-                const inq = ct ? getInquilino(ct.inquilinoId) : null;
+                const ct = findById(contratos, l.contrato_id);
+                const prop = ct ? findById(propiedades, ct.propiedad_id) : undefined;
+                const inq = ct ? findById(inquilinos, ct.inquilino_id) : undefined;
                 return (
                   <TableRow key={l.id} className="cursor-pointer" onClick={() => navigate(`/liquidaciones/${l.id}`)}>
-                    <TableCell className="font-medium">{l.periodoLabel}</TableCell>
-                    <TableCell><Badge variant="outline" className="cursor-pointer">{ct?.codigo}</Badge></TableCell>
+                    <TableCell className="font-medium">{l.periodo_label}</TableCell>
+                    <TableCell><Badge variant="outline">{ct?.codigo}</Badge></TableCell>
                     <TableCell className="text-muted-foreground text-sm">{prop?.direccion} {prop?.unidad}</TableCell>
                     <TableCell>{inq?.nombre}</TableCell>
-                    <TableCell>{formatCurrency(l.totalCobrar)}</TableCell>
-                    <TableCell>{formatCurrency(l.totalCobrado)}</TableCell>
-                    <TableCell>{formatCurrency(l.comisionInmobiliaria)}</TableCell>
-                    <TableCell>{formatCurrency(l.netoPropietario)}</TableCell>
+                    <TableCell>{formatCurrency(l.total_cobrar)}</TableCell>
+                    <TableCell>{formatCurrency(l.total_cobrado)}</TableCell>
+                    <TableCell>{formatCurrency(l.comision_inmobiliaria)}</TableCell>
+                    <TableCell>{formatCurrency(l.neto_propietario)}</TableCell>
                     <TableCell><Badge className={estadoBadge(l.estado)}>{l.estado}</Badge></TableCell>
                     <TableCell><Button variant="ghost" size="sm"><Eye className="h-4 w-4" /></Button></TableCell>
                   </TableRow>

@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { contratos, getPropiedad, getPropietario, getInquilino, formatCurrency, formatDate } from '@/data/mockData';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useContratos, usePropiedades, usePropietarios, useInquilinos, findById, formatCurrency, formatDate } from '@/hooks/useSupabaseData';
 import { Search, Eye } from 'lucide-react';
 
 export default function Contratos() {
@@ -14,12 +15,19 @@ export default function Contratos() {
   const [search, setSearch] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('todos');
 
+  const { data: contratos = [], isLoading } = useContratos();
+  const { data: propiedades = [] } = usePropiedades();
+  const { data: propietarios = [] } = usePropietarios();
+  const { data: inquilinos = [] } = useInquilinos();
+
+  if (isLoading) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
+
   const filtered = contratos.filter(c => {
     if (filtroEstado !== 'todos' && c.estado !== filtroEstado) return false;
     if (search) {
-      const prop = getPropiedad(c.propiedadId);
-      const inq = getInquilino(c.inquilinoId);
-      const owner = getPropietario(c.propietarioId);
+      const prop = findById(propiedades, c.propiedad_id);
+      const inq = findById(inquilinos, c.inquilino_id);
+      const owner = findById(propietarios, c.propietario_id);
       const text = `${c.codigo} ${prop?.direccion} ${inq?.nombre} ${owner?.nombre}`.toLowerCase();
       if (!text.includes(search.toLowerCase())) return false;
     }
@@ -85,19 +93,19 @@ export default function Contratos() {
             </TableHeader>
             <TableBody>
               {filtered.map(c => {
-                const prop = getPropiedad(c.propiedadId);
-                const owner = getPropietario(c.propietarioId);
-                const inq = getInquilino(c.inquilinoId);
+                const prop = findById(propiedades, c.propiedad_id);
+                const owner = findById(propietarios, c.propietario_id);
+                const inq = findById(inquilinos, c.inquilino_id);
                 return (
                   <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/contratos/${c.id}`)}>
                     <TableCell className="font-medium">{c.codigo}</TableCell>
                     <TableCell>{prop?.direccion} {prop?.unidad}</TableCell>
                     <TableCell>{owner?.nombre}</TableCell>
                     <TableCell>{inq?.nombre}</TableCell>
-                    <TableCell>{formatDate(c.fechaInicio)}</TableCell>
-                    <TableCell>{formatDate(c.fechaFin)}</TableCell>
-                    <TableCell>{formatCurrency(c.alquilerBase)}</TableCell>
-                    <TableCell>{c.reglas.comisionPorcentaje}%</TableCell>
+                    <TableCell>{formatDate(c.fecha_inicio)}</TableCell>
+                    <TableCell>{formatDate(c.fecha_fin)}</TableCell>
+                    <TableCell>{formatCurrency(c.alquiler_base)}</TableCell>
+                    <TableCell>{c.comision_porcentaje}%</TableCell>
                     <TableCell><Badge className={estadoBadge(c.estado)}>{c.estado}</Badge></TableCell>
                     <TableCell><Button variant="ghost" size="sm"><Eye className="h-4 w-4" /></Button></TableCell>
                   </TableRow>
