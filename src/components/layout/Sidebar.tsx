@@ -37,11 +37,11 @@ export default function Sidebar() {
       <div className="flex h-14 items-center border-b border-sidebar-border px-4">
         {!collapsed && (
           <span className="text-base font-bold tracking-tight text-sidebar-primary-foreground">
-            InmoAdmin
+            CyT Propiedades
           </span>
         )}
         {collapsed && (
-          <span className="text-base font-bold text-sidebar-primary-foreground">IA</span>
+          <span className="text-base font-bold text-sidebar-primary-foreground">CyT</span>
         )}
       </div>
 
