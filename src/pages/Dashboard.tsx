@@ -1,42 +1,71 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
-  getDashboardData, evolucionMensual, liquidaciones, contratos, propiedades,
-  inquilinos, getPropietario, getInquilino, getPropiedad, getContrato, formatCurrency,
-} from '@/data/mockData';
+  useContratos, useLiquidaciones, usePropiedades, usePropietarios, useInquilinos,
+  formatCurrency, findById, evolucionMensual,
+} from '@/hooks/useSupabaseData';
 import {
-  DollarSign, Clock, TrendingUp, Users, FileText, AlertTriangle, Building2,
+  DollarSign, Clock, TrendingUp, Users, FileText, AlertTriangle,
 } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  PieChart, Pie, Cell, Legend, LineChart, Line,
+  PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 
 const PIE_COLORS = ['hsl(142, 71%, 45%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)'];
 
 export default function Dashboard() {
-  const d = getDashboardData();
   const navigate = useNavigate();
+  const { data: contratos = [], isLoading: loadingCt } = useContratos();
+  const { data: liquidaciones = [], isLoading: loadingLiq } = useLiquidaciones();
+  const { data: propiedades = [] } = usePropiedades();
+  const { data: propietarios = [] } = usePropietarios();
+  const { data: inquilinos = [] } = useInquilinos();
+
+  const loading = loadingCt || loadingLiq;
+
+  const liqsMarzo = liquidaciones.filter(l => l.periodo === '2025-03');
+
+  const totalCobrado = liqsMarzo.reduce((s, l) => s + l.total_cobrado, 0);
+  const totalPendiente = liqsMarzo.reduce((s, l) => s + l.pendiente, 0);
+  const totalComision = liqsMarzo.reduce((s, l) => s + l.comision_inmobiliaria, 0);
+  const totalNetoPropietarios = liqsMarzo.reduce((s, l) => s + l.neto_propietario, 0);
+  const contratosActivos = contratos.filter(c => c.estado === 'Activo' || c.estado === 'Por vencer').length;
+  const inquilinosMora = liqsMarzo.filter(l => l.estado === 'Pendiente' || l.estado === 'Parcial').length;
+  const pendienteTransferencia = liqsMarzo.filter(l => l.estado === 'Cobrada').reduce((s, l) => s + l.neto_propietario, 0);
+  const gastosRetenidos = Math.max(totalCobrado - totalNetoPropietarios - totalComision, 0);
 
   const pieData = [
-    { name: 'Cobrado', value: d.totalCobrado },
-    { name: 'Pendiente', value: d.totalPendiente },
+    { name: 'Cobrado', value: totalCobrado },
+    { name: 'Pendiente', value: totalPendiente },
   ];
 
   const contratosPorVencer = contratos.filter(c => c.estado === 'Por vencer');
-  const liqsPendientes = liquidaciones.filter(l => l.periodo === '2025-03' && (l.estado === 'Pendiente' || l.estado === 'Parcial'));
-  const liqsPendientesTransf = liquidaciones.filter(l => l.periodo === '2025-03' && l.estado === 'Cobrada');
+  const liqsPendientes = liqsMarzo.filter(l => l.estado === 'Pendiente' || l.estado === 'Parcial');
+  const liqsPendientesTransf = liqsMarzo.filter(l => l.estado === 'Cobrada');
 
   const kpis = [
-    { label: 'Cobrado del mes', value: formatCurrency(d.totalCobrado), icon: DollarSign, color: 'text-status-success' },
-    { label: 'Pendiente de cobro', value: formatCurrency(d.totalPendiente), icon: Clock, color: 'text-status-warning' },
-    { label: 'Comisión de administración', value: formatCurrency(d.totalComision), icon: TrendingUp, color: 'text-status-info' },
-    { label: 'Neto a transferir a propietarios', value: formatCurrency(d.totalNetoPropietarios), icon: Users, color: 'text-foreground' },
-    { label: 'Contratos activos', value: String(d.contratosActivos), icon: FileText, color: 'text-status-info' },
-    { label: 'Inquilinos en mora', value: String(d.inquilinosMora), icon: AlertTriangle, color: 'text-status-danger' },
+    { label: 'Cobrado del mes', value: formatCurrency(totalCobrado), icon: DollarSign, color: 'text-status-success' },
+    { label: 'Pendiente de cobro', value: formatCurrency(totalPendiente), icon: Clock, color: 'text-status-warning' },
+    { label: 'Comisión de administración', value: formatCurrency(totalComision), icon: TrendingUp, color: 'text-status-info' },
+    { label: 'Neto a transferir a propietarios', value: formatCurrency(totalNetoPropietarios), icon: Users, color: 'text-foreground' },
+    { label: 'Contratos activos', value: String(contratosActivos), icon: FileText, color: 'text-status-info' },
+    { label: 'Inquilinos en mora', value: String(inquilinosMora), icon: AlertTriangle, color: 'text-status-danger' },
   ];
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div><h1 className="text-2xl font-bold tracking-tight">Dashboard</h1></div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -73,23 +102,23 @@ export default function Dashboard() {
             <div className="space-y-3">
               <div className="flex justify-between py-2 border-b">
                 <span className="text-muted-foreground">Total cobrado</span>
-                <span className="font-semibold">{formatCurrency(d.totalCobrado)}</span>
+                <span className="font-semibold">{formatCurrency(totalCobrado)}</span>
               </div>
               <div className="flex justify-between py-2 border-b">
                 <span className="text-muted-foreground">(-) Neto propietarios</span>
-                <span className="font-semibold">{formatCurrency(d.totalNetoPropietarios)}</span>
+                <span className="font-semibold">{formatCurrency(totalNetoPropietarios)}</span>
               </div>
               <div className="flex justify-between py-2 border-b">
                 <span className="text-muted-foreground">(-) Gastos retenidos</span>
-                <span className="font-semibold">{formatCurrency(d.gastosRetenidos)}</span>
+                <span className="font-semibold">{formatCurrency(gastosRetenidos)}</span>
               </div>
               <div className="flex justify-between py-2 border-b border-primary/30">
                 <span className="font-semibold">= Comisión inmobiliaria</span>
-                <span className="font-bold text-status-info">{formatCurrency(d.totalComision)}</span>
+                <span className="font-bold text-status-info">{formatCurrency(totalComision)}</span>
               </div>
               <div className="flex justify-between py-2 bg-muted/50 rounded-md px-3">
                 <span className="font-bold">= Saldo administración</span>
-                <span className="font-bold text-lg text-status-success">{formatCurrency(d.saldoAdministracion)}</span>
+                <span className="font-bold text-lg text-status-success">{formatCurrency(totalComision)}</span>
               </div>
             </div>
             <div className="space-y-3">
@@ -98,14 +127,14 @@ export default function Dashboard() {
                   <Clock className="h-3.5 w-3.5 text-status-warning" />
                   Pendiente de cobro
                 </span>
-                <span className="font-semibold text-status-warning">{formatCurrency(d.totalPendiente)}</span>
+                <span className="font-semibold text-status-warning">{formatCurrency(totalPendiente)}</span>
               </div>
               <div className="flex justify-between py-2 border-b">
                 <span className="text-muted-foreground flex items-center gap-2">
                   <Clock className="h-3.5 w-3.5 text-status-warning" />
                   Pendiente de transferencia
                 </span>
-                <span className="font-semibold text-status-warning">{formatCurrency(d.pendienteTransferencia)}</span>
+                <span className="font-semibold text-status-warning">{formatCurrency(pendienteTransferencia)}</span>
               </div>
             </div>
           </div>
@@ -152,7 +181,6 @@ export default function Dashboard() {
 
       {/* Tables */}
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Contratos por vencer */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Contratos próximos a vencer</CardTitle>
@@ -169,12 +197,12 @@ export default function Dashboard() {
               </TableHeader>
               <TableBody>
                 {contratosPorVencer.map(c => {
-                  const prop = getPropiedad(c.propiedadId);
+                  const prop = findById(propiedades, c.propiedad_id);
                   return (
                     <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/contratos/${c.id}`)}>
                       <TableCell className="font-medium">{c.codigo}</TableCell>
                       <TableCell>{prop?.direccion} {prop?.unidad}</TableCell>
-                      <TableCell>{new Date(c.fechaFin).toLocaleDateString('es-AR')}</TableCell>
+                      <TableCell>{new Date(c.fecha_fin).toLocaleDateString('es-AR')}</TableCell>
                       <TableCell>
                         <Badge className="bg-status-warning text-status-warning-foreground">{c.estado}</Badge>
                       </TableCell>
@@ -186,7 +214,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Inquilinos con deuda */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Inquilinos con deuda</CardTitle>
@@ -203,14 +230,12 @@ export default function Dashboard() {
               </TableHeader>
               <TableBody>
                 {liqsPendientes.map(l => {
-                  const ct = getContrato(l.contratoId);
-                  const inq = ct ? getInquilino(ct.inquilinoId) : null;
+                  const ct = findById(contratos, l.contrato_id);
+                  const inq = findById(inquilinos, ct?.inquilino_id ?? null);
                   return (
                     <TableRow key={l.id} className="cursor-pointer" onClick={() => navigate(`/liquidaciones/${l.id}`)}>
                       <TableCell className="font-medium">{inq?.nombre || '—'}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{ct?.codigo}</Badge>
-                      </TableCell>
+                      <TableCell><Badge variant="outline">{ct?.codigo}</Badge></TableCell>
                       <TableCell className="text-status-danger font-semibold">{formatCurrency(l.pendiente)}</TableCell>
                       <TableCell>
                         <Badge className={l.estado === 'Pendiente' ? 'bg-status-warning text-status-warning-foreground' : 'bg-status-danger text-status-danger-foreground'}>
@@ -245,16 +270,16 @@ export default function Dashboard() {
             </TableHeader>
             <TableBody>
               {liqsPendientesTransf.map(l => {
-                const ct = getContrato(l.contratoId);
-                const prop = ct ? getPropiedad(ct.propiedadId) : null;
-                const owner = ct ? getPropietario(ct.propietarioId) : null;
+                const ct = findById(contratos, l.contrato_id);
+                const prop = findById(propiedades, ct?.propiedad_id ?? null);
+                const owner = findById(propietarios, ct?.propietario_id ?? null);
                 return (
                   <TableRow key={l.id} className="cursor-pointer" onClick={() => navigate(`/liquidaciones/${l.id}`)}>
                     <TableCell><Badge variant="outline">{ct?.codigo}</Badge></TableCell>
                     <TableCell>{prop?.direccion} {prop?.unidad}</TableCell>
                     <TableCell>{owner?.nombre}</TableCell>
-                    <TableCell>{l.periodoLabel}</TableCell>
-                    <TableCell className="font-semibold">{formatCurrency(l.netoPropietario)}</TableCell>
+                    <TableCell>{l.periodo_label}</TableCell>
+                    <TableCell className="font-semibold">{formatCurrency(l.neto_propietario)}</TableCell>
                     <TableCell>
                       <Badge className="bg-status-success text-status-success-foreground">Cobrada</Badge>
                     </TableCell>

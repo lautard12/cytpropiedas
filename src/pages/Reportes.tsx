@@ -3,35 +3,46 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
-  getDashboardData, contratos, liquidaciones, evolucionMensual,
-  getContrato, getPropiedad, getPropietario, formatCurrency,
-} from '@/data/mockData';
-import { TrendingUp, DollarSign, Clock, Users, AlertTriangle, Building2 } from 'lucide-react';
+  useContratos, useLiquidaciones, usePropiedades, usePropietarios,
+  findById, formatCurrency, evolucionMensual,
+} from '@/hooks/useSupabaseData';
+import { TrendingUp, DollarSign, Clock, Users } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
 export default function Reportes() {
-  const d = getDashboardData();
   const [periodo, setPeriodo] = useState('2025-03');
+
+  const { data: contratos = [], isLoading: loadingCt } = useContratos();
+  const { data: liquidaciones = [], isLoading: loadingLiq } = useLiquidaciones();
+  const { data: propiedades = [] } = usePropiedades();
+  const { data: propietarios = [] } = usePropietarios();
+
+  if (loadingCt || loadingLiq) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
 
   const liqsPeriodo = liquidaciones.filter(l => l.periodo === periodo);
 
-  // Comisión por contrato
+  const totalCobrado = liqsPeriodo.reduce((s, l) => s + l.total_cobrado, 0);
+  const totalPendiente = liqsPeriodo.reduce((s, l) => s + l.pendiente, 0);
+  const totalComision = liqsPeriodo.reduce((s, l) => s + l.comision_inmobiliaria, 0);
+  const totalNeto = liqsPeriodo.reduce((s, l) => s + l.neto_propietario, 0);
+  const gastosRetenidos = Math.max(totalCobrado - totalNeto - totalComision, 0);
+
   const comisionPorContrato = liqsPeriodo.map(l => {
-    const ct = getContrato(l.contratoId);
-    const prop = ct ? getPropiedad(ct.propiedadId) : null;
-    const owner = ct ? getPropietario(ct.propietarioId) : null;
+    const ct = findById(contratos, l.contrato_id);
+    const prop = ct ? findById(propiedades, ct.propiedad_id) : undefined;
+    const owner = ct ? findById(propietarios, ct.propietario_id) : undefined;
     return {
       contrato: ct?.codigo || '—',
       propiedad: prop ? `${prop.direccion} ${prop.unidad}` : '—',
       propietario: owner?.nombre || '—',
-      comision: l.comisionInmobiliaria,
-      neto: l.netoPropietario,
-      total: l.totalCobrar,
+      comision: l.comision_inmobiliaria,
+      neto: l.neto_propietario,
+      total: l.total_cobrar,
     };
   });
 
-  const contratosVacantes = contratos.filter(c => c.estado === 'Vencido' || c.estado === 'Rescindido').length;
   const contratosActivos = contratos.filter(c => c.estado === 'Activo' || c.estado === 'Por vencer').length;
   const morosos = liqsPeriodo.filter(l => l.estado === 'Pendiente' || l.estado === 'Parcial').length;
 
@@ -51,13 +62,12 @@ export default function Reportes() {
         </Select>
       </div>
 
-      {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Ingresos del período', value: formatCurrency(liqsPeriodo.reduce((s, l) => s + l.totalCobrado, 0)), icon: DollarSign, color: 'text-status-success' },
-          { label: 'Pendiente de cobro', value: formatCurrency(liqsPeriodo.reduce((s, l) => s + l.pendiente, 0)), icon: Clock, color: 'text-status-warning' },
-          { label: 'Comisión inmobiliaria', value: formatCurrency(liqsPeriodo.reduce((s, l) => s + l.comisionInmobiliaria, 0)), icon: TrendingUp, color: 'text-status-info' },
-          { label: 'Neto propietarios', value: formatCurrency(liqsPeriodo.reduce((s, l) => s + l.netoPropietario, 0)), icon: Users, color: 'text-foreground' },
+          { label: 'Ingresos del período', value: formatCurrency(totalCobrado), icon: DollarSign, color: 'text-status-success' },
+          { label: 'Pendiente de cobro', value: formatCurrency(totalPendiente), icon: Clock, color: 'text-status-warning' },
+          { label: 'Comisión inmobiliaria', value: formatCurrency(totalComision), icon: TrendingUp, color: 'text-status-info' },
+          { label: 'Neto propietarios', value: formatCurrency(totalNeto), icon: Users, color: 'text-foreground' },
         ].map(k => (
           <Card key={k.label}>
             <CardContent className="p-4">
@@ -71,7 +81,6 @@ export default function Reportes() {
         ))}
       </div>
 
-      {/* Resultado Financiero */}
       <Card className="border-2 border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -82,10 +91,10 @@ export default function Reportes() {
         <CardContent>
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">Total cobrado</span><span className="font-semibold">{formatCurrency(d.totalCobrado)}</span></div>
-              <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">(-) Neto propietarios</span><span className="font-semibold">{formatCurrency(d.totalNetoPropietarios)}</span></div>
-              <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">(-) Gastos retenidos</span><span className="font-semibold">{formatCurrency(d.gastosRetenidos)}</span></div>
-              <div className="flex justify-between py-2 bg-muted/50 rounded px-3"><span className="font-bold">= Saldo administración</span><span className="font-bold text-lg text-status-success">{formatCurrency(d.saldoAdministracion)}</span></div>
+              <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">Total cobrado</span><span className="font-semibold">{formatCurrency(totalCobrado)}</span></div>
+              <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">(-) Neto propietarios</span><span className="font-semibold">{formatCurrency(totalNeto)}</span></div>
+              <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">(-) Gastos retenidos</span><span className="font-semibold">{formatCurrency(gastosRetenidos)}</span></div>
+              <div className="flex justify-between py-2 bg-muted/50 rounded px-3"><span className="font-bold">= Saldo administración</span><span className="font-bold text-lg text-status-success">{formatCurrency(totalComision)}</span></div>
             </div>
             <div className="space-y-3 text-sm">
               <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">Contratos activos</span><span className="font-semibold">{contratosActivos}</span></div>
@@ -96,7 +105,6 @@ export default function Reportes() {
         </CardContent>
       </Card>
 
-      {/* Evolución */}
       <Card>
         <CardHeader><CardTitle className="text-base">Evolución mensual: cobrado vs comisión vs neto propietarios</CardTitle></CardHeader>
         <CardContent>
@@ -114,7 +122,6 @@ export default function Reportes() {
         </CardContent>
       </Card>
 
-      {/* Comisión por contrato */}
       <Card>
         <CardHeader><CardTitle className="text-base">Comisión por contrato — {periodo === '2025-03' ? 'Marzo 2025' : 'Febrero 2025'}</CardTitle></CardHeader>
         <CardContent className="p-0">
