@@ -41,7 +41,7 @@ export default function Sidebar() {
           </span>
         )}
         {collapsed && (
-          <span className="text-base font-bold text-sidebar-primary-foreground">IA</span>
+          <span className="text-base font-bold text-sidebar-primary-foreground">CyT</span>
         )}
       </div>
 
