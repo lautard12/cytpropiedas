@@ -25,6 +25,7 @@ export default function Dashboard() {
   const { data: propiedades = [] } = usePropiedades();
   const { data: propietarios = [] } = usePropietarios();
   const { data: inquilinos = [] } = useInquilinos();
+  const { data: eventosRecientes = [] } = useEventosRecientes(8);
 
   const loading = loadingCt || loadingLiq;
 
