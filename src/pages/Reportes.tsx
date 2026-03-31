@@ -15,12 +15,13 @@ import { useNavigate } from 'react-router-dom';
 
 export default function Reportes() {
   const [periodo, setPeriodo] = useState('2025-03');
+  const navigate = useNavigate();
 
   const { data: contratos = [], isLoading: loadingCt } = useContratos();
   const { data: liquidaciones = [], isLoading: loadingLiq } = useLiquidaciones();
   const { data: propiedades = [] } = usePropiedades();
   const { data: propietarios = [] } = usePropietarios();
-
+  const { data: eventosRecientes = [] } = useEventosRecientes(20);
   if (loadingCt || loadingLiq) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
 
   const liqsPeriodo = liquidaciones.filter(l => l.periodo === periodo);
