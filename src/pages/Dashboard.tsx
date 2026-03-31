@@ -4,10 +4,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   useContratos, useLiquidaciones, usePropiedades, usePropietarios, useInquilinos,
-  formatCurrency, findById, evolucionMensual,
+  useEventosRecientes,
+  formatCurrency, formatDate, findById, evolucionMensual,
 } from '@/hooks/useSupabaseData';
 import {
-  DollarSign, Clock, TrendingUp, Users, FileText, AlertTriangle,
+  DollarSign, Clock, TrendingUp, Users, FileText, AlertTriangle, Activity,
 } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -24,6 +25,7 @@ export default function Dashboard() {
   const { data: propiedades = [] } = usePropiedades();
   const { data: propietarios = [] } = usePropietarios();
   const { data: inquilinos = [] } = useInquilinos();
+  const { data: eventosRecientes = [] } = useEventosRecientes(8);
 
   const loading = loadingCt || loadingLiq;
 
@@ -288,6 +290,45 @@ export default function Dashboard() {
               })}
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+      {/* Trazabilidad — últimos movimientos */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Activity className="h-4 w-4 text-status-info" />
+            Trazabilidad — Últimos movimientos registrados
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {eventosRecientes.length > 0 ? (
+            <div className="space-y-3">
+              {eventosRecientes.map(e => {
+                const ct = findById(contratos, e.contrato_id);
+                return (
+                  <div
+                    key={e.id}
+                    className="flex items-center justify-between rounded-md border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => navigate(`/contratos/${e.contrato_id}`)}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-xs text-muted-foreground font-medium">{formatDate(e.fecha)}</span>
+                        <Badge variant="outline" className="text-[10px]">{e.tipo.replace(/_/g, ' ')}</Badge>
+                        <Badge variant="outline" className="text-[10px]">{ct?.codigo}</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground line-clamp-1">{e.descripcion}</p>
+                    </div>
+                    {e.monto != null && e.monto !== 0 && (
+                      <span className="text-sm font-semibold ml-4">{formatCurrency(e.monto)}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-4">No hay movimientos registrados.</p>
+          )}
         </CardContent>
       </Card>
     </div>

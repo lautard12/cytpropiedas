@@ -6,19 +6,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   useContratos, useLiquidaciones, usePropiedades, usePropietarios,
-  findById, formatCurrency, evolucionMensual,
+  useEventosRecientes,
+  findById, formatCurrency, formatDate, evolucionMensual,
 } from '@/hooks/useSupabaseData';
-import { TrendingUp, DollarSign, Clock, Users } from 'lucide-react';
+import { TrendingUp, DollarSign, Clock, Users, Activity } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 
 export default function Reportes() {
   const [periodo, setPeriodo] = useState('2025-03');
+  const navigate = useNavigate();
 
   const { data: contratos = [], isLoading: loadingCt } = useContratos();
   const { data: liquidaciones = [], isLoading: loadingLiq } = useLiquidaciones();
   const { data: propiedades = [] } = usePropiedades();
   const { data: propietarios = [] } = usePropietarios();
-
+  const { data: eventosRecientes = [] } = useEventosRecientes(20);
   if (loadingCt || loadingLiq) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
 
   const liqsPeriodo = liquidaciones.filter(l => l.periodo === periodo);
@@ -154,6 +157,51 @@ export default function Reportes() {
               </TableRow>
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+      {/* Contratos con cambios recientes */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Activity className="h-4 w-4 text-status-info" />
+            Contratos con cambios recientes
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(() => {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            const recent = eventosRecientes.filter(e => new Date(e.fecha) >= thirtyDaysAgo);
+            const uniqueContratos = [...new Set(recent.map(e => e.contrato_id))];
+            if (uniqueContratos.length === 0) {
+              return <p className="text-sm text-muted-foreground text-center py-4">No hay cambios recientes.</p>;
+            }
+            return (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Contrato</TableHead>
+                    <TableHead>Evento</TableHead>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Descripción</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recent.slice(0, 10).map(e => {
+                    const ct = findById(contratos, e.contrato_id);
+                    return (
+                      <TableRow key={e.id} className="cursor-pointer" onClick={() => navigate(`/contratos/${e.contrato_id}`)}>
+                        <TableCell><Badge variant="outline">{ct?.codigo || '—'}</Badge></TableCell>
+                        <TableCell><Badge variant="outline" className="text-[10px]">{e.tipo.replace(/_/g, ' ')}</Badge></TableCell>
+                        <TableCell className="text-sm">{formatDate(e.fecha)}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground line-clamp-1">{e.descripcion}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            );
+          })()}
         </CardContent>
       </Card>
     </div>

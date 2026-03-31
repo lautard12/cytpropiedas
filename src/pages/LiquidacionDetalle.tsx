@@ -6,10 +6,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   useLiquidacion, useContrato, usePropiedad, usePropietario, useInquilino,
-  useConceptosLiquidacion, usePagosByLiquidacion,
+  useConceptosLiquidacion, usePagosByLiquidacion, useLiquidaciones,
+  useEventosPorPeriodo,
   formatCurrency, formatDate,
 } from '@/hooks/useSupabaseData';
-import { ArrowLeft, CreditCard, CheckCircle, FileText } from 'lucide-react';
+import {
+  ArrowLeft, CreditCard, CheckCircle, FileText, ChevronLeft, ChevronRight,
+  MessageSquare, AlertTriangle, DollarSign, Zap,
+} from 'lucide-react';
+
+const TIPO_ICON: Record<string, React.ElementType> = {
+  punitorio: AlertTriangle,
+  bonificacion: Zap,
+  gasto_especial: DollarSign,
+  observacion: MessageSquare,
+};
 
 export default function LiquidacionDetalle() {
   const { id } = useParams();
@@ -21,18 +32,50 @@ export default function LiquidacionDetalle() {
   const { data: inquilino } = useInquilino(contrato?.inquilino_id || '');
   const { data: conceptos = [] } = useConceptosLiquidacion(liq?.id || '');
   const { data: pagos = [] } = usePagosByLiquidacion(liq?.id || '');
+  const { data: allLiquidaciones = [] } = useLiquidaciones();
+  const { data: eventosPeriodo = [] } = useEventosPorPeriodo(liq?.contrato_id || '', liq?.periodo || '');
 
   if (isLoading) return <div className="p-8"><Skeleton className="h-64" /></div>;
   if (!liq) return <div className="p-8 text-center text-muted-foreground">Liquidación no encontrada</div>;
+
+  // Prev/next navigation
+  const contratoLiqs = allLiquidaciones
+    .filter(l => l.contrato_id === liq.contrato_id)
+    .sort((a, b) => a.periodo.localeCompare(b.periodo));
+  const currentIdx = contratoLiqs.findIndex(l => l.id === liq.id);
+  const prevLiq = currentIdx > 0 ? contratoLiqs[currentIdx - 1] : null;
+  const nextLiq = currentIdx < contratoLiqs.length - 1 ? contratoLiqs[currentIdx + 1] : null;
 
   const estadoBadge = liq.estado === 'Cobrada' || liq.estado === 'Transferida' ? 'bg-status-success text-status-success-foreground'
     : liq.estado === 'Pendiente' ? 'bg-status-warning text-status-warning-foreground'
     : liq.estado === 'Parcial' ? 'bg-status-danger text-status-danger-foreground'
     : 'bg-muted text-muted-foreground';
 
+  const medioBadge = (medio: string) => {
+    switch (medio) {
+      case 'Transferencia': return 'bg-status-info text-status-info-foreground';
+      case 'Efectivo': return 'bg-status-success text-status-success-foreground';
+      default: return 'bg-muted text-muted-foreground';
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <Button variant="ghost" size="sm" onClick={() => navigate('/liquidaciones')}><ArrowLeft className="h-4 w-4 mr-1" /> Volver a Liquidaciones</Button>
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/liquidaciones')}><ArrowLeft className="h-4 w-4 mr-1" /> Volver a Liquidaciones</Button>
+        <div className="flex gap-2">
+          {prevLiq && (
+            <Button variant="outline" size="sm" onClick={() => navigate(`/liquidaciones/${prevLiq.id}`)}>
+              <ChevronLeft className="h-4 w-4 mr-1" /> {prevLiq.periodo_label}
+            </Button>
+          )}
+          {nextLiq && (
+            <Button variant="outline" size="sm" onClick={() => navigate(`/liquidaciones/${nextLiq.id}`)}>
+              {nextLiq.periodo_label} <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          )}
+        </div>
+      </div>
 
       <div className="flex items-start justify-between">
         <div>
@@ -72,18 +115,32 @@ export default function LiquidacionDetalle() {
             </CardContent>
           </Card>
 
+          {/* Pagos — mini timeline */}
           <Card>
             <CardHeader><CardTitle className="text-base">Pagos registrados</CardTitle></CardHeader>
             <CardContent>
               {pagos.length > 0 ? (
-                <div className="space-y-3">
-                  {pagos.map(p => (
-                    <div key={p.id} className="flex items-center justify-between rounded-md border p-3">
-                      <div>
-                        <p className="font-medium text-sm">{formatCurrency(p.monto)}</p>
-                        <p className="text-xs text-muted-foreground">{formatDate(p.fecha)} · {p.medio_pago} · Ref: {p.referencia}</p>
+                <div className="space-y-0">
+                  {pagos.map((p, i) => (
+                    <div key={p.id} className="flex gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-muted bg-background">
+                          <CreditCard className="h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                        {i < pagos.length - 1 && <div className="w-px flex-1 bg-border" />}
                       </div>
-                      <Badge className="bg-status-success text-status-success-foreground">{p.estado}</Badge>
+                      <div className="pb-4 flex-1">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-sm">{formatCurrency(p.monto)}</p>
+                            <p className="text-xs text-muted-foreground">{formatDate(p.fecha)} · Ref: {p.referencia}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge className={`text-[10px] ${medioBadge(p.medio_pago)}`}>{p.medio_pago}</Badge>
+                            <Badge className="bg-status-success text-status-success-foreground text-[10px]">{p.estado}</Badge>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -92,6 +149,41 @@ export default function LiquidacionDetalle() {
               )}
             </CardContent>
           </Card>
+
+          {/* Eventos del período */}
+          {eventosPeriodo.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-status-warning" />
+                  Eventos del período
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">Eventos registrados durante {liq.periodo_label} para este contrato.</p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {eventosPeriodo.map(e => {
+                    const Icon = TIPO_ICON[e.tipo] || MessageSquare;
+                    return (
+                      <div key={e.id} className="flex items-start gap-3 rounded-md border p-3">
+                        <Icon className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-xs text-muted-foreground">{formatDate(e.fecha)}</span>
+                            <Badge variant="outline" className="text-[10px]">{e.tipo.replace(/_/g, ' ')}</Badge>
+                          </div>
+                          <p className="text-sm">{e.descripcion}</p>
+                          {e.monto != null && e.monto !== 0 && (
+                            <p className="text-sm font-semibold mt-1">{formatCurrency(e.monto)}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div className="space-y-6">
