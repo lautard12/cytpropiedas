@@ -4,10 +4,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   useContratos, useLiquidaciones, usePropiedades, usePropietarios, useInquilinos,
-  formatCurrency, findById, evolucionMensual,
+  useEventosRecientes,
+  formatCurrency, formatDate, findById, evolucionMensual,
 } from '@/hooks/useSupabaseData';
 import {
-  DollarSign, Clock, TrendingUp, Users, FileText, AlertTriangle,
+  DollarSign, Clock, TrendingUp, Users, FileText, AlertTriangle, Activity,
 } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
