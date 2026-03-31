@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ import {
   ArrowLeft, CreditCard, CheckCircle, FileText, ChevronLeft, ChevronRight,
   MessageSquare, AlertTriangle, DollarSign, Zap,
 } from 'lucide-react';
+import RegistrarPagoDialog from '@/components/RegistrarPagoDialog';
 
 const TIPO_ICON: Record<string, React.ElementType> = {
   punitorio: AlertTriangle,
@@ -25,6 +27,7 @@ const TIPO_ICON: Record<string, React.ElementType> = {
 export default function LiquidacionDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [pagoOpen, setPagoOpen] = useState(false);
   const { data: liq, isLoading } = useLiquidacion(id || '');
   const { data: contrato } = useContrato(liq?.contrato_id || '');
   const { data: propiedad } = usePropiedad(contrato?.propiedad_id || '');
@@ -84,7 +87,9 @@ export default function LiquidacionDetalle() {
         </div>
         <div className="flex items-center gap-2">
           <Badge className={estadoBadge}>{liq.estado}</Badge>
-          <Button variant="outline" size="sm"><CreditCard className="h-4 w-4 mr-1" /> Registrar pago</Button>
+          {(liq.estado === 'Pendiente' || liq.estado === 'Parcial' || liq.estado === 'Borrador') && (
+            <Button variant="outline" size="sm" onClick={() => setPagoOpen(true)}><CreditCard className="h-4 w-4 mr-1" /> Registrar pago</Button>
+          )}
           {liq.estado === 'Cobrada' && <Button size="sm"><CheckCircle className="h-4 w-4 mr-1" /> Marcar transferido</Button>}
         </div>
       </div>
@@ -216,6 +221,17 @@ export default function LiquidacionDetalle() {
           )}
         </div>
       </div>
+
+      <RegistrarPagoDialog
+        open={pagoOpen}
+        onOpenChange={setPagoOpen}
+        liquidacionId={liq.id}
+        contratoId={liq.contrato_id}
+        totalCobrar={liq.total_cobrar}
+        totalCobrado={liq.total_cobrado}
+        pendiente={liq.pendiente}
+        periodoLabel={liq.periodo_label}
+      />
     </div>
   );
 }
