@@ -98,6 +98,20 @@ export interface Pago {
   observaciones: string;
 }
 
+export interface EventoContrato {
+  id: string;
+  contrato_id: string;
+  liquidacion_id: string | null;
+  periodo: string | null;
+  fecha: string;
+  tipo: string;
+  categoria: 'contractual' | 'financiero' | 'administrativo' | 'documental';
+  descripcion: string;
+  monto: number | null;
+  documento_url: string | null;
+  created_at: string;
+}
+
 // ─── Queries ──────────────────────────────────────────────
 
 export function usePropietarios() {
