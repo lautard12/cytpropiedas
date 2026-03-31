@@ -8,9 +8,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   usePropiedad, useContrato, usePropietario, useInquilino, useLiquidaciones,
+  useContratosByPropiedad, usePagos,
   formatCurrency, formatDate,
 } from '@/hooks/useSupabaseData';
-import { Building2, FileText, Info, ArrowLeft } from 'lucide-react';
+import { Building2, FileText, Info, ArrowLeft, CalendarDays, DollarSign, Clock, CreditCard } from 'lucide-react';
 
 export default function PropiedadDetalle() {
   const { id } = useParams();
@@ -20,6 +21,8 @@ export default function PropiedadDetalle() {
   const { data: propietario } = usePropietario(propiedad?.propietario_id || '');
   const { data: inquilino } = useInquilino(contrato?.inquilino_id || '');
   const { data: allLiquidaciones = [] } = useLiquidaciones();
+  const { data: allPagos = [] } = usePagos();
+  const { data: contratosPropiedad = [] } = useContratosByPropiedad(id || '');
 
   if (isLoading) return <div className="p-8"><Skeleton className="h-64" /></div>;
   if (!propiedad) return <div className="p-8 text-center text-muted-foreground">Propiedad no encontrada</div>;
@@ -29,6 +32,14 @@ export default function PropiedadDetalle() {
   const estadoBadge = propiedad.estado === 'Ocupada' ? 'bg-status-success text-status-success-foreground'
     : propiedad.estado === 'Vacante' ? 'bg-status-warning text-status-warning-foreground'
     : 'bg-muted text-muted-foreground';
+
+  // Historial summary
+  const allPropLiqs = allLiquidaciones.filter(l => contratosPropiedad.some(c => c.id === l.contrato_id));
+  const deudaActual = allPropLiqs.reduce((s, l) => s + l.pendiente, 0);
+  const ultimaLiq = allPropLiqs[0];
+  const ultimoPago = allPagos.filter(p => contratosPropiedad.some(c => c.id === p.contrato_id))[0];
+  const contratoVigente = contratosPropiedad.find(c => c.estado === 'Activo' || c.estado === 'Por vencer');
+  const proximoVenc = contratoVigente ? formatDate(contratoVigente.fecha_fin) : '—';
 
   return (
     <div className="space-y-6">
@@ -161,8 +172,63 @@ export default function PropiedadDetalle() {
           )}
         </TabsContent>
 
-        <TabsContent value="historial">
-          <div className="text-center py-12 text-muted-foreground"><p>Historial de contratos anteriores y movimientos de la unidad.</p><p className="text-sm mt-1">Disponible próximamente.</p></div>
+        {/* TAB HISTORIAL — resumen ejecutivo + contratos asociados */}
+        <TabsContent value="historial" className="space-y-6">
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              El historial detallado (contractual, financiero y eventos especiales) se gestiona por contrato.
+              {contratoVigente && (
+                <> Podés ver el historial completo en{' '}
+                  <Link to={`/contratos/${contratoVigente.id}`} className="font-semibold text-primary underline">{contratoVigente.codigo}</Link>.
+                </>
+              )}
+            </AlertDescription>
+          </Alert>
+
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <Card><CardContent className="p-4"><div className="flex items-center gap-2 mb-1"><FileText className="h-4 w-4 text-status-info" /><span className="text-xs text-muted-foreground">Contratos históricos</span></div><p className="text-xl font-bold">{contratosPropiedad.length}</p></CardContent></Card>
+            <Card><CardContent className="p-4"><div className="flex items-center gap-2 mb-1"><DollarSign className="h-4 w-4 text-status-danger" /><span className="text-xs text-muted-foreground">Deuda actual</span></div><p className="text-xl font-bold text-status-danger">{formatCurrency(deudaActual)}</p></CardContent></Card>
+            <Card><CardContent className="p-4"><div className="flex items-center gap-2 mb-1"><CalendarDays className="h-4 w-4 text-muted-foreground" /><span className="text-xs text-muted-foreground">Última liquidación</span></div><p className="text-lg font-bold">{ultimaLiq?.periodo_label || '—'}</p></CardContent></Card>
+            <Card><CardContent className="p-4"><div className="flex items-center gap-2 mb-1"><CreditCard className="h-4 w-4 text-status-success" /><span className="text-xs text-muted-foreground">Último pago</span></div><p className="text-lg font-bold">{ultimoPago ? formatDate(ultimoPago.fecha) : '—'}</p></CardContent></Card>
+            <Card><CardContent className="p-4"><div className="flex items-center gap-2 mb-1"><Clock className="h-4 w-4 text-status-warning" /><span className="text-xs text-muted-foreground">Próx. vencimiento</span></div><p className="text-lg font-bold">{proximoVenc}</p></CardContent></Card>
+          </div>
+
+          <Card>
+            <CardHeader><CardTitle className="text-base">Contratos asociados a esta unidad</CardTitle></CardHeader>
+            <CardContent>
+              {contratosPropiedad.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Contrato</TableHead>
+                      <TableHead>Período</TableHead>
+                      <TableHead>Alquiler</TableHead>
+                      <TableHead>Estado</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {contratosPropiedad.map(c => {
+                      const bc = c.estado === 'Activo' ? 'bg-status-success text-status-success-foreground' : c.estado === 'Por vencer' ? 'bg-status-warning text-status-warning-foreground' : 'bg-muted text-muted-foreground';
+                      return (
+                        <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/contratos/${c.id}`)}>
+                          <TableCell className="font-medium">{c.codigo}</TableCell>
+                          <TableCell className="text-sm">{formatDate(c.fecha_inicio)} — {formatDate(c.fecha_fin)}</TableCell>
+                          <TableCell>{formatCurrency(c.alquiler_base)}</TableCell>
+                          <TableCell><Badge className={bc}>{c.estado}</Badge></TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">No hay contratos registrados para esta unidad.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
