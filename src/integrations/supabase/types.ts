@@ -146,6 +146,63 @@ export type Database = {
           },
         ]
       }
+      eventos_contrato: {
+        Row: {
+          categoria: string
+          contrato_id: string
+          created_at: string
+          descripcion: string
+          documento_url: string | null
+          fecha: string
+          id: string
+          liquidacion_id: string | null
+          monto: number | null
+          periodo: string | null
+          tipo: string
+        }
+        Insert: {
+          categoria?: string
+          contrato_id: string
+          created_at?: string
+          descripcion?: string
+          documento_url?: string | null
+          fecha: string
+          id?: string
+          liquidacion_id?: string | null
+          monto?: number | null
+          periodo?: string | null
+          tipo: string
+        }
+        Update: {
+          categoria?: string
+          contrato_id?: string
+          created_at?: string
+          descripcion?: string
+          documento_url?: string | null
+          fecha?: string
+          id?: string
+          liquidacion_id?: string | null
+          monto?: number | null
+          periodo?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_contrato_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_contrato_liquidacion_id_fkey"
+            columns: ["liquidacion_id"]
+            isOneToOne: false
+            referencedRelation: "liquidaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inquilinos: {
         Row: {
           created_at: string
