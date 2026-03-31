@@ -27,6 +27,7 @@ const TIPO_ICON: Record<string, React.ElementType> = {
 export default function LiquidacionDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [pagoOpen, setPagoOpen] = useState(false);
   const { data: liq, isLoading } = useLiquidacion(id || '');
   const { data: contrato } = useContrato(liq?.contrato_id || '');
   const { data: propiedad } = usePropiedad(contrato?.propiedad_id || '');
