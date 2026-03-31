@@ -87,7 +87,9 @@ export default function LiquidacionDetalle() {
         </div>
         <div className="flex items-center gap-2">
           <Badge className={estadoBadge}>{liq.estado}</Badge>
-          <Button variant="outline" size="sm"><CreditCard className="h-4 w-4 mr-1" /> Registrar pago</Button>
+          {(liq.estado === 'Pendiente' || liq.estado === 'Parcial' || liq.estado === 'Borrador') && (
+            <Button variant="outline" size="sm" onClick={() => setPagoOpen(true)}><CreditCard className="h-4 w-4 mr-1" /> Registrar pago</Button>
+          )}
           {liq.estado === 'Cobrada' && <Button size="sm"><CheckCircle className="h-4 w-4 mr-1" /> Marcar transferido</Button>}
         </div>
       </div>
