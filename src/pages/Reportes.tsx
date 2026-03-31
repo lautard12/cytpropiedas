@@ -6,10 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   useContratos, useLiquidaciones, usePropiedades, usePropietarios,
-  findById, formatCurrency, evolucionMensual,
+  useEventosRecientes,
+  findById, formatCurrency, formatDate, evolucionMensual,
 } from '@/hooks/useSupabaseData';
-import { TrendingUp, DollarSign, Clock, Users } from 'lucide-react';
+import { TrendingUp, DollarSign, Clock, Users, Activity } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 
 export default function Reportes() {
   const [periodo, setPeriodo] = useState('2025-03');
