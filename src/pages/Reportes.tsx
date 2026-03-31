@@ -159,6 +159,51 @@ export default function Reportes() {
           </Table>
         </CardContent>
       </Card>
+      {/* Contratos con cambios recientes */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Activity className="h-4 w-4 text-status-info" />
+            Contratos con cambios recientes
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(() => {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            const recent = eventosRecientes.filter(e => new Date(e.fecha) >= thirtyDaysAgo);
+            const uniqueContratos = [...new Set(recent.map(e => e.contrato_id))];
+            if (uniqueContratos.length === 0) {
+              return <p className="text-sm text-muted-foreground text-center py-4">No hay cambios recientes.</p>;
+            }
+            return (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Contrato</TableHead>
+                    <TableHead>Evento</TableHead>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Descripción</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recent.slice(0, 10).map(e => {
+                    const ct = findById(contratos, e.contrato_id);
+                    return (
+                      <TableRow key={e.id} className="cursor-pointer" onClick={() => navigate(`/contratos/${e.contrato_id}`)}>
+                        <TableCell><Badge variant="outline">{ct?.codigo || '—'}</Badge></TableCell>
+                        <TableCell><Badge variant="outline" className="text-[10px]">{e.tipo.replace(/_/g, ' ')}</Badge></TableCell>
+                        <TableCell className="text-sm">{formatDate(e.fecha)}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground line-clamp-1">{e.descripcion}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            );
+          })()}
+        </CardContent>
+      </Card>
     </div>
   );
 }
