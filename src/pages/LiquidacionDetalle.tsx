@@ -221,6 +221,17 @@ export default function LiquidacionDetalle() {
           )}
         </div>
       </div>
+
+      <RegistrarPagoDialog
+        open={pagoOpen}
+        onOpenChange={setPagoOpen}
+        liquidacionId={liq.id}
+        contratoId={liq.contrato_id}
+        totalCobrar={liq.total_cobrar}
+        totalCobrado={liq.total_cobrado}
+        pendiente={liq.pendiente}
+        periodoLabel={liq.periodo_label}
+      />
     </div>
   );
 }
