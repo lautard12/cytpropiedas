@@ -264,6 +264,73 @@ export function usePagosByLiquidacion(liquidacionId: string) {
   });
 }
 
+export function useEventosContrato(contratoId: string) {
+  return useQuery({
+    queryKey: ['eventos_contrato', contratoId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('eventos_contrato')
+        .select('*')
+        .eq('contrato_id', contratoId)
+        .order('fecha', { ascending: true });
+      if (error) throw error;
+      return data as EventoContrato[];
+    },
+    enabled: !!contratoId,
+  });
+}
+
+export function useEventosPorPeriodo(contratoId: string, periodo: string) {
+  return useQuery({
+    queryKey: ['eventos_contrato', contratoId, periodo],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('eventos_contrato')
+        .select('*')
+        .eq('contrato_id', contratoId)
+        .or(`periodo.eq.${periodo},fecha.gte.${periodo}-01,fecha.lte.${periodo}-31`)
+        .order('fecha', { ascending: true });
+      if (error) throw error;
+      // Filter client-side for accurate period matching
+      return (data as EventoContrato[]).filter(e =>
+        e.periodo === periodo || (e.fecha >= `${periodo}-01` && e.fecha <= `${periodo}-31`)
+      );
+    },
+    enabled: !!contratoId && !!periodo,
+  });
+}
+
+export function useEventosRecientes(limit = 10) {
+  return useQuery({
+    queryKey: ['eventos_contrato', 'recientes', limit],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('eventos_contrato')
+        .select('*')
+        .order('fecha', { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return data as EventoContrato[];
+    },
+  });
+}
+
+export function useContratosByPropiedad(propiedadId: string) {
+  return useQuery({
+    queryKey: ['contratos', 'propiedad', propiedadId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('contratos')
+        .select('*')
+        .eq('propiedad_id', propiedadId)
+        .order('fecha_inicio', { ascending: false });
+      if (error) throw error;
+      return data as Contrato[];
+    },
+    enabled: !!propiedadId,
+  });
+}
+
 // ─── Helpers ──────────────────────────────────────────────
 
 export function formatCurrency(amount: number): string {
