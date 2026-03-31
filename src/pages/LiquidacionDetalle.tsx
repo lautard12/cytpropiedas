@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ import {
   ArrowLeft, CreditCard, CheckCircle, FileText, ChevronLeft, ChevronRight,
   MessageSquare, AlertTriangle, DollarSign, Zap,
 } from 'lucide-react';
+import RegistrarPagoDialog from '@/components/RegistrarPagoDialog';
 
 const TIPO_ICON: Record<string, React.ElementType> = {
   punitorio: AlertTriangle,
