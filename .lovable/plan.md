@@ -1,95 +1,75 @@
 
 
-# Plan: Evolución del Historial — Sistema CyT Propiedades (Revisado)
+# Plan: Documento técnico detallado para presupuestar con IA
 
-## Paso 1: Nueva tabla `eventos_contrato`
+Generar un documento Word (.docx) exhaustivo que describa todo lo construido en el sistema CyT Propiedades, sin horas ni costos, pensado para que una IA pueda analizar la complejidad y recomendar un presupuesto.
 
-Migración SQL:
+## Contenido del documento
 
-```text
-eventos_contrato
-├── id (uuid PK)
-├── contrato_id (uuid, NOT NULL)
-├── liquidacion_id (uuid, NULLABLE) — vincula evento a liquidación específica
-├── periodo (text, NULLABLE) — ej: "2025-03", alternativa cuando no hay liquidación creada
-├── fecha (date, NOT NULL)
-├── tipo (text) — detalle fino: 'inicio_contrato', 'renovacion', 'ajuste_alquiler', 'cambio_comision', 'cambio_responsable', 'rescision', 'finalizacion', 'deposito_garantia', 'punitorio', 'bonificacion', 'descuento', 'honorarios', 'gasto_especial', 'observacion', 'acuerdo', 'comprobante'
-├── categoria (text) — 'contractual' | 'financiero' | 'administrativo' | 'documental'
-├── descripcion (text)
-├── monto (numeric, nullable)
-├── documento_url (text, nullable, mock)
-├── created_at (timestamptz)
-```
+**1. Resumen ejecutivo** — Qué es el sistema, para quién, qué problema resuelve (reemplazo de Excel), contexto Argentina/inmobiliaria.
 
-Categorías:
-- **contractual**: inicio, renovación, ajuste alquiler, cambio comisión, cambio responsable, rescisión, finalización
-- **financiero**: depósito garantía, punitorio, bonificación, descuento, honorarios, gasto especial
-- **administrativo**: observación, acuerdo
-- **documental**: comprobante
+**2. Stack tecnológico** — React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, Supabase (PostgreSQL + API REST), React Query, Recharts, date-fns. Hosting en Lovable Cloud.
 
-RLS pública (MVP/demo). Nota en comentario SQL: "MVP only — restrict for production".
+**3. Modelo de datos completo** — Las 7 tablas con todos sus campos, tipos, relaciones (FK), enums, y lógica de negocio implícita:
+- `propietarios` (9 campos)
+- `inquilinos` (8 campos)
+- `propiedades` (11 campos, 3 enums)
+- `contratos` (20 campos, reglas por contrato)
+- `liquidaciones` (15 campos, ciclo de estados)
+- `conceptos_liquidacion` (6 campos)
+- `pagos` (10 campos, 2 enums)
+- `eventos_contrato` (11 campos, 4 categorías, 16 tipos)
 
-## Paso 2: Mock data con historial realista
+**4. Pantallas implementadas** — 15 rutas, descripción funcional de cada una:
+- Dashboard (KPIs financieros, gráficos, trazabilidad)
+- Propiedades (listado + detalle con tabs)
+- Contratos (listado + detalle con tabs Resumen/Historial)
+- Liquidaciones (listado + detalle con navegación prev/next)
+- Pagos (listado con filtros)
+- Propietarios (listado + detalle)
+- Inquilinos (listado + detalle)
+- Reportes (resultado financiero)
+- Generar Liquidación (formulario completo)
+- Nuevo Contrato (formulario)
 
-INSERT via herramienta de datos:
-- CT-2024-001: inicio mar 2024, ajuste ICL sep 2024, renovación mar 2025, depósito garantía, observación
-- CT-2024-002: inicio, cambio comisión 10%→8%, punitorio ene 2025 (vinculado a periodo "2025-01"), bonificación
-- CT-2024-008: inicio, cambio responsable TGI, gasto especial reparación
-- CT-2023-015: inicio 2023, rescisión anticipada, acuerdo devolución depósito
-- Liquidaciones adicionales ene/feb 2025 para crear historial mensual real
+**5. Funcionalidades implementadas** — Detalle técnico de cada feature:
+- CRUD completo contra base de datos real
+- Registro de pagos con actualización automática de estado (Pendiente → Parcial → Cobrada)
+- Generación de liquidaciones con cálculo de comisión, IVA, neto propietario
+- Sistema de historial con eventos contractuales, financieros, administrativos, documentales
+- Timeline vertical de eventos
+- Navegación entre períodos de liquidación
+- Dashboard con 6 KPIs + gráfico de barras + torta + tabla de trazabilidad
+- Filtros y badges de estado con colores semánticos
+- Layout responsive con sidebar
 
-## Paso 3: Hooks en `useSupabaseData.ts`
+**6. Lógica de negocio** — Reglas específicas del rubro:
+- Liquidación = Contrato + Período (no propiedad)
+- Cada contrato tiene reglas propias (TGI, API, expensas, seguro, servicios)
+- Comisión inmobiliaria configurable por contrato
+- Ajuste por ICL/IPC con frecuencia configurable
+- Ciclo de vida: Borrador → Pendiente → Parcial → Cobrada → Transferida
+- Cálculo: neto_propietario = total_cobrado - comision_inmobiliaria
 
-- Tipo `EventoContrato` con los campos nuevos (incluyendo `liquidacion_id`, `periodo`, `categoria` con 4 valores)
-- `useEventosContrato(contratoId)` — eventos de un contrato, orden fecha desc
-- `useEventosPorPeriodo(contratoId, periodo)` — eventos vinculados a un período específico (por `periodo` o `liquidacion_id`)
-- `useEventosRecientes(limit)` — últimos N eventos globales
-- `useContratosByPropiedad(propiedadId)` — todos los contratos de una propiedad
+**7. Componentes reutilizables** — ~30 componentes shadcn/ui, 1 componente custom (RegistrarPagoDialog), hooks de datos (15 hooks), helpers (formatCurrency, formatDate, findById).
 
-## Paso 4: `ContratoDetalle.tsx` — Pantalla estrella
+**8. Métricas del código** — ~3,120 líneas en páginas + componentes + hooks. 15 rutas. 7 tablas. 5 enums. Sin autenticación (MVP demo).
 
-Estructura con Tabs: **Resumen** | **Historial**
+**9. Qué falta para producción** — Listado explícito:
+- Autenticación y autorización (RLS real)
+- Edición/eliminación de registros
+- Exportación PDF de liquidaciones
+- Notificaciones y alertas
+- Multi-tenancy
+- Tests automatizados
+- Auditoría y logging
+- Backup y recuperación
 
-**Tab Resumen** (default): contenido actual — partes, condiciones, reglas.
+## Implementación
 
-**Tab Historial** — orden fijo, de arriba a abajo:
+Un único script Node.js genera el .docx con docx-js, usando tablas para el modelo de datos, secciones numeradas, y formato profesional. Se valida y se entrega como artifact.
 
-1. **Resumen ejecutivo** — 4-5 cards: meses de vigencia, total cobrado acumulado, pendiente actual, comisión acumulada, cantidad de eventos
-2. **Historial contractual** — Timeline vertical filtrada por `categoria = 'contractual'`. Íconos por tipo. Fecha + badge tipo + descripción.
-3. **Historial mensual financiero** — Tabla con cards resumen arriba. Período, estado (badge), total liquidado, cobrado, pendiente, comisión, neto propietario. Click → detalle liquidación.
-4. **Eventos especiales** — Lista cronológica de `categoria IN ('financiero', 'administrativo', 'documental')`. Cards con fecha, badge categoría/tipo, monto opcional, descripción. Empty state elegante.
+## Archivo generado
 
-## Paso 5: `PropiedadDetalle.tsx` — Tab Historial mejorada
-
-- Cards ejecutivas: contratos históricos, deuda actual, última liquidación, último pago, próximo vencimiento
-- Lista de contratos asociados con link al detalle
-- Banner: "El historial detallado se gestiona por contrato"
-
-## Paso 6: `LiquidacionDetalle.tsx` — Fortalecer
-
-- Navegación anterior/siguiente (mismo contrato)
-- Mini timeline de pagos
-- Bloque "Eventos del período": filtra `eventos_contrato` por `periodo` o `liquidacion_id` matching
-
-## Paso 7: Dashboard — Card "Trazabilidad"
-
-- Card "Últimos movimientos" con 8-10 eventos recientes
-- Fecha, tipo (badge), contrato (link), descripción
-
-## Paso 8: Reportes — Contratos con cambios recientes
-
-- Card con contratos que tuvieron eventos en el último mes
-
-## Archivos a modificar/crear
-
-| Archivo | Cambio |
-|---|---|
-| Migración SQL | Tabla `eventos_contrato` con `liquidacion_id`, `periodo`, 4 categorías |
-| INSERT datos | Mock data historial rico |
-| `useSupabaseData.ts` | Tipos + 4 hooks nuevos |
-| `ContratoDetalle.tsx` | Refactor con Tabs, resumen ejecutivo + 3 bloques historial |
-| `PropiedadDetalle.tsx` | Tab Historial con resumen ejecutivo |
-| `LiquidacionDetalle.tsx` | Nav prev/next, timeline pagos, eventos del período |
-| `Dashboard.tsx` | Card trazabilidad |
-| `Reportes.tsx` | Card cambios recientes |
+`/mnt/documents/CyT_Propiedades_Especificacion_Tecnica.docx`
 
