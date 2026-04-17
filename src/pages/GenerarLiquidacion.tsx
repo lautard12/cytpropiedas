@@ -12,6 +12,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useContratos, usePropiedades, usePropietarios, useInquilinos, findById, formatCurrency } from '@/hooks/useSupabaseData';
 import { ArrowLeft, Calculator, Save, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+
+const PERIODO_LABELS: Record<string, string> = {
+  '2025-04': 'Abril 2025',
+  '2025-03': 'Marzo 2025',
+};
 
 export default function GenerarLiquidacion() {
   const navigate = useNavigate();
