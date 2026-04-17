@@ -12,11 +12,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useContratos, usePropiedades, usePropietarios, useInquilinos, findById, formatCurrency } from '@/hooks/useSupabaseData';
 import { ArrowLeft, Calculator, Save, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+
+const PERIODO_LABELS: Record<string, string> = {
+  '2025-04': 'Abril 2025',
+  '2025-03': 'Marzo 2025',
+};
 
 export default function GenerarLiquidacion() {
   const navigate = useNavigate();
   const { toast } = useToast();
-
+  const queryClient = useQueryClient();
+  const [saving, setSaving] = useState(false);
   const { data: contratos = [], isLoading } = useContratos();
   const { data: propiedades = [] } = usePropiedades();
   const { data: propietarios = [] } = usePropietarios();
@@ -61,9 +69,61 @@ export default function GenerarLiquidacion() {
     return { subtotal, ivaAmount, totalCobrar, comision, neto };
   }, [alquiler, expOrdinarias, expExtraordinarias, tgiMonto, apiMonto, epeMonto, gasMonto, aguasMonto, seguroMonto, ajustes, descuentos, saldoAnterior, contrato]);
 
-  const handleGuardar = (estado: string) => {
-    toast({ title: estado === 'borrador' ? 'Borrador guardado' : 'Liquidación generada', description: `Liquidación del contrato ${contrato?.codigo} — ${periodo === '2025-04' ? 'Abril 2025' : periodo}` });
-    navigate('/liquidaciones');
+  const handleGuardar = async (estado: 'borrador' | 'pendiente') => {
+    if (!contrato) return;
+    setSaving(true);
+    try {
+      const estadoFinal = estado === 'borrador' ? 'Borrador' : 'Pendiente';
+      const periodoLabel = PERIODO_LABELS[periodo] ?? periodo;
+      const n = (v: string) => Number(v) || 0;
+
+      const { data: liq, error: liqErr } = await supabase.from('liquidaciones').insert({
+        contrato_id: contrato.id,
+        periodo,
+        periodo_label: periodoLabel,
+        subtotal: nums.subtotal,
+        total_cobrar: nums.totalCobrar,
+        total_cobrado: 0,
+        pendiente: nums.totalCobrar,
+        comision_inmobiliaria: nums.comision,
+        saldo_anterior: n(saldoAnterior),
+        neto_propietario: nums.neto,
+        estado: estadoFinal as any,
+        observaciones,
+      }).select().single();
+      if (liqErr) throw liqErr;
+
+      // Insert conceptos (solo los que tienen monto > 0)
+      const conceptos = [
+        { concepto: 'Alquiler', monto: n(alquiler), responsable: 'Inquilino' },
+        { concepto: 'Expensas ordinarias', monto: n(expOrdinarias), responsable: contrato.expensas_ordinarias },
+        { concepto: 'Expensas extraordinarias', monto: n(expExtraordinarias), responsable: contrato.expensas_extraordinarias },
+        { concepto: 'TGI', monto: n(tgiMonto), responsable: contrato.tgi },
+        { concepto: 'API', monto: n(apiMonto), responsable: contrato.api },
+        { concepto: 'EPE', monto: n(epeMonto), responsable: 'Inquilino' },
+        { concepto: 'Gas', monto: n(gasMonto), responsable: 'Inquilino' },
+        { concepto: 'Aguas Santafesinas', monto: n(aguasMonto), responsable: 'Inquilino' },
+        { concepto: 'Seguro', monto: n(seguroMonto), responsable: contrato.seguro },
+        { concepto: 'Ajustes', monto: n(ajustes), responsable: 'Inquilino' },
+        { concepto: 'Descuentos', monto: -n(descuentos), responsable: 'Inquilino' },
+        { concepto: 'Saldo anterior', monto: n(saldoAnterior), responsable: 'Inquilino' },
+      ].filter(c => c.monto !== 0).map(c => ({ ...c, liquidacion_id: liq.id, aplica_al_inquilino: c.responsable === 'Inquilino' }));
+
+      if (conceptos.length > 0) {
+        const { error: cErr } = await supabase.from('conceptos_liquidacion').insert(conceptos);
+        if (cErr) throw cErr;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['liquidaciones'] });
+      queryClient.invalidateQueries({ queryKey: ['conceptos_liquidacion'] });
+
+      toast({ title: estado === 'borrador' ? 'Borrador guardado' : 'Liquidación generada', description: `Liquidación del contrato ${contrato.codigo} — ${periodoLabel}` });
+      navigate('/liquidaciones');
+    } catch (err: any) {
+      toast({ title: 'Error al generar liquidación', description: err.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (isLoading) return <div className="p-8"><Skeleton className="h-64" /></div>;
@@ -138,8 +198,8 @@ export default function GenerarLiquidacion() {
           </Card>
 
           <div className="flex gap-3">
-            <Button variant="outline" onClick={() => handleGuardar('borrador')}><Save className="h-4 w-4 mr-1" /> Guardar borrador</Button>
-            <Button onClick={() => handleGuardar('pendiente')} disabled={!contratoId}><Calculator className="h-4 w-4 mr-1" /> Generar liquidación</Button>
+            <Button variant="outline" onClick={() => handleGuardar('borrador')} disabled={!contratoId || saving}><Save className="h-4 w-4 mr-1" /> Guardar borrador</Button>
+            <Button onClick={() => handleGuardar('pendiente')} disabled={!contratoId || saving}><Calculator className="h-4 w-4 mr-1" /> {saving ? 'Generando...' : 'Generar liquidación'}</Button>
           </div>
         </div>
 
