@@ -198,8 +198,8 @@ export default function GenerarLiquidacion() {
           </Card>
 
           <div className="flex gap-3">
-            <Button variant="outline" onClick={() => handleGuardar('borrador')}><Save className="h-4 w-4 mr-1" /> Guardar borrador</Button>
-            <Button onClick={() => handleGuardar('pendiente')} disabled={!contratoId}><Calculator className="h-4 w-4 mr-1" /> Generar liquidación</Button>
+            <Button variant="outline" onClick={() => handleGuardar('borrador')} disabled={!contratoId || saving}><Save className="h-4 w-4 mr-1" /> Guardar borrador</Button>
+            <Button onClick={() => handleGuardar('pendiente')} disabled={!contratoId || saving}><Calculator className="h-4 w-4 mr-1" /> {saving ? 'Generando...' : 'Generar liquidación'}</Button>
           </div>
         </div>
 
