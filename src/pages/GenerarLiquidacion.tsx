@@ -23,7 +23,8 @@ const PERIODO_LABELS: Record<string, string> = {
 export default function GenerarLiquidacion() {
   const navigate = useNavigate();
   const { toast } = useToast();
-
+  const queryClient = useQueryClient();
+  const [saving, setSaving] = useState(false);
   const { data: contratos = [], isLoading } = useContratos();
   const { data: propiedades = [] } = usePropiedades();
   const { data: propietarios = [] } = usePropietarios();
