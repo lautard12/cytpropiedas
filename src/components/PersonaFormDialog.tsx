@@ -120,14 +120,14 @@ export function PersonaFormDialog({ open, onOpenChange, rol, persona }: Props) {
 
     try {
       if (isEdit && persona) {
-        await updatePersona.mutateAsync({ id: persona.id, values: parsed.data });
-        toast({ title: 'Cambios guardados', description: `${parsed.data.nombre} actualizado correctamente.` });
+        await updatePersona.mutateAsync({ id: persona.id, values: data });
+        toast({ title: 'Cambios guardados', description: `${data.nombre} actualizado correctamente.` });
         onOpenChange(false);
         return;
       }
 
       // Re-check duplicates on submit (in case user didn't blur)
-      const existing = duplicate ?? await findPersonaByIdentity(parsed.data);
+      const existing = duplicate ?? await findPersonaByIdentity(data);
       if (existing) {
         if (existing.roles.includes(rol)) {
           toast({
@@ -143,8 +143,8 @@ export function PersonaFormDialog({ open, onOpenChange, rol, persona }: Props) {
           description: `${existing.nombre} ahora también es ${ROL_LABEL[rol].toLowerCase()}.`,
         });
       } else {
-        await createPersona.mutateAsync({ values: parsed.data, rol });
-        toast({ title: 'Creado', description: `${parsed.data.nombre} agregado como ${ROL_LABEL[rol].toLowerCase()}.` });
+        await createPersona.mutateAsync({ values: data, rol });
+        toast({ title: 'Creado', description: `${data.nombre} agregado como ${ROL_LABEL[rol].toLowerCase()}.` });
       }
       onOpenChange(false);
     } catch (e: any) {
