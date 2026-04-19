@@ -17,22 +17,24 @@ import {
 } from '@/hooks/usePersonaMutations';
 import type { Persona, RolPersona } from '@/hooks/useSupabaseData';
 
+const optionalText = (max: number) => z.string().trim().max(max).default('');
+
 const baseSchema = z.object({
   nombre: z.string().trim().min(2, 'Nombre requerido (mín. 2 caracteres)').max(120),
-  dni: z.string().trim().max(20),
-  cuit: z.string().trim().max(20),
-  email: z.string().trim().max(120).refine(
+  dni: optionalText(20),
+  cuit: optionalText(20),
+  email: optionalText(120).refine(
     v => v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
     'Email inválido',
   ),
-  telefono: z.string().trim().max(40),
-  direccion: z.string().trim().max(200),
-  banco: z.string().trim().max(80),
-  cbu: z.string().trim().max(40),
-  garante: z.string().trim().max(120),
-  garante_telefono: z.string().trim().max(40),
-  observaciones: z.string().trim().max(1000),
-});
+  telefono: optionalText(40),
+  direccion: optionalText(200),
+  banco: optionalText(80),
+  cbu: optionalText(40),
+  garante: optionalText(120),
+  garante_telefono: optionalText(40),
+  observaciones: optionalText(1000),
+}) satisfies z.ZodType<PersonaFormValues>;
 
 const ROL_LABEL: Record<RolPersona, string> = {
   propietario: 'Propietario',
