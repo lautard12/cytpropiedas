@@ -1,27 +1,28 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 // ─── Types matching DB schema ─────────────────────────────
-export interface Propietario {
+export type RolPersona = 'propietario' | 'inquilino' | 'garante';
+
+export interface Persona {
   id: string;
   nombre: string;
-  telefono: string;
-  email: string;
+  dni: string;
   cuit: string;
+  email: string;
+  telefono: string;
   direccion: string;
   banco: string;
   cbu: string;
-}
-
-export interface Inquilino {
-  id: string;
-  nombre: string;
-  telefono: string;
-  email: string;
-  dni: string;
   garante: string;
   garante_telefono: string;
+  observaciones: string;
+  roles: RolPersona[];
 }
+
+// Backwards-compat aliases — the rest of the app keeps working unchanged.
+export type Propietario = Persona;
+export type Inquilino = Persona;
 
 export interface Propiedad {
   id: string;
