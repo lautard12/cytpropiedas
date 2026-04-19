@@ -106,16 +106,17 @@ export function PersonaFormDialog({ open, onOpenChange, rol, persona }: Props) {
   };
 
   const handleSubmit = async () => {
-    const parsed = baseSchema.safeParse(values);
-    if (!parsed.success) {
+    const result = baseSchema.safeParse(values);
+    if (!result.success) {
       const next: typeof errors = {};
-      parsed.error.issues.forEach(i => {
+      result.error.issues.forEach(i => {
         const k = i.path[0] as keyof PersonaFormValues;
         if (k && !next[k]) next[k] = i.message;
       });
       setErrors(next);
       return;
     }
+    const data = result.data as PersonaFormValues;
 
     try {
       if (isEdit && persona) {
