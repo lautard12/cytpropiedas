@@ -34,7 +34,7 @@ const baseSchema = z.object({
   garante: optionalText(120),
   garante_telefono: optionalText(40),
   observaciones: optionalText(1000),
-}) satisfies z.ZodType<PersonaFormValues>;
+});
 
 const ROL_LABEL: Record<RolPersona, string> = {
   propietario: 'Propietario',
