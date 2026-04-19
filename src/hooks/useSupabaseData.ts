@@ -2,26 +2,27 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 // ─── Types matching DB schema ─────────────────────────────
-export interface Propietario {
+export type RolPersona = 'propietario' | 'inquilino' | 'garante';
+
+export interface Persona {
   id: string;
   nombre: string;
-  telefono: string;
-  email: string;
+  dni: string;
   cuit: string;
+  email: string;
+  telefono: string;
   direccion: string;
   banco: string;
   cbu: string;
-}
-
-export interface Inquilino {
-  id: string;
-  nombre: string;
-  telefono: string;
-  email: string;
-  dni: string;
   garante: string;
   garante_telefono: string;
+  observaciones: string;
+  roles: RolPersona[];
 }
+
+// Backwards-compat aliases — the rest of the app keeps working unchanged.
+export type Propietario = Persona;
+export type Inquilino = Persona;
 
 export interface Propiedad {
   id: string;
@@ -112,53 +113,78 @@ export interface EventoContrato {
   created_at: string;
 }
 
-// ─── Queries ──────────────────────────────────────────────
+// ─── Personas (unified contacts) ──────────────────────────
 
-export function usePropietarios() {
+async function fetchPersonas(rolFilter?: RolPersona): Promise<Persona[]> {
+  const { data: personasData, error } = await supabase
+    .from('personas')
+    .select('*, personas_roles(rol)')
+    .order('nombre');
+  if (error) throw error;
+  const mapped = (personasData ?? []).map((p: any) => ({
+    id: p.id,
+    nombre: p.nombre,
+    dni: p.dni,
+    cuit: p.cuit,
+    email: p.email,
+    telefono: p.telefono,
+    direccion: p.direccion,
+    banco: p.banco,
+    cbu: p.cbu,
+    garante: p.garante,
+    garante_telefono: p.garante_telefono,
+    observaciones: p.observaciones,
+    roles: (p.personas_roles ?? []).map((r: any) => r.rol as RolPersona),
+  })) as Persona[];
+  return rolFilter ? mapped.filter(p => p.roles.includes(rolFilter)) : mapped;
+}
+
+async function fetchPersonaById(id: string): Promise<Persona | null> {
+  const { data, error } = await supabase
+    .from('personas')
+    .select('*, personas_roles(rol)')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const p: any = data;
+  return {
+    id: p.id,
+    nombre: p.nombre,
+    dni: p.dni,
+    cuit: p.cuit,
+    email: p.email,
+    telefono: p.telefono,
+    direccion: p.direccion,
+    banco: p.banco,
+    cbu: p.cbu,
+    garante: p.garante,
+    garante_telefono: p.garante_telefono,
+    observaciones: p.observaciones,
+    roles: (p.personas_roles ?? []).map((r: any) => r.rol as RolPersona),
+  };
+}
+
+export function usePersonas(rol?: RolPersona) {
   return useQuery({
-    queryKey: ['propietarios'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('propietarios').select('*').order('nombre');
-      if (error) throw error;
-      return data as Propietario[];
-    },
+    queryKey: ['personas', rol ?? 'all'],
+    queryFn: () => fetchPersonas(rol),
   });
 }
 
-export function usePropietario(id: string) {
+export function usePersona(id: string) {
   return useQuery({
-    queryKey: ['propietarios', id],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('propietarios').select('*').eq('id', id).maybeSingle();
-      if (error) throw error;
-      return data as Propietario | null;
-    },
+    queryKey: ['personas', 'one', id],
+    queryFn: () => fetchPersonaById(id),
     enabled: !!id,
   });
 }
 
-export function useInquilinos() {
-  return useQuery({
-    queryKey: ['inquilinos'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('inquilinos').select('*').order('nombre');
-      if (error) throw error;
-      return data as Inquilino[];
-    },
-  });
-}
-
-export function useInquilino(id: string) {
-  return useQuery({
-    queryKey: ['inquilinos', id],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('inquilinos').select('*').eq('id', id).maybeSingle();
-      if (error) throw error;
-      return data as Inquilino | null;
-    },
-    enabled: !!id,
-  });
-}
+// Backwards-compat aliases — preserve existing API used across the app.
+export const usePropietarios = () => usePersonas('propietario');
+export const usePropietario = (id: string) => usePersona(id);
+export const useInquilinos = () => usePersonas('inquilino');
+export const useInquilino = (id: string) => usePersona(id);
 
 export function usePropiedades() {
   return useQuery({

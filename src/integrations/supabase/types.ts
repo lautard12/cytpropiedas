@@ -127,7 +127,7 @@ export type Database = {
             foreignKeyName: "contratos_inquilino_id_fkey"
             columns: ["inquilino_id"]
             isOneToOne: false
-            referencedRelation: "inquilinos"
+            referencedRelation: "personas"
             referencedColumns: ["id"]
           },
           {
@@ -141,7 +141,7 @@ export type Database = {
             foreignKeyName: "contratos_propietario_id_fkey"
             columns: ["propietario_id"]
             isOneToOne: false
-            referencedRelation: "propietarios"
+            referencedRelation: "personas"
             referencedColumns: ["id"]
           },
         ]
@@ -202,39 +202,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      inquilinos: {
-        Row: {
-          created_at: string
-          dni: string
-          email: string
-          garante: string
-          garante_telefono: string
-          id: string
-          nombre: string
-          telefono: string
-        }
-        Insert: {
-          created_at?: string
-          dni?: string
-          email?: string
-          garante?: string
-          garante_telefono?: string
-          id?: string
-          nombre: string
-          telefono?: string
-        }
-        Update: {
-          created_at?: string
-          dni?: string
-          email?: string
-          garante?: string
-          garante_telefono?: string
-          id?: string
-          nombre?: string
-          telefono?: string
-        }
-        Relationships: []
       }
       liquidaciones: {
         Row: {
@@ -352,6 +319,86 @@ export type Database = {
           },
         ]
       }
+      personas: {
+        Row: {
+          banco: string
+          cbu: string
+          created_at: string
+          cuit: string
+          direccion: string
+          dni: string
+          email: string
+          garante: string
+          garante_telefono: string
+          id: string
+          nombre: string
+          observaciones: string
+          telefono: string
+          updated_at: string
+        }
+        Insert: {
+          banco?: string
+          cbu?: string
+          created_at?: string
+          cuit?: string
+          direccion?: string
+          dni?: string
+          email?: string
+          garante?: string
+          garante_telefono?: string
+          id?: string
+          nombre: string
+          observaciones?: string
+          telefono?: string
+          updated_at?: string
+        }
+        Update: {
+          banco?: string
+          cbu?: string
+          created_at?: string
+          cuit?: string
+          direccion?: string
+          dni?: string
+          email?: string
+          garante?: string
+          garante_telefono?: string
+          id?: string
+          nombre?: string
+          observaciones?: string
+          telefono?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      personas_roles: {
+        Row: {
+          created_at: string
+          id: string
+          persona_id: string
+          rol: Database["public"]["Enums"]["rol_persona"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          persona_id: string
+          rol: Database["public"]["Enums"]["rol_persona"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          persona_id?: string
+          rol?: Database["public"]["Enums"]["rol_persona"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personas_roles_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       propiedades: {
         Row: {
           ambientes: number
@@ -404,46 +451,10 @@ export type Database = {
             foreignKeyName: "propiedades_propietario_id_fkey"
             columns: ["propietario_id"]
             isOneToOne: false
-            referencedRelation: "propietarios"
+            referencedRelation: "personas"
             referencedColumns: ["id"]
           },
         ]
-      }
-      propietarios: {
-        Row: {
-          banco: string
-          cbu: string
-          created_at: string
-          cuit: string
-          direccion: string
-          email: string
-          id: string
-          nombre: string
-          telefono: string
-        }
-        Insert: {
-          banco?: string
-          cbu?: string
-          created_at?: string
-          cuit?: string
-          direccion?: string
-          email?: string
-          id?: string
-          nombre: string
-          telefono?: string
-        }
-        Update: {
-          banco?: string
-          cbu?: string
-          created_at?: string
-          cuit?: string
-          direccion?: string
-          email?: string
-          id?: string
-          nombre?: string
-          telefono?: string
-        }
-        Relationships: []
       }
     }
     Views: {
@@ -463,6 +474,7 @@ export type Database = {
       estado_pago: "Confirmado" | "Pendiente" | "Rechazado"
       estado_propiedad: "Ocupada" | "Vacante" | "En refacción"
       medio_pago: "Transferencia" | "Efectivo" | "Cheque" | "Depósito"
+      rol_persona: "propietario" | "inquilino" | "garante"
       tipo_propiedad: "Departamento" | "Casa" | "Local" | "Oficina" | "PH"
     }
     CompositeTypes: {
@@ -602,6 +614,7 @@ export const Constants = {
       estado_pago: ["Confirmado", "Pendiente", "Rechazado"],
       estado_propiedad: ["Ocupada", "Vacante", "En refacción"],
       medio_pago: ["Transferencia", "Efectivo", "Cheque", "Depósito"],
+      rol_persona: ["propietario", "inquilino", "garante"],
       tipo_propiedad: ["Departamento", "Casa", "Local", "Oficina", "PH"],
     },
   },
