@@ -63,18 +63,19 @@ export function PersonaFormDialog({ open, onOpenChange, rol, persona }: Props) {
 
   useEffect(() => {
     if (open) {
+      const p: any = persona;
       setValues(persona ? {
-        nombre: persona.nombre,
-        dni: persona.dni,
-        cuit: persona.cuit,
-        email: persona.email,
-        telefono: persona.telefono,
-        direccion: persona.direccion,
-        banco: persona.banco,
-        cbu: persona.cbu,
-        garante: persona.garante,
-        garante_telefono: persona.garante_telefono,
-        observaciones: persona.observaciones,
+        nombre: p.nombre,
+        dni: p.dni,
+        cuit: p.cuit,
+        email: p.email,
+        telefono: p.telefono,
+        direccion: p.direccion,
+        banco: p.banco ?? '',
+        cbu: p.cbu ?? '',
+        garante: p.garante_nombre ?? p.garante ?? '',
+        garante_telefono: p.garante_telefono ?? '',
+        observaciones: p.observaciones,
       } : emptyPersonaForm);
       setErrors({});
       setDuplicate(null);
@@ -120,7 +121,7 @@ export function PersonaFormDialog({ open, onOpenChange, rol, persona }: Props) {
 
     try {
       if (isEdit && persona) {
-        await updatePersona.mutateAsync({ id: persona.id, values: data });
+        await updatePersona.mutateAsync({ id: persona.id, values: data, rol });
         toast({ title: 'Cambios guardados', description: `${data.nombre} actualizado correctamente.` });
         onOpenChange(false);
         return;

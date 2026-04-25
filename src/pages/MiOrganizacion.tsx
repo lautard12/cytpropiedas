@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Building2, Building, Users, Plus, Edit, Trash2, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganizacion, useSucursales, useUpdateOrganizacion, useDeleteSucursal, type Sucursal } from '@/hooks/useOrganizacion';
-import { usePersonas } from '@/hooks/useSupabaseData';
+import { usePersonalUsuarios } from '@/hooks/useSupabaseData';
 import { supabase } from '@/integrations/supabase/client';
 import SucursalFormDialog from '@/components/SucursalFormDialog';
 import PersonalFormDialog from '@/components/PersonalFormDialog';
@@ -23,7 +23,7 @@ export default function MiOrganizacion() {
   const { toast } = useToast();
   const { data: org, isLoading } = useOrganizacion();
   const { data: sucursales = [] } = useSucursales();
-  const { data: personal = [] } = usePersonas('personal' as any);
+  const { data: personal = [] } = usePersonalUsuarios();
   const updateOrg = useUpdateOrganizacion();
   const deleteSuc = useDeleteSucursal();
 
