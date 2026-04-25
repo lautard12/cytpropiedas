@@ -11,10 +11,11 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Building2, Building, Users, Plus, Edit, Trash2 } from 'lucide-react';
+import { Building2, Building, Users, Plus, Edit, Trash2, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganizacion, useSucursales, useUpdateOrganizacion, useDeleteSucursal, type Sucursal } from '@/hooks/useOrganizacion';
 import { usePersonas } from '@/hooks/useSupabaseData';
+import { supabase } from '@/integrations/supabase/client';
 import SucursalFormDialog from '@/components/SucursalFormDialog';
 import PersonalFormDialog from '@/components/PersonalFormDialog';
 
@@ -29,7 +30,33 @@ export default function MiOrganizacion() {
   const [form, setForm] = useState({ nombre: '', cuit: '', direccion: '', telefono: '', email: '', logo_url: '', fecha_baja: '' });
   const [sucDialog, setSucDialog] = useState<{ open: boolean; sucursal?: Sucursal }>({ open: false });
   const [personalDialog, setPersonalDialog] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
+  const handleLogoUpload = async (file: File) => {
+    if (!org) return;
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Archivo inválido', description: 'Subí una imagen (PNG, JPG o SVG).', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: 'Imagen muy grande', description: 'El logo debe pesar menos de 2 MB.', variant: 'destructive' });
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const ext = file.name.split('.').pop() ?? 'png';
+      const path = `logos/${org.id}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('org-assets').upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('org-assets').getPublicUrl(path);
+      setForm(f => ({ ...f, logo_url: pub.publicUrl }));
+      toast({ title: 'Logo subido', description: 'No olvides guardar los cambios.' });
+    } catch (e: any) {
+      toast({ title: 'Error al subir', description: e.message, variant: 'destructive' });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
   useEffect(() => {
     if (org) setForm({
       nombre: org.nombre, cuit: org.cuit, direccion: org.direccion,
@@ -65,14 +92,36 @@ export default function MiOrganizacion() {
         <TabsContent value="datos">
           <Card>
             <CardHeader><CardTitle>Datos generales</CardTitle><CardDescription>Información de tu inmobiliaria.</CardDescription></CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              <div className="flex flex-col sm:flex-row gap-4 items-start">
+                <div className="h-24 w-24 rounded-lg border bg-muted/30 overflow-hidden flex items-center justify-center shrink-0">
+                  {form.logo_url
+                    ? <img src={form.logo_url} alt="Logo de la organización" className="h-full w-full object-contain" />
+                    : <Building2 className="h-10 w-10 text-muted-foreground" />}
+                </div>
+                <div className="space-y-2 flex-1">
+                  <Label>Logo de la inmobiliaria</Label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button type="button" variant="outline" size="sm" disabled={uploadingLogo} onClick={() => document.getElementById('logo-upload-input')?.click()}>
+                      <Upload className="h-4 w-4 mr-1" />
+                      {uploadingLogo ? 'Subiendo…' : 'Subir imagen'}
+                    </Button>
+                    <input id="logo-upload-input" type="file" accept="image/*" className="hidden"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = ''; }} />
+                    {form.logo_url && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setForm({ ...form, logo_url: '' })}>Quitar</Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">PNG, JPG o SVG. Máx. 2 MB. Recordá guardar los cambios.</p>
+                </div>
+              </div>
+
               <div className="grid md:grid-cols-2 gap-3">
                 <div className="md:col-span-2 space-y-1"><Label>Nombre *</Label><Input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} /></div>
                 <div className="space-y-1"><Label>CUIT</Label><Input value={form.cuit} onChange={e => setForm({ ...form, cuit: e.target.value })} /></div>
                 <div className="space-y-1"><Label>Teléfono</Label><Input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} /></div>
                 <div className="md:col-span-2 space-y-1"><Label>Dirección</Label><Input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} /></div>
                 <div className="space-y-1"><Label>Email</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
-                <div className="space-y-1"><Label>Logo (URL)</Label><Input value={form.logo_url} onChange={e => setForm({ ...form, logo_url: e.target.value })} placeholder="https://…" /></div>
                 <div className="space-y-1"><Label>Fecha de alta</Label><Input value={org.fecha_alta} disabled /></div>
                 <div className="space-y-1"><Label>Fecha de baja</Label><Input type="date" value={form.fecha_baja ?? ''} onChange={e => setForm({ ...form, fecha_baja: e.target.value })} /></div>
               </div>
