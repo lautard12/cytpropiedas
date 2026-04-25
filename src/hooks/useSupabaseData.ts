@@ -35,6 +35,9 @@ export interface Propiedad {
   metros: number;
   ambientes: number;
   observaciones: string;
+  latitud?: number | null;
+  longitud?: number | null;
+  matricula_catastral?: string | null;
 }
 
 export interface Contrato {
