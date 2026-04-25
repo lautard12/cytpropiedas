@@ -147,3 +147,26 @@ CREATE TYPE medio_pago AS ENUM ('Transferencia','Efectivo','Cheque','Mercado Pag
 ## Diagrama Entidad-Relación
 
 Ver [`diagramas/der.mmd`](./diagramas/der.mmd).
+
+---
+
+## Extensiones (v2 — auth & auditoría)
+
+Ver detalle completo en [`10-auth-y-organizacion.md`](./10-auth-y-organizacion.md).
+
+### Nuevas tablas
+- `organizacion`, `sucursales` — datos de la inmobiliaria y sucursales.
+- `user_roles` — vincula `auth.users` con un rol de aplicación (`admin` / `administrativo`) y opcionalmente con una sucursal. Tabla separada para evitar escalación de privilegios.
+- `auditoria` — registro inmutable de cambios sensibles (RLS: solo admin lee, nadie modifica).
+
+### Cambios en tablas existentes
+- `personas`: `+ user_id uuid UNIQUE` (link a `auth.users`), `+ sucursal_id uuid`.
+- `propiedades`: `+ latitud numeric`, `+ longitud numeric`, `+ matricula_catastral text`.
+- Enum `rol_persona`: `+ 'personal'`.
+
+### Nuevo enum
+- `app_role`: `admin` | `administrativo`.
+
+### Nuevas funciones
+- `has_role(_user_id uuid, _role app_role)` — SECURITY DEFINER, usada en RLS.
+- `anular_pago(_pago_id uuid, _motivo text)` — RPC atómica que anula el pago, recalcula la liquidación, registra evento y entrada de auditoría.
