@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/hooks/useSupabaseData';
+import { logAudit } from '@/lib/audit';
 import { CreditCard, AlertCircle } from 'lucide-react';
 
 interface Props {
@@ -54,8 +55,7 @@ export default function RegistrarPagoDialog({
 
     setLoading(true);
     try {
-      // 1. Insert pago
-      const { error: pagoError } = await supabase.from('pagos').insert({
+      const { data: nuevoPago, error: pagoError } = await supabase.from('pagos').insert({
         liquidacion_id: liquidacionId,
         contrato_id: contratoId,
         monto: montoNum,
@@ -64,10 +64,9 @@ export default function RegistrarPagoDialog({
         fecha,
         estado: 'Confirmado' as any,
         observaciones,
-      });
+      }).select().single();
       if (pagoError) throw pagoError;
 
-      // 2. Update liquidacion totals
       const { error: liqError } = await supabase.from('liquidaciones').update({
         total_cobrado: nuevoTotalCobrado,
         pendiente: Math.max(0, nuevoPendiente),
@@ -75,14 +74,17 @@ export default function RegistrarPagoDialog({
       }).eq('id', liquidacionId);
       if (liqError) throw liqError;
 
-      // 3. Invalidate queries
+      await logAudit({
+        accion: 'crear', entidad: 'pago', entidad_id: nuevoPago.id,
+        descripcion: `Pago registrado por ${formatCurrency(montoNum)} (${medioPago})`,
+        datos_despues: nuevoPago, monto: montoNum,
+      });
+
       queryClient.invalidateQueries({ queryKey: ['pagos'] });
       queryClient.invalidateQueries({ queryKey: ['liquidaciones'] });
 
       toast({ title: 'Pago registrado', description: `Se registró un pago de ${formatCurrency(montoNum)} por ${medioPago}.` });
       onOpenChange(false);
-
-      // Reset
       setMonto(Math.max(0, nuevoPendiente).toString());
       setReferencia('');
       setObservaciones('');
@@ -95,7 +97,7 @@ export default function RegistrarPagoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5" /> Registrar pago

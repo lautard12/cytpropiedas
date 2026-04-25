@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      auditoria: {
+        Row: {
+          accion: string
+          created_at: string
+          datos_antes: Json | null
+          datos_despues: Json | null
+          descripcion: string | null
+          entidad: string
+          entidad_id: string | null
+          id: string
+          monto: number | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          accion: string
+          created_at?: string
+          datos_antes?: Json | null
+          datos_despues?: Json | null
+          descripcion?: string | null
+          entidad: string
+          entidad_id?: string | null
+          id?: string
+          monto?: number | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          accion?: string
+          created_at?: string
+          datos_antes?: Json | null
+          datos_despues?: Json | null
+          descripcion?: string | null
+          entidad?: string
+          entidad_id?: string | null
+          id?: string
+          monto?: number | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       conceptos_liquidacion: {
         Row: {
           aplica_al_inquilino: boolean
@@ -265,6 +307,48 @@ export type Database = {
           },
         ]
       }
+      organizacion: {
+        Row: {
+          created_at: string
+          cuit: string | null
+          direccion: string | null
+          email: string | null
+          fecha_alta: string
+          fecha_baja: string | null
+          id: string
+          logo_url: string | null
+          nombre: string
+          telefono: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          cuit?: string | null
+          direccion?: string | null
+          email?: string | null
+          fecha_alta?: string
+          fecha_baja?: string | null
+          id?: string
+          logo_url?: string | null
+          nombre: string
+          telefono?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          cuit?: string | null
+          direccion?: string | null
+          email?: string | null
+          fecha_alta?: string
+          fecha_baja?: string | null
+          id?: string
+          logo_url?: string | null
+          nombre?: string
+          telefono?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pagos: {
         Row: {
           contrato_id: string
@@ -333,8 +417,10 @@ export type Database = {
           id: string
           nombre: string
           observaciones: string
+          sucursal_id: string | null
           telefono: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           banco?: string
@@ -349,8 +435,10 @@ export type Database = {
           id?: string
           nombre: string
           observaciones?: string
+          sucursal_id?: string | null
           telefono?: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           banco?: string
@@ -365,10 +453,20 @@ export type Database = {
           id?: string
           nombre?: string
           observaciones?: string
+          sucursal_id?: string | null
           telefono?: string
           updated_at?: string
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "personas_sucursal_id_fkey"
+            columns: ["sucursal_id"]
+            isOneToOne: false
+            referencedRelation: "sucursales"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       personas_roles: {
         Row: {
@@ -407,6 +505,9 @@ export type Database = {
           direccion: string
           estado: Database["public"]["Enums"]["estado_propiedad"]
           id: string
+          latitud: number | null
+          longitud: number | null
+          matricula_catastral: string | null
           metros: number
           observaciones: string
           propietario_id: string | null
@@ -420,6 +521,9 @@ export type Database = {
           direccion: string
           estado?: Database["public"]["Enums"]["estado_propiedad"]
           id?: string
+          latitud?: number | null
+          longitud?: number | null
+          matricula_catastral?: string | null
           metros?: number
           observaciones?: string
           propietario_id?: string | null
@@ -433,6 +537,9 @@ export type Database = {
           direccion?: string
           estado?: Database["public"]["Enums"]["estado_propiedad"]
           id?: string
+          latitud?: number | null
+          longitud?: number | null
+          matricula_catastral?: string | null
           metros?: number
           observaciones?: string
           propietario_id?: string | null
@@ -456,14 +563,101 @@ export type Database = {
           },
         ]
       }
+      sucursales: {
+        Row: {
+          activa: boolean
+          created_at: string
+          direccion: string | null
+          es_central: boolean
+          id: string
+          nombre: string
+          organizacion_id: string
+          telefono: string | null
+          updated_at: string
+        }
+        Insert: {
+          activa?: boolean
+          created_at?: string
+          direccion?: string | null
+          es_central?: boolean
+          id?: string
+          nombre: string
+          organizacion_id: string
+          telefono?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activa?: boolean
+          created_at?: string
+          direccion?: string | null
+          es_central?: boolean
+          id?: string
+          nombre?: string
+          organizacion_id?: string
+          telefono?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sucursales_organizacion_id_fkey"
+            columns: ["organizacion_id"]
+            isOneToOne: false
+            referencedRelation: "organizacion"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          sucursal_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          sucursal_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          sucursal_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_sucursal_id_fkey"
+            columns: ["sucursal_id"]
+            isOneToOne: false
+            referencedRelation: "sucursales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      anular_pago: {
+        Args: { _motivo?: string; _pago_id: string }
+        Returns: Json
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      app_role: "admin" | "administrativo"
       estado_contrato: "Activo" | "Vencido" | "Por vencer" | "Rescindido"
       estado_liquidacion:
         | "Borrador"
@@ -474,7 +668,7 @@ export type Database = {
       estado_pago: "Confirmado" | "Pendiente" | "Rechazado"
       estado_propiedad: "Ocupada" | "Vacante" | "En refacción"
       medio_pago: "Transferencia" | "Efectivo" | "Cheque" | "Depósito"
-      rol_persona: "propietario" | "inquilino" | "garante"
+      rol_persona: "propietario" | "inquilino" | "garante" | "personal"
       tipo_propiedad: "Departamento" | "Casa" | "Local" | "Oficina" | "PH"
     }
     CompositeTypes: {
@@ -603,6 +797,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "administrativo"],
       estado_contrato: ["Activo", "Vencido", "Por vencer", "Rescindido"],
       estado_liquidacion: [
         "Borrador",
@@ -614,7 +809,7 @@ export const Constants = {
       estado_pago: ["Confirmado", "Pendiente", "Rechazado"],
       estado_propiedad: ["Ocupada", "Vacante", "En refacción"],
       medio_pago: ["Transferencia", "Efectivo", "Cheque", "Depósito"],
-      rol_persona: ["propietario", "inquilino", "garante"],
+      rol_persona: ["propietario", "inquilino", "garante", "personal"],
       tipo_propiedad: ["Departamento", "Casa", "Local", "Oficina", "PH"],
     },
   },
