@@ -1,8 +1,10 @@
 erDiagram
     PERSONAS ||--o{ PERSONAS_ROLES : "tiene roles"
-    PERSONAS ||--o{ PROPIEDADES : "es propietario de"
-    PERSONAS ||--o{ CONTRATOS : "es propietario en"
-    PERSONAS ||--o{ CONTRATOS : "es inquilino en"
+    PERSONAS ||--o| PROPIETARIOS : "es propietario"
+    PERSONAS ||--o| INQUILINOS : "es inquilino"
+    PROPIETARIOS ||--o{ PROPIEDADES : "posee"
+    PROPIETARIOS ||--o{ CONTRATOS : "firma como propietario"
+    INQUILINOS ||--o{ CONTRATOS : "firma como inquilino"
     PROPIEDADES ||--o{ CONTRATOS : "tiene"
     PROPIEDADES }o--|| CONTRATOS : "contrato_activo"
     CONTRATOS ||--o{ LIQUIDACIONES : "genera"
@@ -19,11 +21,30 @@ erDiagram
         text email
         text telefono
         text direccion
-        text banco
-        text cbu
         text observaciones
+        uuid user_id
+        uuid sucursal_id
         timestamptz created_at
         timestamptz updated_at
+    }
+    PROPIETARIOS {
+        uuid id PK
+        uuid persona_id FK
+        text banco
+        text cbu
+        text alias_cbu
+        text condicion_iva
+        text observaciones_fiscales
+    }
+    INQUILINOS {
+        uuid id PK
+        uuid persona_id FK
+        text garante_nombre
+        text garante_telefono
+        text garante_dni
+        text ocupacion
+        numeric ingresos_declarados
+        text observaciones_inquilino
     }
     PERSONAS_ROLES {
         uuid id PK
@@ -40,6 +61,9 @@ erDiagram
         uuid contrato_activo_id FK
         numeric metros
         int ambientes
+        numeric latitud
+        numeric longitud
+        text matricula_catastral
     }
     CONTRATOS {
         uuid id PK
