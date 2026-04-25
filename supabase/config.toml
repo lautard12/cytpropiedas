@@ -1,1 +1,4 @@
 project_id = "jbzscxwbfeuyfqgaakgq"
+
+[functions.create-personal]
+verify_jwt = true
