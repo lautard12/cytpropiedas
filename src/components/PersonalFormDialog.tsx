@@ -8,7 +8,6 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSucursales } from '@/hooks/useOrganizacion';
-import { logAudit } from '@/lib/audit';
 
 interface Props {
   open: boolean;
