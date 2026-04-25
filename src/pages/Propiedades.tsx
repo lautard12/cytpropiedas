@@ -7,19 +7,30 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { usePropiedades, usePropietarios, useContratos, useInquilinos, findById } from '@/hooks/useSupabaseData';
-import { Search, Eye } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { usePropiedades, usePropietarios, useContratos, useInquilinos, findById, type Propiedad } from '@/hooks/useSupabaseData';
+import { useDeletePropiedad } from '@/hooks/usePropiedadMutations';
+import PropiedadFormDialog from '@/components/PropiedadFormDialog';
+import { useToast } from '@/hooks/use-toast';
+import { Search, Eye, Plus, Edit, Trash2 } from 'lucide-react';
 
 export default function Propiedades() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [filtroPropietario, setFiltroPropietario] = useState('todos');
+  const [formDialog, setFormDialog] = useState<{ open: boolean; propiedad?: Propiedad }>({ open: false });
+  const [delTarget, setDelTarget] = useState<Propiedad | null>(null);
 
   const { data: propiedades = [], isLoading } = usePropiedades();
   const { data: propietarios = [] } = usePropietarios();
   const { data: contratos = [] } = useContratos();
   const { data: inquilinos = [] } = useInquilinos();
+  const deletePropiedad = useDeletePropiedad();
 
   const filtered = propiedades.filter(p => {
     if (search && !p.direccion.toLowerCase().includes(search.toLowerCase()) && !p.unidad.toLowerCase().includes(search.toLowerCase())) return false;
