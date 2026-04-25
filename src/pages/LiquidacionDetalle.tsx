@@ -13,9 +13,10 @@ import {
 } from '@/hooks/useSupabaseData';
 import {
   ArrowLeft, CreditCard, CheckCircle, FileText, ChevronLeft, ChevronRight,
-  MessageSquare, AlertTriangle, DollarSign, Zap,
+  MessageSquare, AlertTriangle, DollarSign, Zap, Ban,
 } from 'lucide-react';
 import RegistrarPagoDialog from '@/components/RegistrarPagoDialog';
+import AnularPagoDialog from '@/components/AnularPagoDialog';
 
 const TIPO_ICON: Record<string, React.ElementType> = {
   punitorio: AlertTriangle,
@@ -28,6 +29,7 @@ export default function LiquidacionDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [pagoOpen, setPagoOpen] = useState(false);
+  const [anularPago, setAnularPago] = useState<{ id: string; monto: number } | null>(null);
   const { data: liq, isLoading } = useLiquidacion(id || '');
   const { data: contrato } = useContrato(liq?.contrato_id || '');
   const { data: propiedad } = usePropiedad(contrato?.propiedad_id || '');
@@ -126,28 +128,36 @@ export default function LiquidacionDetalle() {
             <CardContent>
               {pagos.length > 0 ? (
                 <div className="space-y-0">
-                  {pagos.map((p, i) => (
-                    <div key={p.id} className="flex gap-4">
-                      <div className="flex flex-col items-center">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-muted bg-background">
-                          <CreditCard className="h-3.5 w-3.5 text-muted-foreground" />
-                        </div>
-                        {i < pagos.length - 1 && <div className="w-px flex-1 bg-border" />}
-                      </div>
-                      <div className="pb-4 flex-1">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-semibold text-sm">{formatCurrency(p.monto)}</p>
-                            <p className="text-xs text-muted-foreground">{formatDate(p.fecha)} · Ref: {p.referencia}</p>
+                  {pagos.map((p, i) => {
+                    const anulado = p.estado === 'Anulado';
+                    return (
+                      <div key={p.id} className="flex gap-4">
+                        <div className="flex flex-col items-center">
+                          <div className={`flex h-7 w-7 items-center justify-center rounded-full border-2 bg-background ${anulado ? 'border-status-danger/40' : 'border-muted'}`}>
+                            {anulado ? <Ban className="h-3.5 w-3.5 text-status-danger" /> : <CreditCard className="h-3.5 w-3.5 text-muted-foreground" />}
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Badge className={`text-[10px] ${medioBadge(p.medio_pago)}`}>{p.medio_pago}</Badge>
-                            <Badge className="bg-status-success text-status-success-foreground text-[10px]">{p.estado}</Badge>
+                          {i < pagos.length - 1 && <div className="w-px flex-1 bg-border" />}
+                        </div>
+                        <div className="pb-4 flex-1">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className={`font-semibold text-sm ${anulado ? 'line-through text-muted-foreground' : ''}`}>{formatCurrency(p.monto)}</p>
+                              <p className="text-xs text-muted-foreground">{formatDate(p.fecha)} · Ref: {p.referencia}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge className={`text-[10px] ${medioBadge(p.medio_pago)}`}>{p.medio_pago}</Badge>
+                              <Badge className={`text-[10px] ${anulado ? 'bg-status-danger text-status-danger-foreground' : 'bg-status-success text-status-success-foreground'}`}>{p.estado}</Badge>
+                              {!anulado && (
+                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => setAnularPago({ id: p.id, monto: p.monto })}>
+                                  <Ban className="h-3 w-3 mr-1" /> Anular
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-4">Sin pagos registrados</p>
@@ -232,6 +242,15 @@ export default function LiquidacionDetalle() {
         pendiente={liq.pendiente}
         periodoLabel={liq.periodo_label}
       />
+
+      {anularPago && (
+        <AnularPagoDialog
+          open={!!anularPago}
+          onOpenChange={open => !open && setAnularPago(null)}
+          pagoId={anularPago.id}
+          monto={anularPago.monto}
+        />
+      )}
     </div>
   );
 }
