@@ -1,0 +1,8 @@
+stateDiagram-v2
+    [*] --> Borrador: alta inicial
+    Borrador --> Activo: firmar y activar
+    Activo --> Vencido: fecha_fin alcanzada
+    Activo --> Rescindido: rescisión anticipada
+    Vencido --> Activo: renovación / prórroga
+    Rescindido --> [*]
+    Vencido --> [*]
