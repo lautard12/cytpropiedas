@@ -140,6 +140,45 @@ CREATE TRIGGER trg_contrato_sync_propiedad
   AFTER INSERT OR UPDATE ON public.contratos
   FOR EACH ROW EXECUTE FUNCTION public.sync_propiedad_estado();
 
+-- ---------- Sincronización propietarios/inquilinos ↔ personas_roles ----------
+CREATE OR REPLACE FUNCTION public.sync_personas_roles()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  _rol rol_persona;
+BEGIN
+  IF TG_TABLE_NAME = 'propietarios' THEN _rol := 'propietario';
+  ELSIF TG_TABLE_NAME = 'inquilinos' THEN _rol := 'inquilino';
+  ELSE RETURN COALESCE(NEW, OLD);
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO public.personas_roles (persona_id, rol)
+    VALUES (NEW.persona_id, _rol)
+    ON CONFLICT DO NOTHING;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    DELETE FROM public.personas_roles
+     WHERE persona_id = OLD.persona_id AND rol = _rol;
+    RETURN OLD;
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_sync_propietarios_roles ON public.propietarios;
+CREATE TRIGGER trg_sync_propietarios_roles
+  AFTER INSERT OR DELETE ON public.propietarios
+  FOR EACH ROW EXECUTE FUNCTION public.sync_personas_roles();
+
+DROP TRIGGER IF EXISTS trg_sync_inquilinos_roles ON public.inquilinos;
+CREATE TRIGGER trg_sync_inquilinos_roles
+  AFTER INSERT OR DELETE ON public.inquilinos
+  FOR EACH ROW EXECUTE FUNCTION public.sync_personas_roles();
+
 -- =====================================================================
 -- ROW LEVEL SECURITY
 -- =====================================================================
