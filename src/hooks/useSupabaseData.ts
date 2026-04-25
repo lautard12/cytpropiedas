@@ -464,15 +464,23 @@ export function useEventosPorPeriodo(contratoId: string, periodo: string) {
   return useQuery({
     queryKey: ['eventos_contrato', contratoId, periodo],
     queryFn: async () => {
+      // Calcular último día real del mes (evita fechas inválidas como 2025-04-31)
+      const [yStr, mStr] = (periodo || '').split('-');
+      const y = Number(yStr);
+      const m = Number(mStr);
+      const lastDay = (y && m) ? new Date(y, m, 0).getDate() : 31;
+      const desde = `${periodo}-01`;
+      const hasta = `${periodo}-${String(lastDay).padStart(2, '0')}`;
+
       const { data, error } = await supabase
         .from('eventos_contrato')
         .select('*')
         .eq('contrato_id', contratoId)
-        .or(`periodo.eq.${periodo},fecha.gte.${periodo}-01,fecha.lte.${periodo}-31`)
+        .or(`periodo.eq.${periodo},and(fecha.gte.${desde},fecha.lte.${hasta})`)
         .order('fecha', { ascending: true });
       if (error) throw error;
       return (data as EventoContrato[]).filter(e =>
-        e.periodo === periodo || (e.fecha >= `${periodo}-01` && e.fecha <= `${periodo}-31`)
+        e.periodo === periodo || (e.fecha >= desde && e.fecha <= hasta)
       );
     },
     enabled: !!contratoId && !!periodo,
