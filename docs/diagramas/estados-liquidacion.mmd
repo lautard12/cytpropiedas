@@ -1,0 +1,14 @@
+stateDiagram-v2
+    [*] --> Borrador: crear
+    Borrador --> Pendiente: emitir
+    Borrador --> Anulada: descartar
+    Pendiente --> Parcial: pago < total_cobrar
+    Pendiente --> Cobrada: pago >= total_cobrar
+    Parcial --> Cobrada: pagos completan total
+    Parcial --> Pendiente: anular único pago
+    Cobrada --> Transferida: rendir al propietario
+    Cobrada --> Parcial: anular pago
+    Pendiente --> Anulada: anular liquidación
+    Parcial --> Anulada: anular liquidación
+    Transferida --> [*]
+    Anulada --> [*]

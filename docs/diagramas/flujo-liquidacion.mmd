@@ -1,0 +1,20 @@
+flowchart TD
+    A[Operadora abre Generar Liquidación] --> B[Selecciona contrato activo]
+    B --> C[Selecciona período YYYY-MM]
+    C --> D{Existe liquidación<br/>para ese período?}
+    D -- Sí --> E[Bloquear / mostrar existente]
+    D -- No --> F[Calcular alquiler base + ajuste vigente]
+    F --> G[Agregar conceptos según reglas del contrato<br/>TGI, expensas, ABL, seguro...]
+    G --> H[Sumar saldo anterior si lo hubiera]
+    H --> I[Calcular total_cobrar y comisión inmobiliaria]
+    I --> J[INSERT liquidaciones + conceptos_liquidacion]
+    J --> K[INSERT eventos_contrato<br/>tipo=liquidacion_emitida]
+    K --> L[Estado: Pendiente]
+    L --> M{Inquilino paga?}
+    M -- Sí --> N[Registrar pago via RegistrarPagoDialog]
+    N --> O[Recalcular total_cobrado y pendiente]
+    O --> P{pendiente == 0?}
+    P -- Sí --> Q[Estado: Cobrada]
+    P -- No --> R[Estado: Parcial]
+    Q --> S[Rendir al propietario]
+    S --> T[Estado: Transferida]
