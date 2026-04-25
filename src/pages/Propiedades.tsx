@@ -43,9 +43,12 @@ export default function Propiedades() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Propiedades</h1>
-        <p className="text-muted-foreground">Gestión de unidades inmobiliarias</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Propiedades</h1>
+          <p className="text-muted-foreground">Gestión de unidades inmobiliarias</p>
+        </div>
+        <Button onClick={() => setFormDialog({ open: true })}><Plus className="h-4 w-4 mr-1" />Nueva propiedad</Button>
       </div>
 
       <Card>
@@ -59,9 +62,7 @@ export default function Propiedades() {
               <SelectTrigger className="w-[160px]"><SelectValue placeholder="Estado" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos los estados</SelectItem>
-                <SelectItem value="Ocupada">Ocupada</SelectItem>
-                <SelectItem value="Vacante">Vacante</SelectItem>
-                <SelectItem value="En refacción">En refacción</SelectItem>
+                {['Vacante','Alquilada','Reservada','En refacción','Inactiva'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filtroPropietario} onValueChange={setFiltroPropietario}>
@@ -87,7 +88,7 @@ export default function Propiedades() {
                 <TableHead>Estado</TableHead>
                 <TableHead>Contrato</TableHead>
                 <TableHead>Inquilino</TableHead>
-                <TableHead></TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -95,21 +96,25 @@ export default function Propiedades() {
                 const owner = findById(propietarios, p.propietario_id);
                 const ct = findById(contratos, p.contrato_activo_id);
                 const inq = ct ? findById(inquilinos, ct.inquilino_id) : undefined;
-                const estadoBadge = p.estado === 'Ocupada'
+                const estadoBadge = p.estado === 'Alquilada'
                   ? 'bg-status-success text-status-success-foreground'
                   : p.estado === 'Vacante'
                   ? 'bg-status-warning text-status-warning-foreground'
                   : 'bg-muted text-muted-foreground';
                 return (
-                  <TableRow key={p.id} className="cursor-pointer" onClick={() => navigate(`/propiedades/${p.id}`)}>
-                    <TableCell className="font-medium">{p.direccion}</TableCell>
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium cursor-pointer" onClick={() => navigate(`/propiedades/${p.id}`)}>{p.direccion}</TableCell>
                     <TableCell>{p.unidad}</TableCell>
                     <TableCell>{p.tipo}</TableCell>
-                    <TableCell>{owner?.nombre}</TableCell>
+                    <TableCell>{owner?.nombre || <span className="text-muted-foreground">—</span>}</TableCell>
                     <TableCell><Badge className={estadoBadge}>{p.estado}</Badge></TableCell>
                     <TableCell>{ct ? <Badge variant="outline">{ct.codigo}</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>
                     <TableCell>{inq?.nombre || <span className="text-muted-foreground">—</span>}</TableCell>
-                    <TableCell><Button variant="ghost" size="sm"><Eye className="h-4 w-4" /></Button></TableCell>
+                    <TableCell className="text-right space-x-1">
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/propiedades/${p.id}`)}><Eye className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => setFormDialog({ open: true, propiedad: p })}><Edit className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => setDelTarget(p)}><Trash2 className="h-4 w-4 text-status-danger" /></Button>
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -117,6 +122,36 @@ export default function Propiedades() {
           </Table>
         </CardContent>
       </Card>
+
+      <PropiedadFormDialog
+        open={formDialog.open}
+        onOpenChange={open => setFormDialog({ open, propiedad: open ? formDialog.propiedad : undefined })}
+        propiedad={formDialog.propiedad}
+      />
+
+      <AlertDialog open={!!delTarget} onOpenChange={open => !open && setDelTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar propiedad</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Eliminar "{delTarget?.direccion} {delTarget?.unidad}"? Si tiene contratos activos, no se podrá eliminar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={async () => {
+              if (!delTarget) return;
+              try {
+                await deletePropiedad.mutateAsync(delTarget.id);
+                toast({ title: 'Propiedad eliminada' });
+                setDelTarget(null);
+              } catch (e: any) {
+                toast({ title: 'No se pudo eliminar', description: e.message, variant: 'destructive' });
+              }
+            }}>Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
