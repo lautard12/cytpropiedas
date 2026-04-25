@@ -282,6 +282,42 @@ export function useInquilino(id: string) {
   });
 }
 
+// ─── Personal del staff (usuarios del sistema) ────────────
+// Personas vinculadas a un usuario auth (user_id no nulo).
+export function usePersonalUsuarios() {
+  return useQuery({
+    queryKey: ['personas', 'personal'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('personas')
+        .select('*, user_roles:user_id!inner(role)')
+        .not('user_id', 'is', null)
+        .order('nombre');
+      if (error) {
+        // Fallback: si el join falla por relación inexistente, listamos solo con user_id.
+        const { data: data2, error: e2 } = await (supabase as any)
+          .from('personas')
+          .select('*')
+          .not('user_id', 'is', null)
+          .order('nombre');
+        if (e2) throw e2;
+        return (data2 ?? []).map((p: any) => ({
+          ...mapPersonaBase(p),
+          user_id: p.user_id,
+          roles: [] as string[],
+        }));
+      }
+      return (data ?? []).map((p: any) => ({
+        ...mapPersonaBase(p),
+        user_id: p.user_id,
+        roles: (Array.isArray(p.user_roles) ? p.user_roles : [p.user_roles])
+          .filter(Boolean)
+          .map((r: any) => r.role as string),
+      }));
+    },
+  });
+}
+
 // Compat genérico — algunas pantallas usan un único hook por id de persona.
 export function usePersona(id: string) {
   return useQuery({
