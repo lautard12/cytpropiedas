@@ -35,35 +35,11 @@ export default function PersonalFormDialog({ open, onOpenChange }: Props) {
     }
     setSaving(true);
     try {
-      // Signup estándar (auto-confirm activo en este proyecto)
-      const { data: signUp, error: signErr } = await supabase.auth.signUp({
-        email, password,
-        options: { emailRedirectTo: window.location.origin, data: { nombre } },
+      const { data, error } = await supabase.functions.invoke('create-personal', {
+        body: { nombre, email, password, telefono, dni, rol, sucursal_id: sucursalId || null },
       });
-      if (signErr) throw signErr;
-      const newUserId = signUp.user?.id;
-      if (!newUserId) throw new Error('No se obtuvo el ID del nuevo usuario.');
-
-      // Crear persona (rol personal)
-      const { data: persona, error: pErr } = await supabase.from('personas').insert({
-        nombre, email, telefono, dni,
-        user_id: newUserId,
-        sucursal_id: sucursalId || null,
-      }).select().single();
-      if (pErr) throw pErr;
-
-      await supabase.from('personas_roles').insert({ persona_id: persona.id, rol: 'personal' as any });
-
-      // Asignar rol de aplicación
-      await supabase.from('user_roles').insert({
-        user_id: newUserId, role: rol, sucursal_id: sucursalId || null,
-      });
-
-      await logAudit({
-        accion: 'crear', entidad: 'user_role', entidad_id: newUserId,
-        descripcion: `Personal dado de alta: ${nombre} (${email}) — rol ${rol}`,
-        datos_despues: { nombre, email, rol, sucursal_id: sucursalId },
-      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
 
       qc.invalidateQueries({ queryKey: ['personal'] });
       qc.invalidateQueries({ queryKey: ['personas'] });
