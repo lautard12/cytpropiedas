@@ -4,32 +4,56 @@ import { supabase } from '@/integrations/supabase/client';
 // ─── Types matching DB schema ─────────────────────────────
 export type RolPersona = 'propietario' | 'inquilino' | 'garante';
 
-export interface Persona {
-  id: string;
+/** Datos básicos de la persona física (tabla personas). */
+export interface PersonaBase {
+  id: string; // personas.id
   nombre: string;
   dni: string;
   cuit: string;
   email: string;
   telefono: string;
   direccion: string;
+  observaciones: string;
+}
+
+/**
+ * Vista unificada de un propietario/inquilino.
+ * `id` corresponde al id en la tabla específica (propietarios.id o inquilinos.id),
+ * que es lo que referencian propiedades.propietario_id y contratos.*_id.
+ * `persona_id` apunta a personas.id (datos básicos compartidos).
+ */
+export interface Propietario extends PersonaBase {
+  persona_id: string;
   banco: string;
   cbu: string;
-  garante: string;
-  garante_telefono: string;
-  observaciones: string;
+  alias_cbu: string;
+  condicion_iva: string;
+  observaciones_fiscales: string;
   roles: RolPersona[];
 }
 
-// Backwards-compat aliases — the rest of the app keeps working unchanged.
-export type Propietario = Persona;
-export type Inquilino = Persona;
+export interface Inquilino extends PersonaBase {
+  persona_id: string;
+  garante_nombre: string;
+  garante_telefono: string;
+  garante_dni: string;
+  ocupacion: string;
+  ingresos_declarados: number;
+  observaciones_inquilino: string;
+  // Compat: algunos lugares leen .garante / .garante_telefono
+  garante: string;
+  roles: RolPersona[];
+}
+
+/** Alias retro-compatible: muchas pantallas tipan como Persona. */
+export type Persona = Propietario | Inquilino;
 
 export interface Propiedad {
   id: string;
   direccion: string;
   unidad: string;
   tipo: string;
-  propietario_id: string | null;
+  propietario_id: string | null; // -> propietarios.id
   estado: string;
   contrato_activo_id: string | null;
   metros: number;
@@ -44,8 +68,8 @@ export interface Contrato {
   id: string;
   codigo: string;
   propiedad_id: string | null;
-  propietario_id: string | null;
-  inquilino_id: string | null;
+  propietario_id: string | null; // -> propietarios.id
+  inquilino_id: string | null;   // -> inquilinos.id
   fecha_inicio: string;
   fecha_fin: string;
   estado: string;
@@ -116,78 +140,205 @@ export interface EventoContrato {
   created_at: string;
 }
 
-// ─── Personas (unified contacts) ──────────────────────────
+// ─── Personas + roles (mappers compartidos) ────────────────
 
-async function fetchPersonas(rolFilter?: RolPersona): Promise<Persona[]> {
-  const { data: personasData, error } = await supabase
-    .from('personas')
-    .select('*, personas_roles(rol)')
-    .order('nombre');
-  if (error) throw error;
-  const mapped = (personasData ?? []).map((p: any) => ({
+function mapPersonaBase(p: any): PersonaBase {
+  return {
     id: p.id,
-    nombre: p.nombre,
-    dni: p.dni,
-    cuit: p.cuit,
-    email: p.email,
-    telefono: p.telefono,
-    direccion: p.direccion,
-    banco: p.banco,
-    cbu: p.cbu,
-    garante: p.garante,
-    garante_telefono: p.garante_telefono,
-    observaciones: p.observaciones,
-    roles: (p.personas_roles ?? []).map((r: any) => r.rol as RolPersona),
-  })) as Persona[];
-  return rolFilter ? mapped.filter(p => p.roles.includes(rolFilter)) : mapped;
+    nombre: p.nombre ?? '',
+    dni: p.dni ?? '',
+    cuit: p.cuit ?? '',
+    email: p.email ?? '',
+    telefono: p.telefono ?? '',
+    direccion: p.direccion ?? '',
+    observaciones: p.observaciones ?? '',
+  };
 }
 
-async function fetchPersonaById(id: string): Promise<Persona | null> {
+async function fetchRolesPersona(personaId: string): Promise<RolPersona[]> {
   const { data, error } = await supabase
-    .from('personas')
-    .select('*, personas_roles(rol)')
+    .from('personas_roles')
+    .select('rol')
+    .eq('persona_id', personaId);
+  if (error) throw error;
+  return (data ?? []).map((r: any) => r.rol as RolPersona);
+}
+
+// ─── Propietarios ──────────────────────────────────────────
+
+async function fetchPropietarios(): Promise<Propietario[]> {
+  const { data, error } = await (supabase as any)
+    .from('propietarios')
+    .select('*, personas:persona_id(*, personas_roles(rol))');
+  if (error) throw error;
+  return (data ?? []).map((row: any): Propietario => {
+    const base = mapPersonaBase(row.personas ?? {});
+    return {
+      ...base,
+      id: row.id,
+      persona_id: row.persona_id,
+      banco: row.banco ?? '',
+      cbu: row.cbu ?? '',
+      alias_cbu: row.alias_cbu ?? '',
+      condicion_iva: row.condicion_iva ?? '',
+      observaciones_fiscales: row.observaciones_fiscales ?? '',
+      roles: ((row.personas?.personas_roles ?? []) as any[]).map(r => r.rol as RolPersona),
+    };
+  }).sort((a: Propietario, b: Propietario) => a.nombre.localeCompare(b.nombre));
+}
+
+async function fetchPropietarioById(id: string): Promise<Propietario | null> {
+  const { data, error } = await (supabase as any)
+    .from('propietarios')
+    .select('*, personas:persona_id(*, personas_roles(rol))')
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
-  const p: any = data;
+  const base = mapPersonaBase(data.personas ?? {});
   return {
-    id: p.id,
-    nombre: p.nombre,
-    dni: p.dni,
-    cuit: p.cuit,
-    email: p.email,
-    telefono: p.telefono,
-    direccion: p.direccion,
-    banco: p.banco,
-    cbu: p.cbu,
-    garante: p.garante,
-    garante_telefono: p.garante_telefono,
-    observaciones: p.observaciones,
-    roles: (p.personas_roles ?? []).map((r: any) => r.rol as RolPersona),
+    ...base,
+    id: data.id,
+    persona_id: data.persona_id,
+    banco: data.banco ?? '',
+    cbu: data.cbu ?? '',
+    alias_cbu: data.alias_cbu ?? '',
+    condicion_iva: data.condicion_iva ?? '',
+    observaciones_fiscales: data.observaciones_fiscales ?? '',
+    roles: ((data.personas?.personas_roles ?? []) as any[]).map(r => r.rol as RolPersona),
   };
 }
 
-export function usePersonas(rol?: RolPersona) {
-  return useQuery({
-    queryKey: ['personas', rol ?? 'all'],
-    queryFn: () => fetchPersonas(rol),
-  });
+export function usePropietarios() {
+  return useQuery({ queryKey: ['propietarios'], queryFn: fetchPropietarios });
 }
 
-export function usePersona(id: string) {
+export function usePropietario(id: string) {
   return useQuery({
-    queryKey: ['personas', 'one', id],
-    queryFn: () => fetchPersonaById(id),
+    queryKey: ['propietarios', id],
+    queryFn: () => fetchPropietarioById(id),
     enabled: !!id,
   });
 }
 
-// Backwards-compat aliases — preserve existing API used across the app.
-export const usePropietarios = () => usePersonas('propietario');
-export const usePropietario = (id: string) => usePersona(id);
-export const useInquilinos = () => usePersonas('inquilino');
-export const useInquilino = (id: string) => usePersona(id);
+// ─── Inquilinos ────────────────────────────────────────────
+
+async function fetchInquilinos(): Promise<Inquilino[]> {
+  const { data, error } = await (supabase as any)
+    .from('inquilinos')
+    .select('*, personas:persona_id(*, personas_roles(rol))');
+  if (error) throw error;
+  return (data ?? []).map((row: any): Inquilino => {
+    const base = mapPersonaBase(row.personas ?? {});
+    return {
+      ...base,
+      id: row.id,
+      persona_id: row.persona_id,
+      garante_nombre: row.garante_nombre ?? '',
+      garante_telefono: row.garante_telefono ?? '',
+      garante_dni: row.garante_dni ?? '',
+      ocupacion: row.ocupacion ?? '',
+      ingresos_declarados: Number(row.ingresos_declarados ?? 0),
+      observaciones_inquilino: row.observaciones_inquilino ?? '',
+      garante: row.garante_nombre ?? '',
+      roles: ((row.personas?.personas_roles ?? []) as any[]).map(r => r.rol as RolPersona),
+    };
+  }).sort((a: Inquilino, b: Inquilino) => a.nombre.localeCompare(b.nombre));
+}
+
+async function fetchInquilinoById(id: string): Promise<Inquilino | null> {
+  const { data, error } = await (supabase as any)
+    .from('inquilinos')
+    .select('*, personas:persona_id(*, personas_roles(rol))')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const base = mapPersonaBase(data.personas ?? {});
+  return {
+    ...base,
+    id: data.id,
+    persona_id: data.persona_id,
+    garante_nombre: data.garante_nombre ?? '',
+    garante_telefono: data.garante_telefono ?? '',
+    garante_dni: data.garante_dni ?? '',
+    ocupacion: data.ocupacion ?? '',
+    ingresos_declarados: Number(data.ingresos_declarados ?? 0),
+    observaciones_inquilino: data.observaciones_inquilino ?? '',
+    garante: data.garante_nombre ?? '',
+    roles: ((data.personas?.personas_roles ?? []) as any[]).map(r => r.rol as RolPersona),
+  };
+}
+
+export function useInquilinos() {
+  return useQuery({ queryKey: ['inquilinos'], queryFn: fetchInquilinos });
+}
+
+export function useInquilino(id: string) {
+  return useQuery({
+    queryKey: ['inquilinos', id],
+    queryFn: () => fetchInquilinoById(id),
+    enabled: !!id,
+  });
+}
+
+// ─── Personal del staff (usuarios del sistema) ────────────
+// Personas vinculadas a un usuario auth (user_id no nulo).
+export function usePersonalUsuarios() {
+  return useQuery({
+    queryKey: ['personas', 'personal'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('personas')
+        .select('*, user_roles:user_id!inner(role)')
+        .not('user_id', 'is', null)
+        .order('nombre');
+      if (error) {
+        // Fallback: si el join falla por relación inexistente, listamos solo con user_id.
+        const { data: data2, error: e2 } = await (supabase as any)
+          .from('personas')
+          .select('*')
+          .not('user_id', 'is', null)
+          .order('nombre');
+        if (e2) throw e2;
+        return (data2 ?? []).map((p: any) => ({
+          ...mapPersonaBase(p),
+          user_id: p.user_id,
+          roles: [] as string[],
+        }));
+      }
+      return (data ?? []).map((p: any) => ({
+        ...mapPersonaBase(p),
+        user_id: p.user_id,
+        roles: (Array.isArray(p.user_roles) ? p.user_roles : [p.user_roles])
+          .filter(Boolean)
+          .map((r: any) => r.role as string),
+      }));
+    },
+  });
+}
+
+// Compat genérico — algunas pantallas usan un único hook por id de persona.
+export function usePersona(id: string) {
+  return useQuery({
+    queryKey: ['personas', 'one', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('personas')
+        .select('*, personas_roles(rol)')
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      const p: any = data;
+      return {
+        ...mapPersonaBase(p),
+        roles: (p.personas_roles ?? []).map((r: any) => r.rol as RolPersona),
+      };
+    },
+    enabled: !!id,
+  });
+}
 
 export function usePropiedades() {
   return useQuery({
@@ -320,7 +471,6 @@ export function useEventosPorPeriodo(contratoId: string, periodo: string) {
         .or(`periodo.eq.${periodo},fecha.gte.${periodo}-01,fecha.lte.${periodo}-31`)
         .order('fecha', { ascending: true });
       if (error) throw error;
-      // Filter client-side for accurate period matching
       return (data as EventoContrato[]).filter(e =>
         e.periodo === periodo || (e.fecha >= `${periodo}-01` && e.fecha <= `${periodo}-31`)
       );
@@ -376,13 +526,11 @@ export function formatDate(dateStr: string): string {
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-// Lookup helpers for use with already-fetched arrays
 export function findById<T extends { id: string }>(arr: T[] | undefined, id: string | null): T | undefined {
   if (!arr || !id) return undefined;
   return arr.find(item => item.id === id);
 }
 
-// Monthly evolution static data (kept for charts until we compute from DB)
 export const evolucionMensual = [
   { mes: 'Oct 2024', cobrado: 1850000, pendiente: 120000, comision: 185000 },
   { mes: 'Nov 2024', cobrado: 1920000, pendiente: 95000, comision: 192000 },

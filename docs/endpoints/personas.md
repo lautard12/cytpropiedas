@@ -1,146 +1,144 @@
-# Endpoints — Personas (Propietarios, Inquilinos, Garantes)
+# Endpoints — Personas, Propietarios, Inquilinos
+
+A partir de la separación en tablas específicas, las pantallas de **Propietarios** e **Inquilinos** consumen sus propias tablas (con join a `personas` para los datos básicos), y `personas` queda como maestro común.
 
 Pantallas: `/propietarios`, `/propietarios/:id`, `/inquilinos`, `/inquilinos/:id`.
-Hook principal: `useSupabaseData.ts` + `usePersonaMutations.ts`.
+Hooks: `useSupabaseData.ts`, `usePersonaMutations.ts`.
 
 ---
 
-## 1. Listar personas por rol
+## Modelo
+
+```
+personas (id, nombre, dni, cuit, email, telefono, direccion, observaciones, user_id, sucursal_id)
+   │ 1
+   ├──── propietarios (id, persona_id*UNIQUE, banco, cbu, alias_cbu, condicion_iva, observaciones_fiscales)
+   └──── inquilinos   (id, persona_id*UNIQUE, garante_nombre, garante_telefono, garante_dni, ocupacion, ingresos_declarados, observaciones_inquilino)
+```
+
+`propiedades.propietario_id → propietarios.id`
+`contratos.propietario_id → propietarios.id`
+`contratos.inquilino_id → inquilinos.id`
+
+`personas_roles` se sincroniza por trigger cuando se insertan/eliminan filas en `propietarios` o `inquilinos`.
+
+---
+
+## 1. Listar propietarios
 
 **Hook**
 ```ts
-usePersonas(rol?: RolPersona): UseQueryResult<Persona[]>
-// Aliases:
-usePropietarios()  // = usePersonas('propietario')
-useInquilinos()    // = usePersonas('inquilino')
+usePropietarios(): UseQueryResult<Propietario[]>
 ```
 
-**HTTP equivalente**
+**HTTP**
 ```
-GET /rest/v1/personas?select=*,personas_roles(rol)&order=nombre.asc
+GET /rest/v1/propietarios?select=*,personas:persona_id(*,personas_roles(rol))
 ```
-Filtrado por rol se hace en cliente.
 
 **Respuesta** `200 OK`
 ```jsonc
 [{
-  "id": "uuid", "nombre": "Juan Pérez", "dni": "12.345.678", "cuit": "20-...",
-  "email": "juan@x.com", "telefono": "+54...", "direccion": "...",
-  "banco": "Galicia", "cbu": "00701...", "garante": "", "garante_telefono": "",
-  "observaciones": "", "personas_roles": [{ "rol": "propietario" }]
+  "id": "uuid (propietarios.id)",
+  "persona_id": "uuid (personas.id)",
+  "nombre": "Juan Pérez",
+  "dni": "12.345.678",
+  "cuit": "20-...",
+  "email": "juan@x.com",
+  "telefono": "+54...",
+  "direccion": "...",
+  "observaciones": "",
+  "banco": "Galicia",
+  "cbu": "00701...",
+  "alias_cbu": "juan.perez",
+  "condicion_iva": "Monotributo",
+  "observaciones_fiscales": "",
+  "roles": ["propietario"]
 }]
 ```
 
----
+## 2. Listar inquilinos
 
-## 2. Detalle de persona
+**Hook**: `useInquilinos()`
 
-**Hook**
+```
+GET /rest/v1/inquilinos?select=*,personas:persona_id(*,personas_roles(rol))
+```
+
+Devuelve además: `garante_nombre`, `garante_telefono`, `garante_dni`, `ocupacion`, `ingresos_declarados`, `observaciones_inquilino`.
+
+## 3. Detalle
+
 ```ts
-usePersona(id: string): UseQueryResult<Persona | null>
+usePropietario(id): UseQueryResult<Propietario | null>
+useInquilino(id):   UseQueryResult<Inquilino | null>
 ```
 
-**HTTP**
-```
-GET /rest/v1/personas?id=eq.{id}&select=*,personas_roles(rol)
-```
+`id` corresponde a `propietarios.id` / `inquilinos.id`.
 
----
+## 4. Búsqueda de duplicado por identidad
 
-## 3. Buscar duplicado por identidad
-
-**Helper** (no hook React)
 ```ts
-findPersonaByIdentity(values: { dni; cuit; email }):
-  Promise<(Persona & { roles: RolPersona[] }) | null>
+findPersonaByIdentity({ dni, cuit, email }):
+  Promise<{ id, nombre, roles, propietario_id?, inquilino_id? } | null>
 ```
 
-**HTTP**
 ```
 GET /rest/v1/personas?or=(dni.eq.X,cuit.eq.Y,email.eq.z@x.com)
-    &select=*,personas_roles(rol)&limit=1
+    &select=id,nombre,personas_roles(rol),propietarios(id),inquilinos(id)&limit=1
 ```
 
-Usado por `PersonaFormDialog` antes de crear, para sugerir agregar rol en lugar de
-duplicar.
+`id` aquí es **personas.id** (no del rol), porque la búsqueda detecta a la persona base.
 
----
+## 5. Crear o editar propietario
 
-## 4. Crear persona con rol inicial
-
-**Hook**
+**RPC atómico**
 ```ts
-useCreatePersona().mutate({ values: PersonaFormValues, rol: RolPersona })
-// Devuelve el id creado.
-```
-
-**HTTP** (2 requests en transacción cliente)
-```
-POST /rest/v1/personas
-Body: { nombre, dni, cuit, email, telefono, direccion, banco, cbu,
-        garante, garante_telefono, observaciones }
-
-POST /rest/v1/personas_roles
-Body: { persona_id, rol }
-```
-
-**Errores**
-- `409` si email/dni viola un UNIQUE futuro → el frontend debe llamar antes a
-  `findPersonaByIdentity`.
-
----
-
-## 5. Editar persona
-
-**Hook**
-```ts
-useUpdatePersona().mutate({ id: string, values: PersonaFormValues })
+useUpsertPropietario().mutateAsync({ personaId: string|null, values: PropietarioValues })
+// Devuelve propietarios.id
 ```
 
 **HTTP**
 ```
-PATCH /rest/v1/personas?id=eq.{id}
-Body: { ...values }
+POST /rest/v1/rpc/upsert_propietario
+Body: {
+  _persona_id: null | "uuid",
+  _nombre, _dni, _cuit, _email, _telefono, _direccion, _observaciones,
+  _banco, _cbu, _alias_cbu, _condicion_iva, _observaciones_fiscales
+}
 ```
 
----
+Si `_persona_id` es null, crea la persona; si no, actualiza esa persona y reutiliza/upsertea `propietarios`.
 
-## 6. Agregar un rol a persona existente
+## 6. Crear o editar inquilino
 
-**Hook**
 ```ts
-useAddRolToPersona().mutate({ personaId: string, rol: RolPersona })
+useUpsertInquilino().mutateAsync({ personaId: string|null, values: InquilinoValues })
 ```
 
-**HTTP**
 ```
-POST /rest/v1/personas_roles
-Body: { persona_id, rol }
+POST /rest/v1/rpc/upsert_inquilino
+Body: {
+  _persona_id, _nombre, _dni, _cuit, _email, _telefono, _direccion, _observaciones,
+  _garante_nombre, _garante_telefono, _garante_dni,
+  _ocupacion, _ingresos_declarados, _observaciones_inquilino
+}
 ```
 
-`UNIQUE(persona_id, rol)` evita duplicados → `409` ⇒ ignorar.
+## 7. Eliminar propietario / inquilino
 
----
-
-## 7. Quitar rol o eliminar persona
-
-**Hook**
 ```ts
-useRemoveRolOrDeletePersona().mutate({ personaId, rol })
+useDeletePropietario().mutateAsync({ propietarioId, personaId })
+useDeleteInquilino().mutateAsync({ inquilinoId, personaId })
 ```
-Lógica:
-1. Lee roles actuales.
-2. Si la persona tiene **un solo rol**, elimina la persona (cascada borra `personas_roles`).
-3. Si tiene varios, borra solo la fila de `personas_roles` correspondiente.
 
-**HTTP**
 ```
-GET    /rest/v1/personas_roles?persona_id=eq.{id}
-DELETE /rest/v1/personas?id=eq.{id}                  // último rol
-DELETE /rest/v1/personas_roles?id=eq.{rolRowId}      // rol adicional
+DELETE /rest/v1/propietarios?id=eq.{propietarioId}
+DELETE /rest/v1/inquilinos?id=eq.{inquilinoId}
 ```
+
+El trigger `sync_personas_roles` borra automáticamente la fila correspondiente en `personas_roles`. Si la persona no queda referenciada en ninguna otra tabla de rol, el front la elimina luego de `personas`.
 
 **Validación previa (frontend)**:
-- Si `rol = 'propietario'` ⇒ no debe haber `propiedades.propietario_id = id`
-  ni contratos activos vinculados.
-- Si `rol = 'inquilino'` ⇒ no debe haber `contratos.inquilino_id = id` activos.
+- Propietarios: bloquear si hay `propiedades.propietario_id = id` o `contratos.propietario_id = id`.
+- Inquilinos: bloquear si hay `contratos.inquilino_id = id` activos.

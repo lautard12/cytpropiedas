@@ -2,14 +2,16 @@
 
 ## Visión general
 
-8 tablas + 5 enums.
+10 tablas + 5 enums.
 
 | Tabla | Propósito |
 |---|---|
-| `personas` | Maestro único de personas físicas/jurídicas |
-| `personas_roles` | Roles que cumple una persona (propietario / inquilino / garante) |
-| `propiedades` | Unidades inmuebles administradas |
-| `contratos` | Vínculo propiedad ↔ propietario ↔ inquilino con reglas comerciales |
+| `personas` | Maestro único de personas físicas/jurídicas — **datos básicos personales** |
+| `propietarios` | Datos específicos de quien es propietario (banco, CBU, condición IVA…) — 1-a-1 con personas |
+| `inquilinos` | Datos específicos de quien es inquilino (garante, ocupación, ingresos…) — 1-a-1 con personas |
+| `personas_roles` | Índice rápido de roles por persona (propietario / inquilino / garante). Se sincroniza automáticamente vía trigger con `propietarios` e `inquilinos`. |
+| `propiedades` | Unidades inmuebles administradas. `propietario_id` → `propietarios.id`. |
+| `contratos` | Vínculo propiedad ↔ propietario ↔ inquilino. `propietario_id` → `propietarios.id`, `inquilino_id` → `inquilinos.id`. |
 | `liquidaciones` | Cuenta mensual emitida sobre un contrato |
 | `conceptos_liquidacion` | Líneas (alquiler, expensas, ABL, ajustes...) |
 | `pagos` | Cobros parciales o totales aplicados a una liquidación |
@@ -30,6 +32,8 @@ CREATE TYPE medio_pago AS ENUM ('Transferencia','Efectivo','Cheque','Mercado Pag
 ## Detalle por entidad
 
 ### `personas`
+**Solo datos básicos** comunes a cualquier persona en el sistema.
+
 | Columna | Tipo | Notas |
 |---|---|---|
 | id | uuid PK | `gen_random_uuid()` |
@@ -38,17 +42,44 @@ CREATE TYPE medio_pago AS ENUM ('Transferencia','Efectivo','Cheque','Mercado Pag
 | cuit | text | candidato a único |
 | email | text | normalizado a minúsculas |
 | telefono, direccion | text | |
-| banco, cbu | text | datos para rendición al propietario |
-| garante, garante_telefono | text | datos heredados (rol garante se modela aparte) |
 | observaciones | text | |
+| user_id | uuid → auth.users | si la persona también es usuario del sistema |
+| sucursal_id | uuid → sucursales | sucursal donde opera (para staff) |
 | created_at, updated_at | timestamptz | trigger `set_updated_at` |
 
 **Reglas:**
 - Detección de duplicados: al crear se busca por `dni`, `cuit` o `email` no vacíos. Si
-  existe, se ofrece **agregar el rol** en vez de duplicar la persona.
-- Eliminar requiere validar que no haya contratos / propiedades activas vinculadas.
+  existe, se ofrece **agregar el rol** sin duplicar la persona.
+- La eliminación de la última fila en `propietarios`/`inquilinos` borra la persona si no quedan otros vínculos (lógica del front).
+
+### `propietarios` (1-a-1 con `personas`)
+| Columna | Tipo | Notas |
+|---|---|---|
+| id | uuid PK | usado por `propiedades.propietario_id` y `contratos.propietario_id` |
+| persona_id | uuid UNIQUE → personas | `ON DELETE CASCADE` |
+| banco | text | banco para rendición |
+| cbu | text | CBU para transferencias |
+| alias_cbu | text | alias bancario |
+| condicion_iva | text | "Consumidor Final", "Monotributo", "Responsable Inscripto"… (default: Consumidor Final) |
+| observaciones_fiscales | text | |
+| created_at, updated_at | timestamptz | |
+
+### `inquilinos` (1-a-1 con `personas`)
+| Columna | Tipo | Notas |
+|---|---|---|
+| id | uuid PK | usado por `contratos.inquilino_id` |
+| persona_id | uuid UNIQUE → personas | `ON DELETE CASCADE` |
+| garante_nombre | text | |
+| garante_telefono | text | |
+| garante_dni | text | |
+| ocupacion | text | |
+| ingresos_declarados | numeric | |
+| observaciones_inquilino | text | |
+| created_at, updated_at | timestamptz | |
 
 ### `personas_roles`
+Índice rápido de roles. **Se sincroniza automáticamente** vía trigger `sync_personas_roles` cuando se inserta/elimina en `propietarios` o `inquilinos`. El rol `garante` se administra manualmente.
+
 | Columna | Tipo | Notas |
 |---|---|---|
 | id | uuid PK | |
@@ -57,6 +88,13 @@ CREATE TYPE medio_pago AS ENUM ('Transferencia','Efectivo','Cheque','Mercado Pag
 | created_at | timestamptz | |
 
 `UNIQUE(persona_id, rol)`.
+
+## Funciones RPC
+
+- **`upsert_propietario(_persona_id, ...)`**: crea o actualiza atómicamente `personas` + `propietarios`. Si `_persona_id` es null, crea ambas. Devuelve `propietarios.id`.
+- **`upsert_inquilino(_persona_id, ...)`**: análogo para `inquilinos`.
+
+
 
 ### `propiedades`
 | Columna | Tipo | Notas |

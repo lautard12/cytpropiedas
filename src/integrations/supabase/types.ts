@@ -169,7 +169,7 @@ export type Database = {
             foreignKeyName: "contratos_inquilino_id_fkey"
             columns: ["inquilino_id"]
             isOneToOne: false
-            referencedRelation: "personas"
+            referencedRelation: "inquilinos"
             referencedColumns: ["id"]
           },
           {
@@ -183,7 +183,7 @@ export type Database = {
             foreignKeyName: "contratos_propietario_id_fkey"
             columns: ["propietario_id"]
             isOneToOne: false
-            referencedRelation: "personas"
+            referencedRelation: "propietarios"
             referencedColumns: ["id"]
           },
         ]
@@ -241,6 +241,53 @@ export type Database = {
             columns: ["liquidacion_id"]
             isOneToOne: false
             referencedRelation: "liquidaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inquilinos: {
+        Row: {
+          created_at: string
+          garante_dni: string
+          garante_nombre: string
+          garante_telefono: string
+          id: string
+          ingresos_declarados: number
+          observaciones_inquilino: string
+          ocupacion: string
+          persona_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          garante_dni?: string
+          garante_nombre?: string
+          garante_telefono?: string
+          id?: string
+          ingresos_declarados?: number
+          observaciones_inquilino?: string
+          ocupacion?: string
+          persona_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          garante_dni?: string
+          garante_nombre?: string
+          garante_telefono?: string
+          id?: string
+          ingresos_declarados?: number
+          observaciones_inquilino?: string
+          ocupacion?: string
+          persona_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inquilinos_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: true
+            referencedRelation: "personas"
             referencedColumns: ["id"]
           },
         ]
@@ -405,15 +452,11 @@ export type Database = {
       }
       personas: {
         Row: {
-          banco: string
-          cbu: string
           created_at: string
           cuit: string
           direccion: string
           dni: string
           email: string
-          garante: string
-          garante_telefono: string
           id: string
           nombre: string
           observaciones: string
@@ -423,15 +466,11 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
-          banco?: string
-          cbu?: string
           created_at?: string
           cuit?: string
           direccion?: string
           dni?: string
           email?: string
-          garante?: string
-          garante_telefono?: string
           id?: string
           nombre: string
           observaciones?: string
@@ -441,15 +480,11 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
-          banco?: string
-          cbu?: string
           created_at?: string
           cuit?: string
           direccion?: string
           dni?: string
           email?: string
-          garante?: string
-          garante_telefono?: string
           id?: string
           nombre?: string
           observaciones?: string
@@ -558,6 +593,50 @@ export type Database = {
             foreignKeyName: "propiedades_propietario_id_fkey"
             columns: ["propietario_id"]
             isOneToOne: false
+            referencedRelation: "propietarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      propietarios: {
+        Row: {
+          alias_cbu: string
+          banco: string
+          cbu: string
+          condicion_iva: string
+          created_at: string
+          id: string
+          observaciones_fiscales: string
+          persona_id: string
+          updated_at: string
+        }
+        Insert: {
+          alias_cbu?: string
+          banco?: string
+          cbu?: string
+          condicion_iva?: string
+          created_at?: string
+          id?: string
+          observaciones_fiscales?: string
+          persona_id: string
+          updated_at?: string
+        }
+        Update: {
+          alias_cbu?: string
+          banco?: string
+          cbu?: string
+          condicion_iva?: string
+          created_at?: string
+          id?: string
+          observaciones_fiscales?: string
+          persona_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "propietarios_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: true
             referencedRelation: "personas"
             referencedColumns: ["id"]
           },
@@ -654,6 +733,43 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      upsert_inquilino: {
+        Args: {
+          _cuit: string
+          _direccion: string
+          _dni: string
+          _email: string
+          _garante_dni: string
+          _garante_nombre: string
+          _garante_telefono: string
+          _ingresos_declarados: number
+          _nombre: string
+          _observaciones: string
+          _observaciones_inquilino: string
+          _ocupacion: string
+          _persona_id: string
+          _telefono: string
+        }
+        Returns: string
+      }
+      upsert_propietario: {
+        Args: {
+          _alias_cbu: string
+          _banco: string
+          _cbu: string
+          _condicion_iva: string
+          _cuit: string
+          _direccion: string
+          _dni: string
+          _email: string
+          _nombre: string
+          _observaciones: string
+          _observaciones_fiscales: string
+          _persona_id: string
+          _telefono: string
+        }
+        Returns: string
       }
     }
     Enums: {

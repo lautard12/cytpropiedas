@@ -8,9 +8,11 @@ mismo tiempo. Si se cargan dos veces, se rompen reportes, totalizadores y la
 trazabilidad por persona.
 
 ## Solución
-**Una sola tabla `personas`**, varios roles posibles vía `personas_roles`.
-Antes de crear un nuevo registro, el frontend busca duplicados por **DNI**, **CUIT**
-o **email**.
+**Una sola tabla `personas`** con datos básicos, y dos tablas específicas
+(`propietarios`, `inquilinos`) en relación 1-a-1. Antes de crear un nuevo
+registro, el frontend busca duplicados por **DNI**, **CUIT** o **email** sobre
+`personas`. Si la persona ya existe, se reutiliza su `persona_id` y se inserta
+solo la fila del rol nuevo (vía `upsert_propietario` / `upsert_inquilino`).
 
 ## Pasos
 
