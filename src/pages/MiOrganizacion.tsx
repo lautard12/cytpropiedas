@@ -30,7 +30,33 @@ export default function MiOrganizacion() {
   const [form, setForm] = useState({ nombre: '', cuit: '', direccion: '', telefono: '', email: '', logo_url: '', fecha_baja: '' });
   const [sucDialog, setSucDialog] = useState<{ open: boolean; sucursal?: Sucursal }>({ open: false });
   const [personalDialog, setPersonalDialog] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
+  const handleLogoUpload = async (file: File) => {
+    if (!org) return;
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Archivo inválido', description: 'Subí una imagen (PNG, JPG o SVG).', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: 'Imagen muy grande', description: 'El logo debe pesar menos de 2 MB.', variant: 'destructive' });
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const ext = file.name.split('.').pop() ?? 'png';
+      const path = `logos/${org.id}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('org-assets').upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('org-assets').getPublicUrl(path);
+      setForm(f => ({ ...f, logo_url: pub.publicUrl }));
+      toast({ title: 'Logo subido', description: 'No olvides guardar los cambios.' });
+    } catch (e: any) {
+      toast({ title: 'Error al subir', description: e.message, variant: 'destructive' });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
   useEffect(() => {
     if (org) setForm({
       nombre: org.nombre, cuit: org.cuit, direccion: org.direccion,
