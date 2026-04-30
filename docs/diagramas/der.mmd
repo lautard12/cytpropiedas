@@ -1,4 +1,11 @@
 erDiagram
+    USUARIOS ||--o{ USER_ROLES : "tiene"
+    ROLES ||--o{ USER_ROLES : "asignado a"
+    USUARIOS ||--o| PERSONAS : "vinculado a (1:1 opcional)"
+    SUCURSALES ||--o{ PERSONAS : "ubica"
+    SUCURSALES ||--o{ USER_ROLES : "scope opcional"
+    ORGANIZACION ||--o{ SUCURSALES : "contiene"
+    USUARIOS ||--o{ AUDITORIA : "ejecuta"
     PERSONAS ||--o{ PERSONAS_ROLES : "tiene roles"
     PERSONAS ||--o| PROPIETARIOS : "es propietario"
     PERSONAS ||--o| INQUILINOS : "es inquilino"
