@@ -21,6 +21,7 @@ CREATE TABLE public.usuarios (
   email text NOT NULL,
   nombre text NOT NULL DEFAULT '',
   activo boolean NOT NULL DEFAULT true,
+  persona_id uuid UNIQUE REFERENCES public.personas(id) ON DELETE SET NULL,  -- vínculo 1:1 (opcional)
   ultimo_login timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
