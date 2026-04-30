@@ -13,6 +13,38 @@ CREATE TYPE estado_pago       AS ENUM ('Pendiente','Confirmado','Anulado');
 CREATE TYPE medio_pago        AS ENUM ('Transferencia','Efectivo','Cheque','Mercado Pago','Débito automático');
 CREATE TYPE app_role          AS ENUM ('admin','administrativo');
 
+-- ───────── usuarios (espejo público de auth.users) ─────────
+CREATE TABLE public.usuarios (
+  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email text NOT NULL,
+  nombre text NOT NULL DEFAULT '',
+  activo boolean NOT NULL DEFAULT true,
+  ultimo_login timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX usuarios_email_uidx ON public.usuarios (lower(email));
+
+-- ───────── roles (catálogo) ─────────
+CREATE TABLE public.roles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  codigo app_role NOT NULL UNIQUE,
+  nombre text NOT NULL,
+  descripcion text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- ───────── user_roles (N:M usuarios ↔ roles) ─────────
+CREATE TABLE public.user_roles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+  role_id uuid NOT NULL REFERENCES public.roles(id) ON DELETE RESTRICT,
+  role app_role NOT NULL,                              -- denormalizado, sincronizado por trigger (compat has_role)
+  sucursal_id uuid REFERENCES public.sucursales(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(user_id, role_id)
+);
+
 -- ───────── personas (datos básicos) ─────────
 CREATE TABLE public.personas (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
