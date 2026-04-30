@@ -18,17 +18,20 @@ liquidaciones mensuales y cobranzas.
 - [`db/triggers.sql`](./db/triggers.sql) — Triggers, funciones y políticas RLS.
 - [`db/seed.sql`](./db/seed.sql) — Datos de ejemplo opcionales.
 
-### 3. API / Endpoints (firmas por pantalla)
+### 3. Auth, organización y auditoría
+- [`10-auth-y-organizacion.md`](./10-auth-y-organizacion.md) — Usuarios, roles (`admin`/`administrativo`), `personal` con alta/baja, organización, sucursales y auditoría.
+
+### 4. API / Endpoints (firmas por pantalla)
 - [`endpoints/README.md`](./endpoints/README.md) — Convenciones y autenticación.
-- [`endpoints/personas.md`](./endpoints/personas.md) — Propietarios, inquilinos, garantes.
+- [`endpoints/personas.md`](./endpoints/personas.md) — Propietarios, inquilinos y personal del staff.
 - [`endpoints/propiedades.md`](./endpoints/propiedades.md)
 - [`endpoints/contratos.md`](./endpoints/contratos.md)
 - [`endpoints/liquidaciones.md`](./endpoints/liquidaciones.md)
-- [`endpoints/pagos.md`](./endpoints/pagos.md)
+- [`endpoints/pagos.md`](./endpoints/pagos.md) — Incluye RPC `anular_pago`.
 - [`endpoints/eventos.md`](./endpoints/eventos.md)
 - [`endpoints/dashboard-reportes.md`](./endpoints/dashboard-reportes.md)
 
-### 4. Flujos de negocio
+### 5. Flujos de negocio
 - [`flujos/01-alta-contrato.md`](./flujos/01-alta-contrato.md)
 - [`flujos/02-generacion-liquidacion.md`](./flujos/02-generacion-liquidacion.md)
 - [`flujos/03-cobranza-y-pagos.md`](./flujos/03-cobranza-y-pagos.md)
@@ -37,8 +40,8 @@ liquidaciones mensuales y cobranzas.
 - [`flujos/06-cierre-contrato.md`](./flujos/06-cierre-contrato.md)
 - [`flujos/07-deteccion-duplicados-personas.md`](./flujos/07-deteccion-duplicados-personas.md)
 
-### 5. Pantallas
+### 6. Pantallas
 - [`04-pantallas.md`](./04-pantallas.md) — Mapa de rutas, propósito, datos consumidos.
 
-### 6. Glosario
-- [`05-glosario.md`](./05-glosario.md) — TGI, API, ICL, comisión, neto propietario, etc.
+### 7. Glosario
+- [`05-glosario.md`](./05-glosario.md) — TGI, API, ICL, comisión, neto propietario, roles, personal, etc.
