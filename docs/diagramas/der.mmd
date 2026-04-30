@@ -55,6 +55,17 @@ erDiagram
         text observaciones_inquilino
     }
     %% PERSONAS_ROLES eliminada
+    PERSONAL {
+        uuid id PK
+        uuid persona_id FK
+        uuid sucursal_id FK
+        date fecha_alta
+        text causa_alta
+        date fecha_baja
+        text causa_baja
+        boolean activo
+        text observaciones
+    }
     PROPIEDADES {
         uuid id PK
         text direccion
