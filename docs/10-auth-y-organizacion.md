@@ -67,7 +67,28 @@ Roles iniciales: `admin` (Administrador), `administrativo` (Administrativo). Edi
 - `organizacion`: nombre, logo, CUIT, dirección, teléfono, email, fecha_alta, fecha_baja.
 - `sucursales`: pertenecen a la organización (FK explícita `organizacion_id`), con marca `es_central` y `activa`. Una "Central" se crea por seed.
 - ABM en `/mi-organizacion` (solo admin), tabs Datos / Sucursales / Personal.
-- "Personal" = usuarios con `persona_id` no nulo + rol de aplicación asignado. Alta integrada desde `PersonalFormDialog` (edge function `create-personal`).
+- "Personal" = usuarios con `persona_id` no nulo + rol de aplicación + **legajo** activo en la tabla `personal`. Alta integrada desde `PersonalFormDialog` (edge function `create-personal`, que crea auth user + persona + rol + legajo). Baja desde `PersonalBajaDialog` (cierra el legajo y desactiva el usuario).
+
+## Personal (legajo persona ↔ sucursal)
+
+Tabla `personal` que registra el ciclo laboral de una persona dentro de una sucursal.
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| id | uuid PK | |
+| persona_id | uuid → `personas(id)` | ON DELETE CASCADE — a quién pertenece el legajo |
+| sucursal_id | uuid → `sucursales(id)` | ON DELETE SET NULL — sucursal donde trabaja |
+| fecha_alta | date | por defecto `CURRENT_DATE` |
+| causa_alta | text | por defecto `'Alta Personal'` |
+| fecha_baja | date NULL | NULL = legajo activo |
+| causa_baja | text NULL | ej. `Renuncia`, `Despido`, `Jubilación`, `Fallecimiento`, `Fin de contrato` |
+| activo | boolean GENERATED | `fecha_baja IS NULL` (calculado) |
+| observaciones | text | |
+
+Reglas:
+- Índice único parcial garantiza **un solo legajo activo por persona**: una baja debe registrarse antes de un nuevo alta en otra sucursal.
+- RLS: SELECT abierto a autenticados; INSERT/UPDATE/DELETE solo `admin`.
+- La baja desde la UI también pone `usuarios.activo = false` para revocar el acceso lógico.
 
 ## Personas ↔ Usuarios
 
