@@ -1,4 +1,11 @@
 erDiagram
+    USUARIOS ||--o{ USER_ROLES : "tiene"
+    ROLES ||--o{ USER_ROLES : "asignado a"
+    USUARIOS ||--o| PERSONAS : "vinculado a (1:1 opcional)"
+    SUCURSALES ||--o{ PERSONAS : "ubica"
+    SUCURSALES ||--o{ USER_ROLES : "scope opcional"
+    ORGANIZACION ||--o{ SUCURSALES : "contiene"
+    USUARIOS ||--o{ AUDITORIA : "ejecuta"
     PERSONAS ||--o{ PERSONAS_ROLES : "tiene roles"
     PERSONAS ||--o| PROPIETARIOS : "es propietario"
     PERSONAS ||--o| INQUILINOS : "es inquilino"
@@ -131,4 +138,49 @@ erDiagram
         text descripcion
         numeric monto
         text documento_url
+    }
+    USUARIOS {
+        uuid id PK
+        text email
+        text nombre
+        boolean activo
+        timestamptz ultimo_login
+    }
+    ROLES {
+        uuid id PK
+        app_role codigo
+        text nombre
+        text descripcion
+    }
+    USER_ROLES {
+        uuid id PK
+        uuid user_id FK
+        uuid role_id FK
+        app_role role
+        uuid sucursal_id FK
+    }
+    ORGANIZACION {
+        uuid id PK
+        text nombre
+        text logo_url
+        text cuit
+        date fecha_alta
+        date fecha_baja
+    }
+    SUCURSALES {
+        uuid id PK
+        uuid organizacion_id FK
+        text nombre
+        boolean es_central
+        boolean activa
+    }
+    AUDITORIA {
+        uuid id PK
+        uuid user_id FK
+        text accion
+        text entidad
+        uuid entidad_id
+        jsonb datos_antes
+        jsonb datos_despues
+        numeric monto
     }

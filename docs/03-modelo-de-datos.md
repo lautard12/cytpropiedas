@@ -193,12 +193,14 @@ Ver [`diagramas/der.mmd`](./diagramas/der.mmd).
 Ver detalle completo en [`10-auth-y-organizacion.md`](./10-auth-y-organizacion.md).
 
 ### Nuevas tablas
-- `organizacion`, `sucursales` — datos de la inmobiliaria y sucursales.
-- `user_roles` — vincula `auth.users` con un rol de aplicación (`admin` / `administrativo`) y opcionalmente con una sucursal. Tabla separada para evitar escalación de privilegios.
-- `auditoria` — registro inmutable de cambios sensibles (RLS: solo admin lee, nadie modifica).
+- `organizacion`, `sucursales` (FK `organizacion_id`) — datos de la inmobiliaria.
+- **`usuarios`** — espejo público de `auth.users` (id, email, nombre, activo, ultimo_login). Se sincroniza con un trigger `on_auth_user_created`.
+- **`roles`** — catálogo de roles (`codigo app_role`, `nombre`, `descripcion`). Editable por admin.
+- **`user_roles`** — N:M entre `usuarios` y `roles`, con FKs explícitas y unicidad `(user_id, role_id)`. Conserva una columna `role` denormalizada (sincronizada por trigger) para que `has_role()` siga siendo SQL puro.
+- `auditoria` — registro inmutable de cambios sensibles (RLS: solo admin lee, nadie modifica). FK `user_id → usuarios(id)`.
 
 ### Cambios en tablas existentes
-- `personas`: `+ user_id uuid UNIQUE` (link a `auth.users`), `+ sucursal_id uuid`.
+- `personas`: `user_id uuid UNIQUE` ahora referencia **`usuarios(id)`** (no `auth.users`). Una persona ↔ un usuario, e independiente del rol. `sucursal_id` referencia `sucursales(id)`.
 - `propiedades`: `+ latitud numeric`, `+ longitud numeric`, `+ matricula_catastral text`.
 - Enum `rol_persona`: `+ 'personal'`.
 

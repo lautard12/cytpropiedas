@@ -54,7 +54,15 @@ export type Database = {
           user_email?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "auditoria_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       conceptos_liquidacion: {
         Row: {
@@ -501,6 +509,13 @@ export type Database = {
             referencedRelation: "sucursales"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "personas_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
         ]
       }
       personas_roles: {
@@ -642,6 +657,30 @@ export type Database = {
           },
         ]
       }
+      roles: {
+        Row: {
+          codigo: Database["public"]["Enums"]["app_role"]
+          created_at: string
+          descripcion: string
+          id: string
+          nombre: string
+        }
+        Insert: {
+          codigo: Database["public"]["Enums"]["app_role"]
+          created_at?: string
+          descripcion?: string
+          id?: string
+          nombre: string
+        }
+        Update: {
+          codigo?: Database["public"]["Enums"]["app_role"]
+          created_at?: string
+          descripcion?: string
+          id?: string
+          nombre?: string
+        }
+        Relationships: []
+      }
       sucursales: {
         Row: {
           activa: boolean
@@ -691,6 +730,7 @@ export type Database = {
           created_at: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
+          role_id: string
           sucursal_id: string | null
           user_id: string
         }
@@ -698,6 +738,7 @@ export type Database = {
           created_at?: string
           id?: string
           role: Database["public"]["Enums"]["app_role"]
+          role_id: string
           sucursal_id?: string | null
           user_id: string
         }
@@ -705,10 +746,18 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          role_id?: string
           sucursal_id?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "user_roles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_roles_sucursal_id_fkey"
             columns: ["sucursal_id"]
@@ -716,7 +765,44 @@ export type Database = {
             referencedRelation: "sucursales"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      usuarios: {
+        Row: {
+          activo: boolean
+          created_at: string
+          email: string
+          id: string
+          nombre: string
+          ultimo_login: string | null
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          email: string
+          id: string
+          nombre?: string
+          ultimo_login?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          email?: string
+          id?: string
+          nombre?: string
+          ultimo_login?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {

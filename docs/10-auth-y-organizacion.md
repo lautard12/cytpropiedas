@@ -14,20 +14,61 @@
 
 Lo crea idempotentemente la edge function `bootstrap-admin` en el primer arranque.
 
-## Roles de aplicación (`user_roles`)
+## Modelo de usuarios y roles (refactor estructural)
 
-Enum `app_role`: `admin`, `administrativo`. Tabla separada de `personas` para evitar escalación de privilegios. Helper SECURITY DEFINER `has_role(uid, role)` para uso en RLS.
+Tres tablas con relaciones explícitas mediante claves foráneas:
+
+```
+auth.users ─1:1─► usuarios ─N:M─► roles
+                     ▲
+                     │ 1:1 (opcional)
+                     │
+                  personas
+```
+
+### `usuarios` (espejo público de `auth.users`)
+| Columna | Tipo | Notas |
+|---|---|---|
+| id | uuid PK | FK a `auth.users(id)` ON DELETE CASCADE |
+| email | text | único (case-insensitive) |
+| nombre | text | nombre para mostrar |
+| activo | boolean | habilita/deshabilita el acceso lógico |
+| ultimo_login | timestamptz | uso futuro |
+| created_at, updated_at | timestamptz | |
+
+Trigger `on_auth_user_created` (sobre `auth.users`) crea automáticamente la fila en `usuarios` cuando alguien se registra.
+
+### `roles` (catálogo)
+| Columna | Tipo | Notas |
+|---|---|---|
+| id | uuid PK | |
+| codigo | `app_role` | único — usado por `has_role()` y RLS |
+| nombre | text | etiqueta legible |
+| descripcion | text | qué puede hacer ese rol |
+
+Roles iniciales: `admin` (Administrador), `administrativo` (Administrativo). Editable solo por admin.
+
+### `user_roles` (N:M)
+| Columna | Tipo | Notas |
+|---|---|---|
+| user_id | uuid FK → `usuarios(id)` | ON DELETE CASCADE |
+| role_id | uuid FK → `roles(id)` | ON DELETE RESTRICT |
+| role | `app_role` | denormalizado, sincronizado por trigger para que `has_role()` siga siendo SQL puro |
+| sucursal_id | uuid FK → `sucursales(id)` | opcional |
+| UNIQUE | (user_id, role_id) | un usuario no repite el mismo rol |
+
+Helper SECURITY DEFINER `has_role(uid, role)` se mantiene sin cambios (consulta `user_roles.role`), por lo que las políticas RLS y el front no necesitan tocarse. La columna `role` se sincroniza desde `role_id` con el trigger `trg_user_roles_sync`.
 
 ## Organización y sucursales
 
 - `organizacion`: nombre, logo, CUIT, dirección, teléfono, email, fecha_alta, fecha_baja.
-- `sucursales`: pertenecen a la organización, con marca `es_central` y `activa`. Una "Central" se crea por seed.
+- `sucursales`: pertenecen a la organización (FK explícita `organizacion_id`), con marca `es_central` y `activa`. Una "Central" se crea por seed.
 - ABM en `/mi-organizacion` (solo admin), tabs Datos / Sucursales / Personal.
-- "Personal" = personas con rol `personal` + usuario en auth + rol de aplicación. Alta integrada desde `PersonalFormDialog`.
+- "Personal" = personas con `user_id` no nulo + rol de aplicación asignado. Alta integrada desde `PersonalFormDialog`.
 
 ## Personas ↔ Usuarios
 
-`personas.user_id` (uuid, único) vincula la persona con `auth.users`. `personas.sucursal_id` ubica al personal en una sucursal. Inquilinos/propietarios/garantes no tienen `user_id`.
+`personas.user_id` (uuid, **único**) ahora referencia a `usuarios(id)` (no a `auth.users` directamente). Una persona se vincula a un usuario, no a un rol — los roles se administran en `user_roles`. `personas.sucursal_id` referencia a `sucursales(id)`. Inquilinos/propietarios/garantes no tienen `user_id`.
 
 ## Propiedades — campos nuevos
 
@@ -70,7 +111,9 @@ Tabla `auditoria` (inmutable: solo INSERT y SELECT permitidos por RLS):
 
 | Tabla | SELECT | INSERT/UPDATE/DELETE |
 |---|---|---|
-| personas, propiedades, contratos, liquidaciones, conceptos_liquidacion, pagos, eventos_contrato, sucursales | autenticados | autenticados |
+| personas, propiedades, contratos, liquidaciones, conceptos_liquidacion, pagos, eventos_contrato, sucursales, propietarios, inquilinos, personas_roles | autenticados | autenticados |
 | organizacion | autenticados | UPDATE/DELETE solo `admin` |
-| user_roles | propio o admin | solo `admin` |
+| usuarios | propio o `admin` | INSERT/DELETE solo `admin`; UPDATE propio o `admin` |
+| roles | autenticados | solo `admin` |
+| user_roles | propio o `admin` | solo `admin` |
 | auditoria | solo `admin` | INSERT autenticado; UPDATE/DELETE bloqueado |
