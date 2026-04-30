@@ -135,7 +135,8 @@ Tabla `auditoria` (inmutable: solo INSERT y SELECT permitidos por RLS):
 
 | Tabla | SELECT | INSERT/UPDATE/DELETE |
 |---|---|---|
-| personas, propiedades, contratos, liquidaciones, conceptos_liquidacion, pagos, eventos_contrato, sucursales, propietarios, inquilinos, personas_roles | autenticados | autenticados |
+| personas, propiedades, contratos, liquidaciones, conceptos_liquidacion, pagos, eventos_contrato, sucursales, propietarios, inquilinos | autenticados | autenticados |
+| personal | autenticados | solo `admin` |
 | organizacion | autenticados | UPDATE/DELETE solo `admin` |
 | usuarios | propio o `admin` | INSERT/DELETE solo `admin`; UPDATE propio o `admin` |
 | roles | autenticados | solo `admin` |
