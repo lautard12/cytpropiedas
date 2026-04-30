@@ -11,13 +11,14 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Building2, Building, Users, Plus, Edit, Trash2, Upload } from 'lucide-react';
+import { Building2, Building, Users, Plus, Edit, Trash2, Upload, UserMinus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganizacion, useSucursales, useUpdateOrganizacion, useDeleteSucursal, type Sucursal } from '@/hooks/useOrganizacion';
 import { usePersonalUsuarios } from '@/hooks/useSupabaseData';
 import { supabase } from '@/integrations/supabase/client';
 import SucursalFormDialog from '@/components/SucursalFormDialog';
 import PersonalFormDialog from '@/components/PersonalFormDialog';
+import PersonalBajaDialog from '@/components/PersonalBajaDialog';
 
 export default function MiOrganizacion() {
   const { toast } = useToast();
