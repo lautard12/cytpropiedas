@@ -31,6 +31,7 @@ export default function MiOrganizacion() {
   const [form, setForm] = useState({ nombre: '', cuit: '', direccion: '', telefono: '', email: '', logo_url: '', fecha_baja: '' });
   const [sucDialog, setSucDialog] = useState<{ open: boolean; sucursal?: Sucursal }>({ open: false });
   const [personalDialog, setPersonalDialog] = useState(false);
+  const [bajaDialog, setBajaDialog] = useState<{ open: boolean; legajoId?: string; nombre?: string; userId?: string }>({ open: false });
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const handleLogoUpload = async (file: File) => {
