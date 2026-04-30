@@ -41,7 +41,7 @@ export default function PersonalFormDialog({ open, onOpenChange }: Props) {
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
 
-      qc.invalidateQueries({ queryKey: ['personal'] });
+      qc.invalidateQueries({ queryKey: ['usuarios', 'personal'] });
       qc.invalidateQueries({ queryKey: ['personas'] });
       toast({ title: 'Personal creado', description: `${nombre} fue dado de alta.` });
       setNombre(''); setEmail(''); setPassword(''); setTelefono(''); setDni('');
