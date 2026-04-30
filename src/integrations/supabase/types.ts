@@ -458,6 +458,63 @@ export type Database = {
           },
         ]
       }
+      personal: {
+        Row: {
+          activo: boolean
+          causa_alta: string
+          causa_baja: string | null
+          created_at: string
+          fecha_alta: string
+          fecha_baja: string | null
+          id: string
+          observaciones: string
+          persona_id: string
+          sucursal_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          causa_alta?: string
+          causa_baja?: string | null
+          created_at?: string
+          fecha_alta?: string
+          fecha_baja?: string | null
+          id?: string
+          observaciones?: string
+          persona_id: string
+          sucursal_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          causa_alta?: string
+          causa_baja?: string | null
+          created_at?: string
+          fecha_alta?: string
+          fecha_baja?: string | null
+          id?: string
+          observaciones?: string
+          persona_id?: string
+          sucursal_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personal_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personal_sucursal_id_fkey"
+            columns: ["sucursal_id"]
+            isOneToOne: false
+            referencedRelation: "sucursales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       personas: {
         Row: {
           created_at: string

@@ -11,13 +11,14 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Building2, Building, Users, Plus, Edit, Trash2, Upload } from 'lucide-react';
+import { Building2, Building, Users, Plus, Edit, Trash2, Upload, UserMinus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganizacion, useSucursales, useUpdateOrganizacion, useDeleteSucursal, type Sucursal } from '@/hooks/useOrganizacion';
 import { usePersonalUsuarios } from '@/hooks/useSupabaseData';
 import { supabase } from '@/integrations/supabase/client';
 import SucursalFormDialog from '@/components/SucursalFormDialog';
 import PersonalFormDialog from '@/components/PersonalFormDialog';
+import PersonalBajaDialog from '@/components/PersonalBajaDialog';
 
 export default function MiOrganizacion() {
   const { toast } = useToast();
@@ -30,6 +31,7 @@ export default function MiOrganizacion() {
   const [form, setForm] = useState({ nombre: '', cuit: '', direccion: '', telefono: '', email: '', logo_url: '', fecha_baja: '' });
   const [sucDialog, setSucDialog] = useState<{ open: boolean; sucursal?: Sucursal }>({ open: false });
   const [personalDialog, setPersonalDialog] = useState(false);
+  const [bajaDialog, setBajaDialog] = useState<{ open: boolean; legajoId?: string; nombre?: string; userId?: string }>({ open: false });
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const handleLogoUpload = async (file: File) => {
@@ -177,17 +179,32 @@ export default function MiOrganizacion() {
             </CardHeader>
             <CardContent className="p-0">
               <Table>
-                <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Email</TableHead><TableHead>Teléfono</TableHead><TableHead>Roles</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Email</TableHead><TableHead>Sucursal</TableHead><TableHead>Roles</TableHead><TableHead>Estado</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {personal.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">Aún no hay personal cargado.</TableCell></TableRow>}
-                  {personal.map(p => (
-                    <TableRow key={p.id}>
-                      <TableCell className="font-medium">{p.nombre}</TableCell>
-                      <TableCell className="text-muted-foreground">{p.email}</TableCell>
-                      <TableCell className="text-muted-foreground">{p.telefono}</TableCell>
-                      <TableCell>{p.roles.map(r => <Badge key={r} variant="secondary" className="mr-1 capitalize">{r}</Badge>)}</TableCell>
-                    </TableRow>
-                  ))}
+                  {personal.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">Aún no hay personal cargado.</TableCell></TableRow>}
+                  {personal.map(p => {
+                    const esBaja = p.legajo && !p.legajo.activo;
+                    return (
+                      <TableRow key={p.id} className={esBaja ? 'opacity-60' : ''}>
+                        <TableCell className="font-medium">{p.nombre}</TableCell>
+                        <TableCell className="text-muted-foreground">{p.email}</TableCell>
+                        <TableCell className="text-muted-foreground">{p.legajo?.sucursal_nombre ?? '—'}</TableCell>
+                        <TableCell>{p.roles.map(r => <Badge key={r} variant="secondary" className="mr-1 capitalize">{r}</Badge>)}</TableCell>
+                        <TableCell>
+                          {esBaja
+                            ? <Badge className="bg-status-danger text-status-danger-foreground" title={`${p.legajo?.causa_baja ?? ''} (${p.legajo?.fecha_baja ?? ''})`}>Baja</Badge>
+                            : <Badge className="bg-status-success text-status-success-foreground">Activo</Badge>}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {p.legajo?.activo && (
+                            <Button variant="ghost" size="sm" onClick={() => setBajaDialog({ open: true, legajoId: p.legajo!.id, nombre: p.nombre, userId: p.user_id })}>
+                              <UserMinus className="h-4 w-4 text-status-danger" />
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
@@ -197,6 +214,15 @@ export default function MiOrganizacion() {
 
       <SucursalFormDialog open={sucDialog.open} onOpenChange={open => setSucDialog({ open, sucursal: open ? sucDialog.sucursal : undefined })} organizacionId={org.id} sucursal={sucDialog.sucursal} />
       <PersonalFormDialog open={personalDialog} onOpenChange={setPersonalDialog} />
+      {bajaDialog.legajoId && (
+        <PersonalBajaDialog
+          open={bajaDialog.open}
+          onOpenChange={open => setBajaDialog(s => ({ ...s, open }))}
+          legajoId={bajaDialog.legajoId}
+          personaNombre={bajaDialog.nombre ?? ''}
+          userId={bajaDialog.userId ?? ''}
+        />
+      )}
     </div>
   );
 }

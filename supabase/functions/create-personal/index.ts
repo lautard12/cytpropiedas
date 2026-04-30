@@ -62,6 +62,14 @@ Deno.serve(async (req) => {
     // Asignar rol de aplicación al usuario
     await admin.from('user_roles').insert({ user_id: newUserId, role: rol, sucursal_id: sucursal_id || null });
 
+    // Crear legajo de personal (alta) vinculando persona ↔ sucursal
+    await admin.from('personal').insert({
+      persona_id: persona.id,
+      sucursal_id: sucursal_id || null,
+      fecha_alta: new Date().toISOString().slice(0, 10),
+      causa_alta: 'Alta Personal',
+    });
+
     // Auditoría
     await admin.from('auditoria').insert({
       user_id: userData.user.id,

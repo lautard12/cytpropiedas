@@ -7,6 +7,8 @@ erDiagram
     ORGANIZACION ||--o{ SUCURSALES : "contiene"
     USUARIOS ||--o{ AUDITORIA : "ejecuta"
     %% (eliminada PERSONAS_ROLES — los roles de dominio se derivan de propietarios/inquilinos)
+    PERSONAS ||--o{ PERSONAL : "tiene legajo(s)"
+    SUCURSALES ||--o{ PERSONAL : "emplea en"
     PERSONAS ||--o| PROPIETARIOS : "es propietario"
     PERSONAS ||--o| INQUILINOS : "es inquilino"
     PROPIETARIOS ||--o{ PROPIEDADES : "posee"
@@ -53,6 +55,17 @@ erDiagram
         text observaciones_inquilino
     }
     %% PERSONAS_ROLES eliminada
+    PERSONAL {
+        uuid id PK
+        uuid persona_id FK
+        uuid sucursal_id FK
+        date fecha_alta
+        text causa_alta
+        date fecha_baja
+        text causa_baja
+        boolean activo
+        text observaciones
+    }
     PROPIEDADES {
         uuid id PK
         text direccion

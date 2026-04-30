@@ -85,6 +85,26 @@ No existe tabla `personas_roles`. Para saber los roles de una persona se consult
 
 El front lo expone en `Persona.roles` (calculado en los hooks de lectura).
 
+### `personal` (legajo persona ↔ sucursal)
+Vincula una persona con la sucursal donde trabaja y registra su ciclo laboral (alta y baja).
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| id | uuid PK | |
+| persona_id | uuid FK → `personas(id)` | ON DELETE CASCADE |
+| sucursal_id | uuid FK → `sucursales(id)` | ON DELETE SET NULL |
+| fecha_alta | date | default `CURRENT_DATE` |
+| causa_alta | text | default `'Alta Personal'` |
+| fecha_baja | date NULL | NULL ⇒ legajo activo |
+| causa_baja | text NULL | ej. Renuncia, Despido, Jubilación, Fallecimiento, Fin de contrato |
+| activo | boolean GENERATED | `fecha_baja IS NULL` |
+| observaciones | text | |
+| created_at, updated_at | timestamptz | |
+
+> **Regla**: índice único parcial `WHERE fecha_baja IS NULL` impide dos legajos activos para la misma persona. Para reasignar a otra sucursal hay que dar de baja el actual y crear uno nuevo.
+
+> **Acceso**: lectura para autenticados; alta, edición y baja solo por `admin`. La baja desde la UI también marca `usuarios.activo = false`.
+
 ## Funciones RPC
 
 - **`upsert_propietario(_persona_id, ...)`**: crea o actualiza atómicamente `personas` + `propietarios`. Si `_persona_id` es null, crea ambas. Devuelve `propietarios.id`.
@@ -194,6 +214,7 @@ Ver detalle completo en [`10-auth-y-organizacion.md`](./10-auth-y-organizacion.m
 - **`roles`** — catálogo de roles (`codigo app_role`, `nombre`, `descripcion`). Editable por admin.
 - **`user_roles`** — N:M entre `usuarios` y `roles`, con FKs explícitas y unicidad `(user_id, role_id)`. Conserva una columna `role` denormalizada (sincronizada por trigger) para que `has_role()` siga siendo SQL puro. **Es la única vía para asignar roles de aplicación.**
 - `auditoria` — registro inmutable de cambios sensibles (RLS: solo admin lee, nadie modifica). FK `user_id → usuarios(id)`.
+- **`personal`** — legajo persona ↔ sucursal con `fecha_alta` / `causa_alta` / `fecha_baja` / `causa_baja` y `activo` calculado. Índice único parcial garantiza un solo legajo activo por persona. RLS: lectura autenticada, escritura solo `admin`.
 
 ### Cambios en tablas existentes
 - `personas`: **se eliminó la columna `user_id`**. La relación 1:1 con `usuarios` vive ahora en `usuarios.persona_id` (un usuario apunta a su persona).
