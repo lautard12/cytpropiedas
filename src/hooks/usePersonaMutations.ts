@@ -74,17 +74,21 @@ export async function findPersonaByIdentity(values: {
 
   const { data, error } = await (supabase as any)
     .from('personas')
-    .select('id, nombre, personas_roles(rol), propietarios(id), inquilinos(id)')
+    .select('id, nombre, propietarios(id), inquilinos(id)')
     .or(filters.join(','))
     .limit(1)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
 
+  const roles: RolPersona[] = [];
+  if (data.propietarios?.length) roles.push('propietario');
+  if (data.inquilinos?.length) roles.push('inquilino');
+
   return {
     id: data.id,
     nombre: data.nombre,
-    roles: (data.personas_roles ?? []).map((r: any) => r.rol as RolPersona),
+    roles,
     propietario_id: data.propietarios?.[0]?.id,
     inquilino_id: data.inquilinos?.[0]?.id,
   };
