@@ -14,6 +14,10 @@ registro, el frontend busca duplicados por **DNI**, **CUIT** o **email** sobre
 `personas`. Si la persona ya existe, se reutiliza su `persona_id` y se inserta
 solo la fila del rol nuevo (vía `upsert_propietario` / `upsert_inquilino`).
 
+> **Nota**: ya **no existe `personas_roles`**. Los roles de dominio se derivan
+> de la existencia de filas en `propietarios` / `inquilinos`. Agregar un rol =
+> insertar la fila correspondiente; quitarlo = borrarla.
+
 ## Pasos
 
 1. Operadora hace click en "Nuevo propietario" (o inquilino).
@@ -24,8 +28,9 @@ solo la fila del rol nuevo (vía `upsert_propietario` / `upsert_inquilino`).
    - Si **ya tiene el rol que estoy intentando cargar** ⇒ deshabilitar submit y
      ofrecer "Ir a la ficha".
    - Si **no tiene ese rol** ⇒ ofrecer botón "Agregar rol a esta persona"
-     ⇒ `useAddRolToPersona`.
-5. Si no hay match ⇒ submit normal con `useCreatePersona`.
+     ⇒ ejecuta `upsert_propietario` / `upsert_inquilino` con el `persona_id`
+     existente (no se crea persona nueva, solo la fila de rol).
+5. Si no hay match ⇒ submit normal (`upsert_*` con `_persona_id = null`).
 
 ## Eliminación segura
 
@@ -34,8 +39,9 @@ Antes de eliminar:
 - `GET /propiedades?propietario_id=eq.X`
 
 Si hay resultados ⇒ **bloquear** con modal explicativo listando los vínculos.
-Si no hay ⇒ ejecutar `useRemoveRolOrDeletePersona` (quita rol o elimina la
-persona si era su último rol).
+Si no hay ⇒ borrar la fila de `propietarios` / `inquilinos`. Si la persona no
+queda referenciada en ninguna otra tabla de rol, el front elimina luego
+`personas`.
 
 ## Diagrama
 
@@ -43,10 +49,9 @@ persona si era su último rol).
 flowchart TD
     A[Operadora abre Nuevo Propietario] --> B[Carga DNI/CUIT/Email]
     B --> C{findPersonaByIdentity}
-    C -- No existe --> D[Submit: crear persona + rol]
-    C -- Existe sin este rol --> E[Botón: Agregar rol]
+    C -- No existe --> D[upsert_propietario con _persona_id=null]
+    C -- Existe sin este rol --> E[Agregar rol: upsert_propietario con _persona_id=existente]
     C -- Existe con este rol --> F[Bloquear + ir a ficha]
-    E --> G[POST personas_roles]
     D --> H[Redirect ficha]
-    G --> H
+    E --> H
 ```
