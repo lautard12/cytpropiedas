@@ -24,6 +24,15 @@
 | **Estado Parcial** | Tiene pagos pero aún hay saldo. |
 | **Estado Cobrada** | `pendiente = 0`. |
 | **Estado Transferida** | El neto ya fue rendido al propietario. |
-| **Garante** | Tercero que respalda al inquilino. Modelado como persona con rol `garante`. |
+| **Estado Anulada** | Liquidación dejada sin efecto (manual). |
+| **Garante** | Tercero que respalda al inquilino. Datos en `inquilinos.garante_*`. |
 | **Rendición** | Acción de transferir al propietario el neto cobrado. |
 | **Evento de contrato** | Entrada en la bitácora histórica del contrato (financiero, contractual, administrativo o documental). |
+| **Anulación de pago** | RPC `anular_pago` que marca el pago como `Anulado`, recalcula la liquidación, registra evento y entrada de auditoría. |
+| **Rol de dominio** | Cualidad de la persona derivada de su pertenencia a `propietarios` / `inquilinos`. **No se persiste**. |
+| **Rol de aplicación** | Permiso del usuario en el sistema (`admin`, `administrativo`). Se persiste en `user_roles`. |
+| **Personal / legajo** | Vínculo de una persona con una sucursal en la tabla `personal`, con `fecha_alta` / `causa_alta` / `fecha_baja` / `causa_baja`. |
+| **Causa de alta** | Motivo de incorporación. Por defecto: `Alta Personal`. |
+| **Causa de baja** | Motivo de desvinculación: `Renuncia`, `Despido`, `Jubilación`, `Fallecimiento`, `Fin de contrato`, `Otro`. |
+| **Sucursal central** | Sucursal marcada como `es_central = true`; se crea por seed y no se puede eliminar. |
+| **Auditoría** | Registro inmutable (solo INSERT y SELECT) de cambios sensibles. Visible en `/auditoria` solo para admin. |

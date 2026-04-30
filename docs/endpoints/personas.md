@@ -10,17 +10,20 @@ Hooks: `useSupabaseData.ts`, `usePersonaMutations.ts`.
 ## Modelo
 
 ```
-personas (id, nombre, dni, cuit, email, telefono, direccion, observaciones, user_id, sucursal_id)
+personas (id, nombre, dni, cuit, email, telefono, direccion, observaciones, sucursal_id)
    │ 1
    ├──── propietarios (id, persona_id*UNIQUE, banco, cbu, alias_cbu, condicion_iva, observaciones_fiscales)
-   └──── inquilinos   (id, persona_id*UNIQUE, garante_nombre, garante_telefono, garante_dni, ocupacion, ingresos_declarados, observaciones_inquilino)
+   ├──── inquilinos   (id, persona_id*UNIQUE, garante_nombre, garante_telefono, garante_dni, ocupacion, ingresos_declarados, observaciones_inquilino)
+   └──── personal     (id, persona_id, sucursal_id, fecha_alta, causa_alta, fecha_baja, causa_baja, activo)
 ```
 
 `propiedades.propietario_id → propietarios.id`
 `contratos.propietario_id → propietarios.id`
 `contratos.inquilino_id → inquilinos.id`
 
-`personas_roles` se sincroniza por trigger cuando se insertan/eliminan filas en `propietarios` o `inquilinos`.
+> **No existe `personas_roles`**. Los **roles de dominio** (propietario / inquilino) son **derivados**: una persona es propietaria ⇔ existe fila en `propietarios` con su `persona_id`; es inquilina ⇔ existe fila en `inquilinos`. Los hooks de lectura calculan `roles: ('propietario' | 'inquilino')[]` en cada respuesta.
+
+> El vínculo persona ↔ usuario vive en `usuarios.persona_id` (1:1 opcional).
 
 ---
 
@@ -33,8 +36,10 @@ usePropietarios(): UseQueryResult<Propietario[]>
 
 **HTTP**
 ```
-GET /rest/v1/propietarios?select=*,personas:persona_id(*,personas_roles(rol))
+GET /rest/v1/propietarios?select=*,personas:persona_id(*,inquilinos(id))
 ```
+
+> El embed `inquilinos(id)` permite calcular `roles` en el front (si trae fila ⇒ también es inquilino).
 
 **Respuesta** `200 OK`
 ```jsonc
@@ -53,7 +58,7 @@ GET /rest/v1/propietarios?select=*,personas:persona_id(*,personas_roles(rol))
   "alias_cbu": "juan.perez",
   "condicion_iva": "Monotributo",
   "observaciones_fiscales": "",
-  "roles": ["propietario"]
+  "roles": ["propietario"]            // derivado en el front
 }]
 ```
 
@@ -62,7 +67,7 @@ GET /rest/v1/propietarios?select=*,personas:persona_id(*,personas_roles(rol))
 **Hook**: `useInquilinos()`
 
 ```
-GET /rest/v1/inquilinos?select=*,personas:persona_id(*,personas_roles(rol))
+GET /rest/v1/inquilinos?select=*,personas:persona_id(*,propietarios(id))
 ```
 
 Devuelve además: `garante_nombre`, `garante_telefono`, `garante_dni`, `ocupacion`, `ingresos_declarados`, `observaciones_inquilino`.
@@ -72,9 +77,10 @@ Devuelve además: `garante_nombre`, `garante_telefono`, `garante_dni`, `ocupacio
 ```ts
 usePropietario(id): UseQueryResult<Propietario | null>
 useInquilino(id):   UseQueryResult<Inquilino | null>
+usePersona(id):     UseQueryResult<Persona | null>   // genérico, por personas.id
 ```
 
-`id` corresponde a `propietarios.id` / `inquilinos.id`.
+`id` corresponde a `propietarios.id` / `inquilinos.id` (en los dos primeros) o a `personas.id` (en el tercero). En todos los casos se devuelve `roles` derivado.
 
 ## 4. Búsqueda de duplicado por identidad
 
@@ -85,10 +91,10 @@ findPersonaByIdentity({ dni, cuit, email }):
 
 ```
 GET /rest/v1/personas?or=(dni.eq.X,cuit.eq.Y,email.eq.z@x.com)
-    &select=id,nombre,personas_roles(rol),propietarios(id),inquilinos(id)&limit=1
+    &select=id,nombre,propietarios(id),inquilinos(id)&limit=1
 ```
 
-`id` aquí es **personas.id** (no del rol), porque la búsqueda detecta a la persona base.
+`id` aquí es **`personas.id`** (no del rol), porque la búsqueda detecta a la persona base. Los roles se calculan en el front a partir de la presencia de `propietarios` / `inquilinos` en el embed.
 
 ## 5. Crear o editar propietario
 
@@ -137,8 +143,46 @@ DELETE /rest/v1/propietarios?id=eq.{propietarioId}
 DELETE /rest/v1/inquilinos?id=eq.{inquilinoId}
 ```
 
-El trigger `sync_personas_roles` borra automáticamente la fila correspondiente en `personas_roles`. Si la persona no queda referenciada en ninguna otra tabla de rol, el front la elimina luego de `personas`.
+Como ya no existe `personas_roles`, **no hace falta sincronizar nada**: borrar la fila de `propietarios` o `inquilinos` automáticamente "quita" ese rol derivado. Si la persona no queda referenciada en ninguna otra tabla de rol, el front la elimina luego de `personas`.
 
 **Validación previa (frontend)**:
 - Propietarios: bloquear si hay `propiedades.propietario_id = id` o `contratos.propietario_id = id`.
 - Inquilinos: bloquear si hay `contratos.inquilino_id = id` activos.
+
+---
+
+## 8. Personal del staff (alta y baja)
+
+**Hook**
+```ts
+usePersonalUsuarios(): UseQueryResult<PersonalUsuario[]>
+// Cada item: persona base + user_id + email + roles (app) + legajo (sucursal/alta/baja)
+```
+
+**Implementación** (dos queries — `usuarios → personal` no tiene FK directa, va por `persona_id`):
+```
+GET /rest/v1/usuarios?select=id,email,nombre,activo,persona_id,personas:persona_id(*),user_roles(role)
+    &persona_id=not.is.null
+GET /rest/v1/personal?select=id,persona_id,sucursal_id,fecha_alta,causa_alta,fecha_baja,causa_baja,activo,sucursales:sucursal_id(id,nombre)
+    &persona_id=in.(<ids>)
+```
+
+### Alta (admin)
+```
+POST /functions/v1/create-personal
+Body: { nombre, email, password, telefono?, dni?, rol, sucursal_id? }
+```
+La edge function crea atómicamente: `auth.users` (con `email_confirm: true`) → fila en `personas` → vínculo `usuarios.persona_id` → `user_roles` → legajo activo en `personal` (`causa_alta = 'Alta Personal'`) → entrada de auditoría.
+
+### Baja
+Componente `PersonalBajaDialog`. Cierra el legajo y desactiva el usuario:
+```
+PATCH /rest/v1/personal?id=eq.{legajoId}
+Body: { fecha_baja: 'YYYY-MM-DD', causa_baja: 'Renuncia — detalle' }
+
+PATCH /rest/v1/usuarios?id=eq.{userId}
+Body: { activo: false }
+```
+Causas de baja sugeridas: `Renuncia`, `Despido`, `Jubilación`, `Fallecimiento`, `Fin de contrato`, `Otro`. La acción registra una entrada en `auditoria` (entidad `user_role`, acción `editar`).
+
+> El índice único parcial sobre `personal(persona_id) WHERE fecha_baja IS NULL` impide tener dos legajos activos para la misma persona. Para reasignar de sucursal: dar de baja el actual y crear uno nuevo.

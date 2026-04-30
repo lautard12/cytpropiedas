@@ -1,5 +1,6 @@
 -- =====================================================================
 -- Triggers, funciones y políticas RLS
+-- (refleja el estado actual: sin personas_roles, con usuarios/roles/personal)
 -- =====================================================================
 
 -- ---------- updated_at automático ----------
@@ -16,6 +17,11 @@ $$;
 DROP TRIGGER IF EXISTS trg_personas_updated_at ON public.personas;
 CREATE TRIGGER trg_personas_updated_at
   BEFORE UPDATE ON public.personas
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+DROP TRIGGER IF EXISTS personal_set_updated_at ON public.personal;
+CREATE TRIGGER personal_set_updated_at
+  BEFORE UPDATE ON public.personal
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ---------- Recalcular totales de la liquidación cuando cambian pagos ----------
@@ -140,89 +146,166 @@ CREATE TRIGGER trg_contrato_sync_propiedad
   AFTER INSERT OR UPDATE ON public.contratos
   FOR EACH ROW EXECUTE FUNCTION public.sync_propiedad_estado();
 
--- ---------- Sincronización propietarios/inquilinos ↔ personas_roles ----------
-CREATE OR REPLACE FUNCTION public.sync_personas_roles()
+-- =====================================================================
+-- AUTH: trigger sobre auth.users + sync user_roles ↔ roles
+-- =====================================================================
+
+-- Crea automáticamente la fila pública en `usuarios` cuando alguien se
+-- registra en auth.users. Si vino `persona_id` en raw_user_meta_data y no
+-- está tomado por otro usuario, lo vincula.
+CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  _rol rol_persona;
+  _persona_id uuid;
 BEGIN
-  IF TG_TABLE_NAME = 'propietarios' THEN _rol := 'propietario';
-  ELSIF TG_TABLE_NAME = 'inquilinos' THEN _rol := 'inquilino';
-  ELSE RETURN COALESCE(NEW, OLD);
+  BEGIN
+    _persona_id := NULLIF(NEW.raw_user_meta_data->>'persona_id','')::uuid;
+  EXCEPTION WHEN OTHERS THEN
+    _persona_id := NULL;
+  END;
+
+  IF _persona_id IS NOT NULL AND EXISTS (
+    SELECT 1 FROM public.usuarios WHERE persona_id = _persona_id
+  ) THEN
+    _persona_id := NULL;
   END IF;
 
-  IF TG_OP = 'INSERT' THEN
-    INSERT INTO public.personas_roles (persona_id, rol)
-    VALUES (NEW.persona_id, _rol)
-    ON CONFLICT DO NOTHING;
-    RETURN NEW;
-  ELSIF TG_OP = 'DELETE' THEN
-    DELETE FROM public.personas_roles
-     WHERE persona_id = OLD.persona_id AND rol = _rol;
-    RETURN OLD;
-  END IF;
-  RETURN NULL;
+  INSERT INTO public.usuarios (id, email, nombre, persona_id)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.email,''),
+    COALESCE(NEW.raw_user_meta_data->>'nombre', NEW.raw_user_meta_data->>'full_name', ''),
+    _persona_id
+  )
+  ON CONFLICT (id) DO UPDATE
+    SET email = EXCLUDED.email,
+        persona_id = COALESCE(public.usuarios.persona_id, EXCLUDED.persona_id);
+  RETURN NEW;
 END;
 $$;
 
-DROP TRIGGER IF EXISTS trg_sync_propietarios_roles ON public.propietarios;
-CREATE TRIGGER trg_sync_propietarios_roles
-  AFTER INSERT OR DELETE ON public.propietarios
-  FOR EACH ROW EXECUTE FUNCTION public.sync_personas_roles();
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
 
-DROP TRIGGER IF EXISTS trg_sync_inquilinos_roles ON public.inquilinos;
-CREATE TRIGGER trg_sync_inquilinos_roles
-  AFTER INSERT OR DELETE ON public.inquilinos
-  FOR EACH ROW EXECUTE FUNCTION public.sync_personas_roles();
+-- Sincroniza la columna denormalizada `user_roles.role` con `role_id` (y vv).
+-- Permite que `has_role()` siga siendo SQL puro y simple.
+CREATE OR REPLACE FUNCTION public.sync_user_roles_enum()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.role_id IS NOT NULL AND (NEW.role IS NULL OR TG_OP = 'INSERT' OR NEW.role_id IS DISTINCT FROM OLD.role_id) THEN
+    SELECT codigo INTO NEW.role FROM public.roles WHERE id = NEW.role_id;
+  ELSIF NEW.role IS NOT NULL AND NEW.role_id IS NULL THEN
+    SELECT id INTO NEW.role_id FROM public.roles WHERE codigo = NEW.role;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_user_roles_sync ON public.user_roles;
+CREATE TRIGGER trg_user_roles_sync
+  BEFORE INSERT OR UPDATE ON public.user_roles
+  FOR EACH ROW EXECUTE FUNCTION public.sync_user_roles_enum();
+
+-- Helper SECURITY DEFINER para RLS (no consulta `user_roles` con la sesión
+-- actual, evitando recursión).
+CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role app_role)
+RETURNS boolean
+LANGUAGE sql
+STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.user_roles
+    WHERE user_id = _user_id AND role = _role
+  )
+$$;
 
 -- =====================================================================
 -- ROW LEVEL SECURITY
 -- =====================================================================
--- En el MVP actual está abierto a `public` (true/true). Cuando se sume
--- autenticación, reemplazar por políticas basadas en `auth.uid()` y un
--- modelo de roles (ver docs/02-arquitectura.md).
--- =====================================================================
 
 ALTER TABLE public.personas              ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.personas_roles        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.propietarios          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.inquilinos            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.propiedades           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.contratos             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.liquidaciones         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conceptos_liquidacion ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pagos                 ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.eventos_contrato      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.organizacion          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sucursales            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.usuarios              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.roles                 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_roles            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.personal              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.auditoria             ENABLE ROW LEVEL SECURITY;
 
--- Política MVP demo: acceso total
+-- Tablas de dominio: lectura/escritura libre para autenticados
 DO $$
 DECLARE t text;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['personas','personas_roles','propiedades','contratos',
-                           'liquidaciones','conceptos_liquidacion','pagos','eventos_contrato']
+  FOREACH t IN ARRAY ARRAY['personas','propietarios','inquilinos','propiedades',
+                           'contratos','liquidaciones','conceptos_liquidacion',
+                           'pagos','eventos_contrato','sucursales']
   LOOP
-    EXECUTE format(
-      'DROP POLICY IF EXISTS "Allow all access to %1$s" ON public.%1$s;', t);
-    EXECUTE format(
-      'CREATE POLICY "Allow all access to %1$s" ON public.%1$s FOR ALL USING (true) WITH CHECK (true);', t);
+    EXECUTE format('DROP POLICY IF EXISTS auth_select_%1$s ON public.%1$s;', t);
+    EXECUTE format('CREATE POLICY auth_select_%1$s ON public.%1$s FOR SELECT TO authenticated USING (true);', t);
+    EXECUTE format('DROP POLICY IF EXISTS auth_ins_%1$s ON public.%1$s;', t);
+    EXECUTE format('CREATE POLICY auth_ins_%1$s ON public.%1$s FOR INSERT TO authenticated WITH CHECK (true);', t);
+    EXECUTE format('DROP POLICY IF EXISTS auth_upd_%1$s ON public.%1$s;', t);
+    EXECUTE format('CREATE POLICY auth_upd_%1$s ON public.%1$s FOR UPDATE TO authenticated USING (true) WITH CHECK (true);', t);
+    EXECUTE format('DROP POLICY IF EXISTS auth_del_%1$s ON public.%1$s;', t);
+    EXECUTE format('CREATE POLICY auth_del_%1$s ON public.%1$s FOR DELETE TO authenticated USING (true);', t);
   END LOOP;
 END $$;
 
--- =====================================================================
--- POLÍTICAS RLS RECOMENDADAS PARA PRODUCCIÓN (referencia)
--- =====================================================================
--- Requisitos previos:
---   1. Tabla public.user_roles (id, user_id, rol app_role) — ver docs.
---   2. Función public.has_role(_user_id uuid, _role app_role) SECURITY DEFINER.
---
--- Ejemplo (NO ejecutar todavía):
---   CREATE POLICY "Operadores leen personas"
---     ON public.personas FOR SELECT TO authenticated
---     USING (public.has_role(auth.uid(),'admin') OR public.has_role(auth.uid(),'operador'));
---
---   CREATE POLICY "Solo admin elimina personas"
---     ON public.personas FOR DELETE TO authenticated
---     USING (public.has_role(auth.uid(),'admin'));
--- =====================================================================
+-- organizacion: lectura abierta a auth, mutación solo admin
+CREATE POLICY auth_select_organizacion ON public.organizacion FOR SELECT TO authenticated USING (true);
+CREATE POLICY admin_upd_organizacion   ON public.organizacion FOR UPDATE TO authenticated
+  USING (has_role(auth.uid(),'admin')) WITH CHECK (has_role(auth.uid(),'admin'));
+CREATE POLICY admin_del_organizacion   ON public.organizacion FOR DELETE TO authenticated
+  USING (has_role(auth.uid(),'admin'));
+
+-- usuarios: cada uno se ve a sí mismo; admin ve todo y muta
+CREATE POLICY usuarios_self_or_admin_select ON public.usuarios FOR SELECT TO authenticated
+  USING (id = auth.uid() OR has_role(auth.uid(),'admin'));
+CREATE POLICY usuarios_admin_ins ON public.usuarios FOR INSERT TO authenticated WITH CHECK (has_role(auth.uid(),'admin'));
+CREATE POLICY usuarios_admin_upd ON public.usuarios FOR UPDATE TO authenticated
+  USING (has_role(auth.uid(),'admin') OR id = auth.uid())
+  WITH CHECK (has_role(auth.uid(),'admin') OR id = auth.uid());
+CREATE POLICY usuarios_admin_del ON public.usuarios FOR DELETE TO authenticated USING (has_role(auth.uid(),'admin'));
+
+-- roles: lectura abierta, mutación solo admin
+CREATE POLICY roles_auth_select ON public.roles FOR SELECT TO authenticated USING (true);
+CREATE POLICY roles_admin_ins   ON public.roles FOR INSERT TO authenticated WITH CHECK (has_role(auth.uid(),'admin'));
+CREATE POLICY roles_admin_upd   ON public.roles FOR UPDATE TO authenticated USING (has_role(auth.uid(),'admin')) WITH CHECK (has_role(auth.uid(),'admin'));
+CREATE POLICY roles_admin_del   ON public.roles FOR DELETE TO authenticated USING (has_role(auth.uid(),'admin'));
+
+-- user_roles: cada uno ve los suyos; admin lee todo y administra
+CREATE POLICY user_roles_self_select ON public.user_roles FOR SELECT TO authenticated
+  USING (user_id = auth.uid() OR has_role(auth.uid(),'admin'));
+CREATE POLICY user_roles_admin_ins ON public.user_roles FOR INSERT TO authenticated WITH CHECK (has_role(auth.uid(),'admin'));
+CREATE POLICY user_roles_admin_upd ON public.user_roles FOR UPDATE TO authenticated USING (has_role(auth.uid(),'admin')) WITH CHECK (has_role(auth.uid(),'admin'));
+CREATE POLICY user_roles_admin_del ON public.user_roles FOR DELETE TO authenticated USING (has_role(auth.uid(),'admin'));
+
+-- personal: lectura abierta a auth; alta/edición/baja solo admin
+CREATE POLICY personal_auth_select ON public.personal FOR SELECT TO authenticated USING (true);
+CREATE POLICY personal_admin_ins   ON public.personal FOR INSERT TO authenticated WITH CHECK (has_role(auth.uid(),'admin'));
+CREATE POLICY personal_admin_upd   ON public.personal FOR UPDATE TO authenticated USING (has_role(auth.uid(),'admin')) WITH CHECK (has_role(auth.uid(),'admin'));
+CREATE POLICY personal_admin_del   ON public.personal FOR DELETE TO authenticated USING (has_role(auth.uid(),'admin'));
+
+-- auditoria: solo admin lee; cualquiera autenticado puede insertar; nadie modifica/borra
+CREATE POLICY auditoria_admin_select ON public.auditoria FOR SELECT TO authenticated USING (has_role(auth.uid(),'admin'));
+CREATE POLICY auditoria_auth_insert  ON public.auditoria FOR INSERT TO authenticated WITH CHECK (true);
+-- (sin policies de UPDATE/DELETE ⇒ bloqueado por RLS)
