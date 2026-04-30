@@ -85,6 +85,26 @@ No existe tabla `personas_roles`. Para saber los roles de una persona se consult
 
 El front lo expone en `Persona.roles` (calculado en los hooks de lectura).
 
+### `personal` (legajo persona ↔ sucursal)
+Vincula una persona con la sucursal donde trabaja y registra su ciclo laboral (alta y baja).
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| id | uuid PK | |
+| persona_id | uuid FK → `personas(id)` | ON DELETE CASCADE |
+| sucursal_id | uuid FK → `sucursales(id)` | ON DELETE SET NULL |
+| fecha_alta | date | default `CURRENT_DATE` |
+| causa_alta | text | default `'Alta Personal'` |
+| fecha_baja | date NULL | NULL ⇒ legajo activo |
+| causa_baja | text NULL | ej. Renuncia, Despido, Jubilación, Fallecimiento, Fin de contrato |
+| activo | boolean GENERATED | `fecha_baja IS NULL` |
+| observaciones | text | |
+| created_at, updated_at | timestamptz | |
+
+> **Regla**: índice único parcial `WHERE fecha_baja IS NULL` impide dos legajos activos para la misma persona. Para reasignar a otra sucursal hay que dar de baja el actual y crear uno nuevo.
+
+> **Acceso**: lectura para autenticados; alta, edición y baja solo por `admin`. La baja desde la UI también marca `usuarios.activo = false`.
+
 ## Funciones RPC
 
 - **`upsert_propietario(_persona_id, ...)`**: crea o actualiza atómicamente `personas` + `propietarios`. Si `_persona_id` es null, crea ambas. Devuelve `propietarios.id`.
