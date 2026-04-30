@@ -136,9 +136,7 @@ export function useUpsertPropietario() {
 
 /**
  * Elimina un propietario (rol). Si la persona no tiene otros vínculos
- * el cascade del FK borra también la persona si así lo decide la app.
- * Por seguridad solo eliminamos la fila de propietarios; personas_roles
- * se sincroniza por trigger.
+ * (otra fila en propietarios o en inquilinos) se borra también la persona.
  */
 export function useDeletePropietario() {
   const qc = useQueryClient();
