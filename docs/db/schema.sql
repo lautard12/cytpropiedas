@@ -4,7 +4,6 @@
 -- ============================================================
 
 -- ───────── Enums ─────────
-CREATE TYPE rol_persona       AS ENUM ('propietario','inquilino','garante');
 CREATE TYPE tipo_propiedad    AS ENUM ('Departamento','Casa','Local','Oficina','Cochera','Galpon','Terreno','Otro');
 CREATE TYPE estado_propiedad  AS ENUM ('Vacante','Alquilada','Reservada','En refacción','Inactiva');
 CREATE TYPE estado_contrato   AS ENUM ('Activo','Vencido','Rescindido','Borrador');
@@ -12,6 +11,9 @@ CREATE TYPE estado_liquidacion AS ENUM ('Borrador','Pendiente','Parcial','Cobrad
 CREATE TYPE estado_pago       AS ENUM ('Pendiente','Confirmado','Anulado');
 CREATE TYPE medio_pago        AS ENUM ('Transferencia','Efectivo','Cheque','Mercado Pago','Débito automático');
 CREATE TYPE app_role          AS ENUM ('admin','administrativo');
+-- NOTA: el enum rol_persona y la tabla personas_roles fueron eliminados.
+-- Los roles de dominio (propietario/inquilino) se derivan de la existencia
+-- de filas en propietarios/inquilinos.
 
 -- ───────── usuarios (espejo público de auth.users) ─────────
 CREATE TABLE public.usuarios (
