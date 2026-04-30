@@ -94,6 +94,24 @@ CREATE TABLE public.inquilinos (
 -- (eliminada) personas_roles: los roles de dominio (propietario/inquilino)
 -- se derivan ahora de la existencia de filas en propietarios/inquilinos.
 
+-- ───────── personal (legajo: persona ↔ sucursal con alta/baja) ─────────
+CREATE TABLE public.personal (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  persona_id uuid NOT NULL REFERENCES public.personas(id) ON DELETE CASCADE,
+  sucursal_id uuid REFERENCES public.sucursales(id) ON DELETE SET NULL,
+  fecha_alta date NOT NULL DEFAULT CURRENT_DATE,
+  causa_alta text NOT NULL DEFAULT 'Alta Personal',
+  fecha_baja date,                       -- NULL = legajo activo
+  causa_baja text,                       -- ej: Renuncia, Despido, Fallecimiento
+  activo boolean GENERATED ALWAYS AS (fecha_baja IS NULL) STORED,
+  observaciones text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+-- Una persona no puede tener dos legajos activos a la vez:
+CREATE UNIQUE INDEX personal_persona_activo_uidx
+  ON public.personal (persona_id) WHERE fecha_baja IS NULL;
+
 -- ───────── propiedades ─────────
 CREATE TABLE public.propiedades (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
