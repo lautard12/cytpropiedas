@@ -67,11 +67,11 @@ Roles iniciales: `admin` (Administrador), `administrativo` (Administrativo). Edi
 - `organizacion`: nombre, logo, CUIT, dirección, teléfono, email, fecha_alta, fecha_baja.
 - `sucursales`: pertenecen a la organización (FK explícita `organizacion_id`), con marca `es_central` y `activa`. Una "Central" se crea por seed.
 - ABM en `/mi-organizacion` (solo admin), tabs Datos / Sucursales / Personal.
-- "Personal" = personas con `user_id` no nulo + rol de aplicación asignado. Alta integrada desde `PersonalFormDialog`.
+- "Personal" = usuarios con `persona_id` no nulo + rol de aplicación asignado. Alta integrada desde `PersonalFormDialog` (edge function `create-personal`).
 
 ## Personas ↔ Usuarios
 
-`personas.user_id` (uuid, **único**) ahora referencia a `usuarios(id)` (no a `auth.users` directamente). Una persona se vincula a un usuario, no a un rol — los roles se administran en `user_roles`. `personas.sucursal_id` referencia a `sucursales(id)`. Inquilinos/propietarios/garantes no tienen `user_id`.
+El vínculo 1:1 vive en **`usuarios.persona_id`** (uuid UNIQUE → `personas(id)`, ON DELETE SET NULL). La columna `personas.user_id` **fue eliminada**. Una persona puede no tener usuario (inquilinos/propietarios comunes); un usuario puede no tener persona vinculada hasta que se complete el alta de personal. Los roles de aplicación se administran exclusivamente en `user_roles`.
 
 ## Propiedades — campos nuevos
 
