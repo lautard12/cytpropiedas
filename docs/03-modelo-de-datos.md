@@ -2,14 +2,13 @@
 
 ## Visión general
 
-10 tablas + 5 enums.
+Tablas principales del dominio + auth/organización (ver §extensiones).
 
 | Tabla | Propósito |
 |---|---|
-| `personas` | Maestro único de personas físicas/jurídicas — **datos básicos personales** |
+| `personas` | Maestro único de personas físicas/jurídicas — **datos básicos** |
 | `propietarios` | Datos específicos de quien es propietario (banco, CBU, condición IVA…) — 1-a-1 con personas |
 | `inquilinos` | Datos específicos de quien es inquilino (garante, ocupación, ingresos…) — 1-a-1 con personas |
-| `personas_roles` | Índice rápido de roles por persona (propietario / inquilino / garante). Se sincroniza automáticamente vía trigger con `propietarios` e `inquilinos`. |
 | `propiedades` | Unidades inmuebles administradas. `propietario_id` → `propietarios.id`. |
 | `contratos` | Vínculo propiedad ↔ propietario ↔ inquilino. `propietario_id` → `propietarios.id`, `inquilino_id` → `inquilinos.id`. |
 | `liquidaciones` | Cuenta mensual emitida sobre un contrato |
@@ -17,22 +16,24 @@
 | `pagos` | Cobros parciales o totales aplicados a una liquidación |
 | `eventos_contrato` | Bitácora histórica unificada (timeline) |
 
+> **Roles de dominio** (propietario / inquilino) **ya no se persisten en una tabla aparte**. Se derivan de la **existencia** de la fila correspondiente en `propietarios` / `inquilinos`. El enum `rol_persona` y la tabla `personas_roles` fueron eliminados.
+
 ## Enums
 
 ```sql
-CREATE TYPE rol_persona AS ENUM ('propietario', 'inquilino', 'garante');
 CREATE TYPE tipo_propiedad AS ENUM ('Departamento','Casa','Local','Oficina','Cochera','Galpon','Terreno','Otro');
 CREATE TYPE estado_propiedad AS ENUM ('Vacante','Alquilada','Reservada','En refacción','Inactiva');
 CREATE TYPE estado_contrato AS ENUM ('Activo','Vencido','Rescindido','Borrador');
 CREATE TYPE estado_liquidacion AS ENUM ('Borrador','Pendiente','Parcial','Cobrada','Transferida','Anulada');
 CREATE TYPE estado_pago AS ENUM ('Pendiente','Confirmado','Anulado');
 CREATE TYPE medio_pago AS ENUM ('Transferencia','Efectivo','Cheque','Mercado Pago','Débito automático');
+CREATE TYPE app_role AS ENUM ('admin','administrativo');
 ```
 
 ## Detalle por entidad
 
 ### `personas`
-**Solo datos básicos** comunes a cualquier persona en el sistema.
+**Solo datos básicos** comunes a cualquier persona en el sistema. **No tiene `user_id`** — el vínculo con el usuario del sistema vive en `usuarios.persona_id`.
 
 | Columna | Tipo | Notas |
 |---|---|---|
@@ -43,8 +44,7 @@ CREATE TYPE medio_pago AS ENUM ('Transferencia','Efectivo','Cheque','Mercado Pag
 | email | text | normalizado a minúsculas |
 | telefono, direccion | text | |
 | observaciones | text | |
-| user_id | uuid → auth.users | si la persona también es usuario del sistema |
-| sucursal_id | uuid → sucursales | sucursal donde opera (para staff) |
+| sucursal_id | uuid → sucursales | sucursal donde opera (cuando aplica) |
 | created_at, updated_at | timestamptz | trigger `set_updated_at` |
 
 **Reglas:**
