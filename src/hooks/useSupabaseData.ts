@@ -155,13 +155,17 @@ function mapPersonaBase(p: any): PersonaBase {
   };
 }
 
+// Roles de dominio derivados: una persona es "propietario" si tiene fila en propietarios,
+// "inquilino" si tiene fila en inquilinos. Ya no existe tabla personas_roles.
 async function fetchRolesPersona(personaId: string): Promise<RolPersona[]> {
-  const { data, error } = await supabase
-    .from('personas_roles')
-    .select('rol')
-    .eq('persona_id', personaId);
-  if (error) throw error;
-  return (data ?? []).map((r: any) => r.rol as RolPersona);
+  const [{ data: prop }, { data: inq }] = await Promise.all([
+    supabase.from('propietarios').select('id').eq('persona_id', personaId).maybeSingle(),
+    supabase.from('inquilinos').select('id').eq('persona_id', personaId).maybeSingle(),
+  ]);
+  const roles: RolPersona[] = [];
+  if (prop) roles.push('propietario');
+  if (inq) roles.push('inquilino');
+  return roles;
 }
 
 // ─── Propietarios ──────────────────────────────────────────
@@ -169,10 +173,12 @@ async function fetchRolesPersona(personaId: string): Promise<RolPersona[]> {
 async function fetchPropietarios(): Promise<Propietario[]> {
   const { data, error } = await (supabase as any)
     .from('propietarios')
-    .select('*, personas:persona_id(*, personas_roles(rol))');
+    .select('*, personas:persona_id(*, inquilinos(id))');
   if (error) throw error;
   return (data ?? []).map((row: any): Propietario => {
     const base = mapPersonaBase(row.personas ?? {});
+    const roles: RolPersona[] = ['propietario'];
+    if (row.personas?.inquilinos?.length) roles.push('inquilino');
     return {
       ...base,
       id: row.id,
@@ -182,7 +188,7 @@ async function fetchPropietarios(): Promise<Propietario[]> {
       alias_cbu: row.alias_cbu ?? '',
       condicion_iva: row.condicion_iva ?? '',
       observaciones_fiscales: row.observaciones_fiscales ?? '',
-      roles: ((row.personas?.personas_roles ?? []) as any[]).map(r => r.rol as RolPersona),
+      roles,
     };
   }).sort((a: Propietario, b: Propietario) => a.nombre.localeCompare(b.nombre));
 }
@@ -190,12 +196,14 @@ async function fetchPropietarios(): Promise<Propietario[]> {
 async function fetchPropietarioById(id: string): Promise<Propietario | null> {
   const { data, error } = await (supabase as any)
     .from('propietarios')
-    .select('*, personas:persona_id(*, personas_roles(rol))')
+    .select('*, personas:persona_id(*, inquilinos(id))')
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
   const base = mapPersonaBase(data.personas ?? {});
+  const roles: RolPersona[] = ['propietario'];
+  if (data.personas?.inquilinos?.length) roles.push('inquilino');
   return {
     ...base,
     id: data.id,
@@ -205,7 +213,7 @@ async function fetchPropietarioById(id: string): Promise<Propietario | null> {
     alias_cbu: data.alias_cbu ?? '',
     condicion_iva: data.condicion_iva ?? '',
     observaciones_fiscales: data.observaciones_fiscales ?? '',
-    roles: ((data.personas?.personas_roles ?? []) as any[]).map(r => r.rol as RolPersona),
+    roles,
   };
 }
 
