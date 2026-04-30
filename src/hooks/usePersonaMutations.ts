@@ -313,7 +313,7 @@ export function useAddRolToPersona() {
   return {
     isPending: upsertProp.isPending || upsertInq.isPending,
     mutateAsync: async ({ personaId, rol }: { personaId: string; rol: RolPersona }) => {
-      // Crear la fila en propietarios/inquilinos vacía; el trigger sincroniza personas_roles.
+      // Crear la fila en propietarios/inquilinos. El rol queda determinado por la existencia de la fila.
       if (rol === 'propietario') {
         const { data: existing } = await (supabase as any).from('personas').select('*').eq('id', personaId).single();
         return upsertProp.mutateAsync({
