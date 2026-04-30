@@ -214,6 +214,7 @@ Ver detalle completo en [`10-auth-y-organizacion.md`](./10-auth-y-organizacion.m
 - **`roles`** — catálogo de roles (`codigo app_role`, `nombre`, `descripcion`). Editable por admin.
 - **`user_roles`** — N:M entre `usuarios` y `roles`, con FKs explícitas y unicidad `(user_id, role_id)`. Conserva una columna `role` denormalizada (sincronizada por trigger) para que `has_role()` siga siendo SQL puro. **Es la única vía para asignar roles de aplicación.**
 - `auditoria` — registro inmutable de cambios sensibles (RLS: solo admin lee, nadie modifica). FK `user_id → usuarios(id)`.
+- **`personal`** — legajo persona ↔ sucursal con `fecha_alta` / `causa_alta` / `fecha_baja` / `causa_baja` y `activo` calculado. Índice único parcial garantiza un solo legajo activo por persona. RLS: lectura autenticada, escritura solo `admin`.
 
 ### Cambios en tablas existentes
 - `personas`: **se eliminó la columna `user_id`**. La relación 1:1 con `usuarios` vive ahora en `usuarios.persona_id` (un usuario apunta a su persona).
