@@ -471,7 +471,6 @@ export type Database = {
           sucursal_id: string | null
           telefono: string
           updated_at: string
-          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -485,7 +484,6 @@ export type Database = {
           sucursal_id?: string | null
           telefono?: string
           updated_at?: string
-          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -499,7 +497,6 @@ export type Database = {
           sucursal_id?: string | null
           telefono?: string
           updated_at?: string
-          user_id?: string | null
         }
         Relationships: [
           {
@@ -507,42 +504,6 @@ export type Database = {
             columns: ["sucursal_id"]
             isOneToOne: false
             referencedRelation: "sucursales"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "personas_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "usuarios"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      personas_roles: {
-        Row: {
-          created_at: string
-          id: string
-          persona_id: string
-          rol: Database["public"]["Enums"]["rol_persona"]
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          persona_id: string
-          rol: Database["public"]["Enums"]["rol_persona"]
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          persona_id?: string
-          rol?: Database["public"]["Enums"]["rol_persona"]
-        }
-        Relationships: [
-          {
-            foreignKeyName: "personas_roles_persona_id_fkey"
-            columns: ["persona_id"]
-            isOneToOne: false
-            referencedRelation: "personas"
             referencedColumns: ["id"]
           },
         ]
@@ -781,6 +742,7 @@ export type Database = {
           email: string
           id: string
           nombre: string
+          persona_id: string | null
           ultimo_login: string | null
           updated_at: string
         }
@@ -790,6 +752,7 @@ export type Database = {
           email: string
           id: string
           nombre?: string
+          persona_id?: string | null
           ultimo_login?: string | null
           updated_at?: string
         }
@@ -799,10 +762,19 @@ export type Database = {
           email?: string
           id?: string
           nombre?: string
+          persona_id?: string | null
           ultimo_login?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "usuarios_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: true
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -870,7 +842,6 @@ export type Database = {
       estado_pago: "Confirmado" | "Pendiente" | "Rechazado"
       estado_propiedad: "Ocupada" | "Vacante" | "En refacción"
       medio_pago: "Transferencia" | "Efectivo" | "Cheque" | "Depósito"
-      rol_persona: "propietario" | "inquilino" | "garante" | "personal"
       tipo_propiedad: "Departamento" | "Casa" | "Local" | "Oficina" | "PH"
     }
     CompositeTypes: {
@@ -1011,7 +982,6 @@ export const Constants = {
       estado_pago: ["Confirmado", "Pendiente", "Rechazado"],
       estado_propiedad: ["Ocupada", "Vacante", "En refacción"],
       medio_pago: ["Transferencia", "Efectivo", "Cheque", "Depósito"],
-      rol_persona: ["propietario", "inquilino", "garante", "personal"],
       tipo_propiedad: ["Departamento", "Casa", "Local", "Oficina", "PH"],
     },
   },

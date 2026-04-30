@@ -4,7 +4,6 @@
 -- ============================================================
 
 -- ───────── Enums ─────────
-CREATE TYPE rol_persona       AS ENUM ('propietario','inquilino','garante');
 CREATE TYPE tipo_propiedad    AS ENUM ('Departamento','Casa','Local','Oficina','Cochera','Galpon','Terreno','Otro');
 CREATE TYPE estado_propiedad  AS ENUM ('Vacante','Alquilada','Reservada','En refacción','Inactiva');
 CREATE TYPE estado_contrato   AS ENUM ('Activo','Vencido','Rescindido','Borrador');
@@ -12,6 +11,9 @@ CREATE TYPE estado_liquidacion AS ENUM ('Borrador','Pendiente','Parcial','Cobrad
 CREATE TYPE estado_pago       AS ENUM ('Pendiente','Confirmado','Anulado');
 CREATE TYPE medio_pago        AS ENUM ('Transferencia','Efectivo','Cheque','Mercado Pago','Débito automático');
 CREATE TYPE app_role          AS ENUM ('admin','administrativo');
+-- NOTA: el enum rol_persona y la tabla personas_roles fueron eliminados.
+-- Los roles de dominio (propietario/inquilino) se derivan de la existencia
+-- de filas en propietarios/inquilinos.
 
 -- ───────── usuarios (espejo público de auth.users) ─────────
 CREATE TABLE public.usuarios (
@@ -19,6 +21,7 @@ CREATE TABLE public.usuarios (
   email text NOT NULL,
   nombre text NOT NULL DEFAULT '',
   activo boolean NOT NULL DEFAULT true,
+  persona_id uuid UNIQUE REFERENCES public.personas(id) ON DELETE SET NULL,  -- vínculo 1:1 (opcional)
   ultimo_login timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
@@ -55,7 +58,7 @@ CREATE TABLE public.personas (
   telefono text NOT NULL DEFAULT '',
   direccion text NOT NULL DEFAULT '',
   observaciones text NOT NULL DEFAULT '',
-  user_id uuid UNIQUE REFERENCES public.usuarios(id) ON DELETE SET NULL,   -- 1:1 con usuarios (opcional)
+  -- (sin user_id: el vínculo usuario↔persona vive en usuarios.persona_id)
   sucursal_id uuid REFERENCES public.sucursales(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
@@ -88,14 +91,8 @@ CREATE TABLE public.inquilinos (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- ───────── personas_roles (índice de roles) ─────────
-CREATE TABLE public.personas_roles (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  persona_id uuid NOT NULL REFERENCES public.personas(id) ON DELETE CASCADE,
-  rol rol_persona NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE(persona_id, rol)
-);
+-- (eliminada) personas_roles: los roles de dominio (propietario/inquilino)
+-- se derivan ahora de la existencia de filas en propietarios/inquilinos.
 
 -- ───────── propiedades ─────────
 CREATE TABLE public.propiedades (

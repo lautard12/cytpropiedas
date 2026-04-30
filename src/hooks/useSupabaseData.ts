@@ -155,13 +155,17 @@ function mapPersonaBase(p: any): PersonaBase {
   };
 }
 
+// Roles de dominio derivados: una persona es "propietario" si tiene fila en propietarios,
+// "inquilino" si tiene fila en inquilinos. Ya no existe tabla personas_roles.
 async function fetchRolesPersona(personaId: string): Promise<RolPersona[]> {
-  const { data, error } = await supabase
-    .from('personas_roles')
-    .select('rol')
-    .eq('persona_id', personaId);
-  if (error) throw error;
-  return (data ?? []).map((r: any) => r.rol as RolPersona);
+  const [{ data: prop }, { data: inq }] = await Promise.all([
+    supabase.from('propietarios').select('id').eq('persona_id', personaId).maybeSingle(),
+    supabase.from('inquilinos').select('id').eq('persona_id', personaId).maybeSingle(),
+  ]);
+  const roles: RolPersona[] = [];
+  if (prop) roles.push('propietario');
+  if (inq) roles.push('inquilino');
+  return roles;
 }
 
 // ─── Propietarios ──────────────────────────────────────────
@@ -169,10 +173,12 @@ async function fetchRolesPersona(personaId: string): Promise<RolPersona[]> {
 async function fetchPropietarios(): Promise<Propietario[]> {
   const { data, error } = await (supabase as any)
     .from('propietarios')
-    .select('*, personas:persona_id(*, personas_roles(rol))');
+    .select('*, personas:persona_id(*, inquilinos(id))');
   if (error) throw error;
   return (data ?? []).map((row: any): Propietario => {
     const base = mapPersonaBase(row.personas ?? {});
+    const roles: RolPersona[] = ['propietario'];
+    if (row.personas?.inquilinos?.length) roles.push('inquilino');
     return {
       ...base,
       id: row.id,
@@ -182,7 +188,7 @@ async function fetchPropietarios(): Promise<Propietario[]> {
       alias_cbu: row.alias_cbu ?? '',
       condicion_iva: row.condicion_iva ?? '',
       observaciones_fiscales: row.observaciones_fiscales ?? '',
-      roles: ((row.personas?.personas_roles ?? []) as any[]).map(r => r.rol as RolPersona),
+      roles,
     };
   }).sort((a: Propietario, b: Propietario) => a.nombre.localeCompare(b.nombre));
 }
@@ -190,12 +196,14 @@ async function fetchPropietarios(): Promise<Propietario[]> {
 async function fetchPropietarioById(id: string): Promise<Propietario | null> {
   const { data, error } = await (supabase as any)
     .from('propietarios')
-    .select('*, personas:persona_id(*, personas_roles(rol))')
+    .select('*, personas:persona_id(*, inquilinos(id))')
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
   const base = mapPersonaBase(data.personas ?? {});
+  const roles: RolPersona[] = ['propietario'];
+  if (data.personas?.inquilinos?.length) roles.push('inquilino');
   return {
     ...base,
     id: data.id,
@@ -205,7 +213,7 @@ async function fetchPropietarioById(id: string): Promise<Propietario | null> {
     alias_cbu: data.alias_cbu ?? '',
     condicion_iva: data.condicion_iva ?? '',
     observaciones_fiscales: data.observaciones_fiscales ?? '',
-    roles: ((data.personas?.personas_roles ?? []) as any[]).map(r => r.rol as RolPersona),
+    roles,
   };
 }
 
@@ -226,10 +234,12 @@ export function usePropietario(id: string) {
 async function fetchInquilinos(): Promise<Inquilino[]> {
   const { data, error } = await (supabase as any)
     .from('inquilinos')
-    .select('*, personas:persona_id(*, personas_roles(rol))');
+    .select('*, personas:persona_id(*, propietarios(id))');
   if (error) throw error;
   return (data ?? []).map((row: any): Inquilino => {
     const base = mapPersonaBase(row.personas ?? {});
+    const roles: RolPersona[] = ['inquilino'];
+    if (row.personas?.propietarios?.length) roles.push('propietario');
     return {
       ...base,
       id: row.id,
@@ -241,7 +251,7 @@ async function fetchInquilinos(): Promise<Inquilino[]> {
       ingresos_declarados: Number(row.ingresos_declarados ?? 0),
       observaciones_inquilino: row.observaciones_inquilino ?? '',
       garante: row.garante_nombre ?? '',
-      roles: ((row.personas?.personas_roles ?? []) as any[]).map(r => r.rol as RolPersona),
+      roles,
     };
   }).sort((a: Inquilino, b: Inquilino) => a.nombre.localeCompare(b.nombre));
 }
@@ -249,12 +259,14 @@ async function fetchInquilinos(): Promise<Inquilino[]> {
 async function fetchInquilinoById(id: string): Promise<Inquilino | null> {
   const { data, error } = await (supabase as any)
     .from('inquilinos')
-    .select('*, personas:persona_id(*, personas_roles(rol))')
+    .select('*, personas:persona_id(*, propietarios(id))')
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
   const base = mapPersonaBase(data.personas ?? {});
+  const roles: RolPersona[] = ['inquilino'];
+  if (data.personas?.propietarios?.length) roles.push('propietario');
   return {
     ...base,
     id: data.id,
@@ -266,7 +278,7 @@ async function fetchInquilinoById(id: string): Promise<Inquilino | null> {
     ingresos_declarados: Number(data.ingresos_declarados ?? 0),
     observaciones_inquilino: data.observaciones_inquilino ?? '',
     garante: data.garante_nombre ?? '',
-    roles: ((data.personas?.personas_roles ?? []) as any[]).map(r => r.rol as RolPersona),
+    roles,
   };
 }
 
@@ -283,57 +295,48 @@ export function useInquilino(id: string) {
 }
 
 // ─── Personal del staff (usuarios del sistema) ────────────
-// Personas vinculadas a un usuario auth (user_id no nulo).
+// Usuarios con persona vinculada (usuarios.persona_id IS NOT NULL).
 export function usePersonalUsuarios() {
   return useQuery({
-    queryKey: ['personas', 'personal'],
+    queryKey: ['usuarios', 'personal'],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
-        .from('personas')
-        .select('*, user_roles:user_id!inner(role)')
-        .not('user_id', 'is', null)
+        .from('usuarios')
+        .select('id, email, nombre, activo, persona_id, personas:persona_id(*), user_roles(role)')
+        .not('persona_id', 'is', null)
         .order('nombre');
-      if (error) {
-        // Fallback: si el join falla por relación inexistente, listamos solo con user_id.
-        const { data: data2, error: e2 } = await (supabase as any)
-          .from('personas')
-          .select('*')
-          .not('user_id', 'is', null)
-          .order('nombre');
-        if (e2) throw e2;
-        return (data2 ?? []).map((p: any) => ({
-          ...mapPersonaBase(p),
-          user_id: p.user_id,
-          roles: [] as string[],
-        }));
-      }
-      return (data ?? []).map((p: any) => ({
-        ...mapPersonaBase(p),
-        user_id: p.user_id,
-        roles: (Array.isArray(p.user_roles) ? p.user_roles : [p.user_roles])
-          .filter(Boolean)
-          .map((r: any) => r.role as string),
+      if (error) throw error;
+      return (data ?? []).map((u: any) => ({
+        ...mapPersonaBase(u.personas ?? { id: u.persona_id, nombre: u.nombre }),
+        user_id: u.id,
+        email: u.personas?.email || u.email || '',
+        activo: u.activo,
+        roles: (u.user_roles ?? []).map((r: any) => r.role as string),
       }));
     },
   });
 }
 
 // Compat genérico — algunas pantallas usan un único hook por id de persona.
+// Roles derivados desde existencia en propietarios/inquilinos.
 export function usePersona(id: string) {
   return useQuery({
     queryKey: ['personas', 'one', id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('personas')
-        .select('*, personas_roles(rol)')
+        .select('*, propietarios(id), inquilinos(id)')
         .eq('id', id)
         .maybeSingle();
       if (error) throw error;
       if (!data) return null;
       const p: any = data;
+      const roles: RolPersona[] = [];
+      if (p.propietarios?.length) roles.push('propietario');
+      if (p.inquilinos?.length) roles.push('inquilino');
       return {
         ...mapPersonaBase(p),
-        roles: (p.personas_roles ?? []).map((r: any) => r.rol as RolPersona),
+        roles,
       };
     },
     enabled: !!id,

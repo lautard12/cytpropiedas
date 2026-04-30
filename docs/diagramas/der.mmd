@@ -6,7 +6,7 @@ erDiagram
     SUCURSALES ||--o{ USER_ROLES : "scope opcional"
     ORGANIZACION ||--o{ SUCURSALES : "contiene"
     USUARIOS ||--o{ AUDITORIA : "ejecuta"
-    PERSONAS ||--o{ PERSONAS_ROLES : "tiene roles"
+    %% (eliminada PERSONAS_ROLES — los roles de dominio se derivan de propietarios/inquilinos)
     PERSONAS ||--o| PROPIETARIOS : "es propietario"
     PERSONAS ||--o| INQUILINOS : "es inquilino"
     PROPIETARIOS ||--o{ PROPIEDADES : "posee"
@@ -29,7 +29,6 @@ erDiagram
         text telefono
         text direccion
         text observaciones
-        uuid user_id
         uuid sucursal_id
         timestamptz created_at
         timestamptz updated_at
@@ -53,11 +52,7 @@ erDiagram
         numeric ingresos_declarados
         text observaciones_inquilino
     }
-    PERSONAS_ROLES {
-        uuid id PK
-        uuid persona_id FK
-        rol_persona rol
-    }
+    %% PERSONAS_ROLES eliminada
     PROPIEDADES {
         uuid id PK
         text direccion
@@ -144,6 +139,7 @@ erDiagram
         text email
         text nombre
         boolean activo
+        uuid persona_id FK
         timestamptz ultimo_login
     }
     ROLES {

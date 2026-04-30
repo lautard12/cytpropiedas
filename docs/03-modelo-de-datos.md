@@ -2,14 +2,13 @@
 
 ## Visión general
 
-10 tablas + 5 enums.
+Tablas principales del dominio + auth/organización (ver §extensiones).
 
 | Tabla | Propósito |
 |---|---|
-| `personas` | Maestro único de personas físicas/jurídicas — **datos básicos personales** |
+| `personas` | Maestro único de personas físicas/jurídicas — **datos básicos** |
 | `propietarios` | Datos específicos de quien es propietario (banco, CBU, condición IVA…) — 1-a-1 con personas |
 | `inquilinos` | Datos específicos de quien es inquilino (garante, ocupación, ingresos…) — 1-a-1 con personas |
-| `personas_roles` | Índice rápido de roles por persona (propietario / inquilino / garante). Se sincroniza automáticamente vía trigger con `propietarios` e `inquilinos`. |
 | `propiedades` | Unidades inmuebles administradas. `propietario_id` → `propietarios.id`. |
 | `contratos` | Vínculo propiedad ↔ propietario ↔ inquilino. `propietario_id` → `propietarios.id`, `inquilino_id` → `inquilinos.id`. |
 | `liquidaciones` | Cuenta mensual emitida sobre un contrato |
@@ -17,22 +16,24 @@
 | `pagos` | Cobros parciales o totales aplicados a una liquidación |
 | `eventos_contrato` | Bitácora histórica unificada (timeline) |
 
+> **Roles de dominio** (propietario / inquilino) **ya no se persisten en una tabla aparte**. Se derivan de la **existencia** de la fila correspondiente en `propietarios` / `inquilinos`. El enum `rol_persona` y la tabla `personas_roles` fueron eliminados.
+
 ## Enums
 
 ```sql
-CREATE TYPE rol_persona AS ENUM ('propietario', 'inquilino', 'garante');
 CREATE TYPE tipo_propiedad AS ENUM ('Departamento','Casa','Local','Oficina','Cochera','Galpon','Terreno','Otro');
 CREATE TYPE estado_propiedad AS ENUM ('Vacante','Alquilada','Reservada','En refacción','Inactiva');
 CREATE TYPE estado_contrato AS ENUM ('Activo','Vencido','Rescindido','Borrador');
 CREATE TYPE estado_liquidacion AS ENUM ('Borrador','Pendiente','Parcial','Cobrada','Transferida','Anulada');
 CREATE TYPE estado_pago AS ENUM ('Pendiente','Confirmado','Anulado');
 CREATE TYPE medio_pago AS ENUM ('Transferencia','Efectivo','Cheque','Mercado Pago','Débito automático');
+CREATE TYPE app_role AS ENUM ('admin','administrativo');
 ```
 
 ## Detalle por entidad
 
 ### `personas`
-**Solo datos básicos** comunes a cualquier persona en el sistema.
+**Solo datos básicos** comunes a cualquier persona en el sistema. **No tiene `user_id`** — el vínculo con el usuario del sistema vive en `usuarios.persona_id`.
 
 | Columna | Tipo | Notas |
 |---|---|---|
@@ -43,8 +44,7 @@ CREATE TYPE medio_pago AS ENUM ('Transferencia','Efectivo','Cheque','Mercado Pag
 | email | text | normalizado a minúsculas |
 | telefono, direccion | text | |
 | observaciones | text | |
-| user_id | uuid → auth.users | si la persona también es usuario del sistema |
-| sucursal_id | uuid → sucursales | sucursal donde opera (para staff) |
+| sucursal_id | uuid → sucursales | sucursal donde opera (cuando aplica) |
 | created_at, updated_at | timestamptz | trigger `set_updated_at` |
 
 **Reglas:**
@@ -77,17 +77,13 @@ CREATE TYPE medio_pago AS ENUM ('Transferencia','Efectivo','Cheque','Mercado Pag
 | observaciones_inquilino | text | |
 | created_at, updated_at | timestamptz | |
 
-### `personas_roles`
-Índice rápido de roles. **Se sincroniza automáticamente** vía trigger `sync_personas_roles` cuando se inserta/elimina en `propietarios` o `inquilinos`. El rol `garante` se administra manualmente.
+### Roles de dominio (derivados)
+No existe tabla `personas_roles`. Para saber los roles de una persona se consulta directamente:
 
-| Columna | Tipo | Notas |
-|---|---|---|
-| id | uuid PK | |
-| persona_id | uuid FK → personas | on delete cascade |
-| rol | `rol_persona` | |
-| created_at | timestamptz | |
+- es **propietario** ⇔ existe fila en `propietarios` con su `persona_id`.
+- es **inquilino**   ⇔ existe fila en `inquilinos` con su `persona_id`.
 
-`UNIQUE(persona_id, rol)`.
+El front lo expone en `Persona.roles` (calculado en los hooks de lectura).
 
 ## Funciones RPC
 
@@ -194,15 +190,18 @@ Ver detalle completo en [`10-auth-y-organizacion.md`](./10-auth-y-organizacion.m
 
 ### Nuevas tablas
 - `organizacion`, `sucursales` (FK `organizacion_id`) — datos de la inmobiliaria.
-- **`usuarios`** — espejo público de `auth.users` (id, email, nombre, activo, ultimo_login). Se sincroniza con un trigger `on_auth_user_created`.
+- **`usuarios`** — espejo público de `auth.users` (id, email, nombre, activo, ultimo_login, **`persona_id` UNIQUE → personas**). Se crea automáticamente con el trigger `on_auth_user_created`.
 - **`roles`** — catálogo de roles (`codigo app_role`, `nombre`, `descripcion`). Editable por admin.
-- **`user_roles`** — N:M entre `usuarios` y `roles`, con FKs explícitas y unicidad `(user_id, role_id)`. Conserva una columna `role` denormalizada (sincronizada por trigger) para que `has_role()` siga siendo SQL puro.
+- **`user_roles`** — N:M entre `usuarios` y `roles`, con FKs explícitas y unicidad `(user_id, role_id)`. Conserva una columna `role` denormalizada (sincronizada por trigger) para que `has_role()` siga siendo SQL puro. **Es la única vía para asignar roles de aplicación.**
 - `auditoria` — registro inmutable de cambios sensibles (RLS: solo admin lee, nadie modifica). FK `user_id → usuarios(id)`.
 
 ### Cambios en tablas existentes
-- `personas`: `user_id uuid UNIQUE` ahora referencia **`usuarios(id)`** (no `auth.users`). Una persona ↔ un usuario, e independiente del rol. `sucursal_id` referencia `sucursales(id)`.
+- `personas`: **se eliminó la columna `user_id`**. La relación 1:1 con `usuarios` vive ahora en `usuarios.persona_id` (un usuario apunta a su persona).
 - `propiedades`: `+ latitud numeric`, `+ longitud numeric`, `+ matricula_catastral text`.
-- Enum `rol_persona`: `+ 'personal'`.
+
+### Tablas / enums eliminados
+- ❌ `personas_roles` (tabla) — los roles de dominio se derivan de propietarios/inquilinos.
+- ❌ `rol_persona` (enum) — ya no se usa.
 
 ### Nuevo enum
 - `app_role`: `admin` | `administrativo`.
