@@ -20,11 +20,13 @@ Tres tablas con relaciones explícitas mediante claves foráneas:
 
 ```
 auth.users ─1:1─► usuarios ─N:M─► roles
-                     ▲
-                     │ 1:1 (opcional)
                      │
+                     │ 1:1 (opcional, vía usuarios.persona_id)
+                     ▼
                   personas
 ```
+
+> El vínculo persona ↔ usuario vive en **`usuarios.persona_id`** (no en `personas.user_id`, que ya no existe). Una persona puede existir sin usuario; un usuario puede existir sin persona vinculada.
 
 ### `usuarios` (espejo público de `auth.users`)
 | Columna | Tipo | Notas |
@@ -33,10 +35,11 @@ auth.users ─1:1─► usuarios ─N:M─► roles
 | email | text | único (case-insensitive) |
 | nombre | text | nombre para mostrar |
 | activo | boolean | habilita/deshabilita el acceso lógico |
+| **persona_id** | uuid UNIQUE → `personas(id)` | ON DELETE SET NULL — vínculo opcional 1:1 |
 | ultimo_login | timestamptz | uso futuro |
 | created_at, updated_at | timestamptz | |
 
-Trigger `on_auth_user_created` (sobre `auth.users`) crea automáticamente la fila en `usuarios` cuando alguien se registra.
+Trigger `on_auth_user_created` (sobre `auth.users`) crea automáticamente la fila en `usuarios`. Si en `raw_user_meta_data` viene un `persona_id`, intenta vincularlo (si la persona aún no está tomada por otro usuario).
 
 ### `roles` (catálogo)
 | Columna | Tipo | Notas |
@@ -57,7 +60,7 @@ Roles iniciales: `admin` (Administrador), `administrativo` (Administrativo). Edi
 | sucursal_id | uuid FK → `sucursales(id)` | opcional |
 | UNIQUE | (user_id, role_id) | un usuario no repite el mismo rol |
 
-Helper SECURITY DEFINER `has_role(uid, role)` se mantiene sin cambios (consulta `user_roles.role`), por lo que las políticas RLS y el front no necesitan tocarse. La columna `role` se sincroniza desde `role_id` con el trigger `trg_user_roles_sync`.
+`user_roles` es la **única** tabla que asigna roles de aplicación. Los "roles de dominio" (propietario / inquilino) ya no se persisten: se derivan de la existencia de filas en `propietarios` / `inquilinos` para una `persona_id` dada.
 
 ## Organización y sucursales
 
