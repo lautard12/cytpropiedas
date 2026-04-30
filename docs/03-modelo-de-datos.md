@@ -77,17 +77,13 @@ CREATE TYPE app_role AS ENUM ('admin','administrativo');
 | observaciones_inquilino | text | |
 | created_at, updated_at | timestamptz | |
 
-### `personas_roles`
-Índice rápido de roles. **Se sincroniza automáticamente** vía trigger `sync_personas_roles` cuando se inserta/elimina en `propietarios` o `inquilinos`. El rol `garante` se administra manualmente.
+### Roles de dominio (derivados)
+No existe tabla `personas_roles`. Para saber los roles de una persona se consulta directamente:
 
-| Columna | Tipo | Notas |
-|---|---|---|
-| id | uuid PK | |
-| persona_id | uuid FK → personas | on delete cascade |
-| rol | `rol_persona` | |
-| created_at | timestamptz | |
+- es **propietario** ⇔ existe fila en `propietarios` con su `persona_id`.
+- es **inquilino**   ⇔ existe fila en `inquilinos` con su `persona_id`.
 
-`UNIQUE(persona_id, rol)`.
+El front lo expone en `Persona.roles` (calculado en los hooks de lectura).
 
 ## Funciones RPC
 
