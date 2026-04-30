@@ -234,10 +234,12 @@ export function usePropietario(id: string) {
 async function fetchInquilinos(): Promise<Inquilino[]> {
   const { data, error } = await (supabase as any)
     .from('inquilinos')
-    .select('*, personas:persona_id(*, personas_roles(rol))');
+    .select('*, personas:persona_id(*, propietarios(id))');
   if (error) throw error;
   return (data ?? []).map((row: any): Inquilino => {
     const base = mapPersonaBase(row.personas ?? {});
+    const roles: RolPersona[] = ['inquilino'];
+    if (row.personas?.propietarios?.length) roles.push('propietario');
     return {
       ...base,
       id: row.id,
@@ -249,7 +251,7 @@ async function fetchInquilinos(): Promise<Inquilino[]> {
       ingresos_declarados: Number(row.ingresos_declarados ?? 0),
       observaciones_inquilino: row.observaciones_inquilino ?? '',
       garante: row.garante_nombre ?? '',
-      roles: ((row.personas?.personas_roles ?? []) as any[]).map(r => r.rol as RolPersona),
+      roles,
     };
   }).sort((a: Inquilino, b: Inquilino) => a.nombre.localeCompare(b.nombre));
 }
@@ -257,12 +259,14 @@ async function fetchInquilinos(): Promise<Inquilino[]> {
 async function fetchInquilinoById(id: string): Promise<Inquilino | null> {
   const { data, error } = await (supabase as any)
     .from('inquilinos')
-    .select('*, personas:persona_id(*, personas_roles(rol))')
+    .select('*, personas:persona_id(*, propietarios(id))')
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
   const base = mapPersonaBase(data.personas ?? {});
+  const roles: RolPersona[] = ['inquilino'];
+  if (data.personas?.propietarios?.length) roles.push('propietario');
   return {
     ...base,
     id: data.id,
@@ -274,7 +278,7 @@ async function fetchInquilinoById(id: string): Promise<Inquilino | null> {
     ingresos_declarados: Number(data.ingresos_declarados ?? 0),
     observaciones_inquilino: data.observaciones_inquilino ?? '',
     garante: data.garante_nombre ?? '',
-    roles: ((data.personas?.personas_roles ?? []) as any[]).map(r => r.rol as RolPersona),
+    roles,
   };
 }
 
