@@ -190,15 +190,18 @@ Ver detalle completo en [`10-auth-y-organizacion.md`](./10-auth-y-organizacion.m
 
 ### Nuevas tablas
 - `organizacion`, `sucursales` (FK `organizacion_id`) — datos de la inmobiliaria.
-- **`usuarios`** — espejo público de `auth.users` (id, email, nombre, activo, ultimo_login). Se sincroniza con un trigger `on_auth_user_created`.
+- **`usuarios`** — espejo público de `auth.users` (id, email, nombre, activo, ultimo_login, **`persona_id` UNIQUE → personas**). Se crea automáticamente con el trigger `on_auth_user_created`.
 - **`roles`** — catálogo de roles (`codigo app_role`, `nombre`, `descripcion`). Editable por admin.
-- **`user_roles`** — N:M entre `usuarios` y `roles`, con FKs explícitas y unicidad `(user_id, role_id)`. Conserva una columna `role` denormalizada (sincronizada por trigger) para que `has_role()` siga siendo SQL puro.
+- **`user_roles`** — N:M entre `usuarios` y `roles`, con FKs explícitas y unicidad `(user_id, role_id)`. Conserva una columna `role` denormalizada (sincronizada por trigger) para que `has_role()` siga siendo SQL puro. **Es la única vía para asignar roles de aplicación.**
 - `auditoria` — registro inmutable de cambios sensibles (RLS: solo admin lee, nadie modifica). FK `user_id → usuarios(id)`.
 
 ### Cambios en tablas existentes
-- `personas`: `user_id uuid UNIQUE` ahora referencia **`usuarios(id)`** (no `auth.users`). Una persona ↔ un usuario, e independiente del rol. `sucursal_id` referencia `sucursales(id)`.
+- `personas`: **se eliminó la columna `user_id`**. La relación 1:1 con `usuarios` vive ahora en `usuarios.persona_id` (un usuario apunta a su persona).
 - `propiedades`: `+ latitud numeric`, `+ longitud numeric`, `+ matricula_catastral text`.
-- Enum `rol_persona`: `+ 'personal'`.
+
+### Tablas / enums eliminados
+- ❌ `personas_roles` (tabla) — los roles de dominio se derivan de propietarios/inquilinos.
+- ❌ `rol_persona` (enum) — ya no se usa.
 
 ### Nuevo enum
 - `app_role`: `admin` | `administrativo`.
