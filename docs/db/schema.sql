@@ -58,7 +58,7 @@ CREATE TABLE public.personas (
   telefono text NOT NULL DEFAULT '',
   direccion text NOT NULL DEFAULT '',
   observaciones text NOT NULL DEFAULT '',
-  user_id uuid UNIQUE REFERENCES public.usuarios(id) ON DELETE SET NULL,   -- 1:1 con usuarios (opcional)
+  -- (sin user_id: el vínculo usuario↔persona vive en usuarios.persona_id)
   sucursal_id uuid REFERENCES public.sucursales(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
