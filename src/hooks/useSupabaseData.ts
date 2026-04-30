@@ -295,57 +295,48 @@ export function useInquilino(id: string) {
 }
 
 // ─── Personal del staff (usuarios del sistema) ────────────
-// Personas vinculadas a un usuario auth (user_id no nulo).
+// Usuarios con persona vinculada (usuarios.persona_id IS NOT NULL).
 export function usePersonalUsuarios() {
   return useQuery({
-    queryKey: ['personas', 'personal'],
+    queryKey: ['usuarios', 'personal'],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
-        .from('personas')
-        .select('*, user_roles:user_id!inner(role)')
-        .not('user_id', 'is', null)
+        .from('usuarios')
+        .select('id, email, nombre, activo, persona_id, personas:persona_id(*), user_roles(role)')
+        .not('persona_id', 'is', null)
         .order('nombre');
-      if (error) {
-        // Fallback: si el join falla por relación inexistente, listamos solo con user_id.
-        const { data: data2, error: e2 } = await (supabase as any)
-          .from('personas')
-          .select('*')
-          .not('user_id', 'is', null)
-          .order('nombre');
-        if (e2) throw e2;
-        return (data2 ?? []).map((p: any) => ({
-          ...mapPersonaBase(p),
-          user_id: p.user_id,
-          roles: [] as string[],
-        }));
-      }
-      return (data ?? []).map((p: any) => ({
-        ...mapPersonaBase(p),
-        user_id: p.user_id,
-        roles: (Array.isArray(p.user_roles) ? p.user_roles : [p.user_roles])
-          .filter(Boolean)
-          .map((r: any) => r.role as string),
+      if (error) throw error;
+      return (data ?? []).map((u: any) => ({
+        ...mapPersonaBase(u.personas ?? { id: u.persona_id, nombre: u.nombre }),
+        user_id: u.id,
+        email: u.personas?.email || u.email || '',
+        activo: u.activo,
+        roles: (u.user_roles ?? []).map((r: any) => r.role as string),
       }));
     },
   });
 }
 
 // Compat genérico — algunas pantallas usan un único hook por id de persona.
+// Roles derivados desde existencia en propietarios/inquilinos.
 export function usePersona(id: string) {
   return useQuery({
     queryKey: ['personas', 'one', id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('personas')
-        .select('*, personas_roles(rol)')
+        .select('*, propietarios(id), inquilinos(id)')
         .eq('id', id)
         .maybeSingle();
       if (error) throw error;
       if (!data) return null;
       const p: any = data;
+      const roles: RolPersona[] = [];
+      if (p.propietarios?.length) roles.push('propietario');
+      if (p.inquilinos?.length) roles.push('inquilino');
       return {
         ...mapPersonaBase(p),
-        roles: (p.personas_roles ?? []).map((r: any) => r.rol as RolPersona),
+        roles,
       };
     },
     enabled: !!id,
