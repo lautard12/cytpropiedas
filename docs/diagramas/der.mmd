@@ -6,7 +6,7 @@ erDiagram
     SUCURSALES ||--o{ USER_ROLES : "scope opcional"
     ORGANIZACION ||--o{ SUCURSALES : "contiene"
     USUARIOS ||--o{ AUDITORIA : "ejecuta"
-    PERSONAS ||--o{ PERSONAS_ROLES : "tiene roles"
+    %% (eliminada PERSONAS_ROLES — los roles de dominio se derivan de propietarios/inquilinos)
     PERSONAS ||--o| PROPIETARIOS : "es propietario"
     PERSONAS ||--o| INQUILINOS : "es inquilino"
     PROPIETARIOS ||--o{ PROPIEDADES : "posee"
