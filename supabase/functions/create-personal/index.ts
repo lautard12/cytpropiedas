@@ -49,14 +49,17 @@ Deno.serve(async (req) => {
     if (cErr || !created.user) throw new Error(cErr?.message ?? 'No se pudo crear el usuario');
     const newUserId = created.user.id;
 
-    // Crear persona
+    // Crear persona (datos básicos)
     const { data: persona, error: pErr } = await admin.from('personas').insert({
       nombre, email, telefono: telefono ?? '', dni: dni ?? '',
-      user_id: newUserId, sucursal_id: sucursal_id || null,
+      sucursal_id: sucursal_id || null,
     }).select().single();
     if (pErr) throw new Error(pErr.message);
 
-    await admin.from('personas_roles').insert({ persona_id: persona.id, rol: 'personal' });
+    // Vincular el usuario recién creado con la persona (usuarios.persona_id)
+    await admin.from('usuarios').update({ persona_id: persona.id }).eq('id', newUserId);
+
+    // Asignar rol de aplicación al usuario
     await admin.from('user_roles').insert({ user_id: newUserId, role: rol, sucursal_id: sucursal_id || null });
 
     // Auditoría
