@@ -295,24 +295,38 @@ export function useInquilino(id: string) {
 }
 
 // ─── Personal del staff (usuarios del sistema) ────────────
-// Usuarios con persona vinculada (usuarios.persona_id IS NOT NULL).
+// Usuarios con persona vinculada + legajo activo en `personal`.
 export function usePersonalUsuarios() {
   return useQuery({
     queryKey: ['usuarios', 'personal'],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('usuarios')
-        .select('id, email, nombre, activo, persona_id, personas:persona_id(*), user_roles(role)')
+        .select('id, email, nombre, activo, persona_id, personas:persona_id(*), user_roles(role), personal:personal!personal_persona_id_fkey(id, sucursal_id, fecha_alta, causa_alta, fecha_baja, causa_baja, activo, sucursales:sucursal_id(id, nombre))')
         .not('persona_id', 'is', null)
         .order('nombre');
       if (error) throw error;
-      return (data ?? []).map((u: any) => ({
-        ...mapPersonaBase(u.personas ?? { id: u.persona_id, nombre: u.nombre }),
-        user_id: u.id,
-        email: u.personas?.email || u.email || '',
-        activo: u.activo,
-        roles: (u.user_roles ?? []).map((r: any) => r.role as string),
-      }));
+      return (data ?? []).map((u: any) => {
+        const legajos = (u.personal ?? []) as any[];
+        const legajoActivo = legajos.find(l => l.activo) ?? legajos[0] ?? null;
+        return {
+          ...mapPersonaBase(u.personas ?? { id: u.persona_id, nombre: u.nombre }),
+          user_id: u.id,
+          email: u.personas?.email || u.email || '',
+          activo: u.activo,
+          roles: (u.user_roles ?? []).map((r: any) => r.role as string),
+          legajo: legajoActivo ? {
+            id: legajoActivo.id as string,
+            sucursal_id: legajoActivo.sucursal_id as string | null,
+            sucursal_nombre: legajoActivo.sucursales?.nombre as string | undefined,
+            fecha_alta: legajoActivo.fecha_alta as string,
+            causa_alta: legajoActivo.causa_alta as string,
+            fecha_baja: legajoActivo.fecha_baja as string | null,
+            causa_baja: legajoActivo.causa_baja as string | null,
+            activo: legajoActivo.activo as boolean,
+          } : null,
+        };
+      });
     },
   });
 }
