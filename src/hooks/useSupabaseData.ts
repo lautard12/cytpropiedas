@@ -300,30 +300,46 @@ export function usePersonalUsuarios() {
   return useQuery({
     queryKey: ['usuarios', 'personal'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data: usuarios, error } = await (supabase as any)
         .from('usuarios')
-        .select('id, email, nombre, activo, persona_id, personas:persona_id(*), user_roles(role), personal:personal!personal_persona_id_fkey(id, sucursal_id, fecha_alta, causa_alta, fecha_baja, causa_baja, activo, sucursales:sucursal_id(id, nombre))')
+        .select('id, email, nombre, activo, persona_id, personas:persona_id(*), user_roles(role)')
         .not('persona_id', 'is', null)
         .order('nombre');
       if (error) throw error;
-      return (data ?? []).map((u: any) => {
-        const legajos = (u.personal ?? []) as any[];
-        const legajoActivo = legajos.find(l => l.activo) ?? legajos[0] ?? null;
+
+      const personaIds = (usuarios ?? []).map((u: any) => u.persona_id).filter(Boolean);
+      let legajosByPersona: Record<string, any> = {};
+      if (personaIds.length) {
+        const { data: legajos, error: legErr } = await (supabase as any)
+          .from('personal')
+          .select('id, persona_id, sucursal_id, fecha_alta, causa_alta, fecha_baja, causa_baja, activo, sucursales:sucursal_id(id, nombre)')
+          .in('persona_id', personaIds)
+          .order('fecha_alta', { ascending: false });
+        if (legErr) throw legErr;
+        for (const l of legajos ?? []) {
+          // priorizamos legajo activo; si no, el más reciente (orden ya descendente)
+          const prev = legajosByPersona[l.persona_id];
+          if (!prev || (l.activo && !prev.activo)) legajosByPersona[l.persona_id] = l;
+        }
+      }
+
+      return (usuarios ?? []).map((u: any) => {
+        const l = legajosByPersona[u.persona_id];
         return {
           ...mapPersonaBase(u.personas ?? { id: u.persona_id, nombre: u.nombre }),
           user_id: u.id,
           email: u.personas?.email || u.email || '',
           activo: u.activo,
           roles: (u.user_roles ?? []).map((r: any) => r.role as string),
-          legajo: legajoActivo ? {
-            id: legajoActivo.id as string,
-            sucursal_id: legajoActivo.sucursal_id as string | null,
-            sucursal_nombre: legajoActivo.sucursales?.nombre as string | undefined,
-            fecha_alta: legajoActivo.fecha_alta as string,
-            causa_alta: legajoActivo.causa_alta as string,
-            fecha_baja: legajoActivo.fecha_baja as string | null,
-            causa_baja: legajoActivo.causa_baja as string | null,
-            activo: legajoActivo.activo as boolean,
+          legajo: l ? {
+            id: l.id as string,
+            sucursal_id: l.sucursal_id as string | null,
+            sucursal_nombre: l.sucursales?.nombre as string | undefined,
+            fecha_alta: l.fecha_alta as string,
+            causa_alta: l.causa_alta as string,
+            fecha_baja: l.fecha_baja as string | null,
+            causa_baja: l.causa_baja as string | null,
+            activo: l.activo as boolean,
           } : null,
         };
       });
