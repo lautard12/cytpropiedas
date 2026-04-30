@@ -7,6 +7,8 @@ erDiagram
     ORGANIZACION ||--o{ SUCURSALES : "contiene"
     USUARIOS ||--o{ AUDITORIA : "ejecuta"
     %% (eliminada PERSONAS_ROLES — los roles de dominio se derivan de propietarios/inquilinos)
+    PERSONAS ||--o{ PERSONAL : "tiene legajo(s)"
+    SUCURSALES ||--o{ PERSONAL : "emplea en"
     PERSONAS ||--o| PROPIETARIOS : "es propietario"
     PERSONAS ||--o| INQUILINOS : "es inquilino"
     PROPIETARIOS ||--o{ PROPIEDADES : "posee"
