@@ -43,28 +43,25 @@ Deno.serve(async (req) => {
     const { data: central } = await supabase
       .from("sucursales").select("id").eq("es_central", true).maybeSingle();
 
-    // persona vinculada
-    const { data: existingPersona } = await supabase
-      .from("personas").select("id").eq("user_id", admin.id).maybeSingle();
+    // persona vinculada vía usuarios.persona_id
+    const { data: usuarioRow } = await supabase
+      .from("usuarios").select("persona_id").eq("id", admin.id).maybeSingle();
 
-    let personaId = existingPersona?.id;
+    let personaId = usuarioRow?.persona_id ?? null;
     if (!personaId) {
       const { data: nuevaPersona, error: pErr } = await supabase
         .from("personas")
         .insert({
           nombre: "Administrador",
           email: ADMIN_EMAIL,
-          user_id: admin.id,
           sucursal_id: central?.id ?? null,
         })
         .select("id").single();
       if (pErr) throw pErr;
       personaId = nuevaPersona.id;
+      // Vincular usuario ↔ persona
+      await supabase.from("usuarios").update({ persona_id: personaId }).eq("id", admin.id);
     }
-
-    // rol persona = personal
-    await supabase.from("personas_roles")
-      .upsert({ persona_id: personaId, rol: "personal" }, { onConflict: "persona_id,rol" });
 
     // rol app = admin
     await supabase.from("user_roles")
