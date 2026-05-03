@@ -6,6 +6,8 @@
 - Existe la **propiedad** (con `propietario_id` asignado).
 - Existe el **inquilino** (persona con rol `inquilino`).
 - Opcionalmente existe el **garante** (persona con rol `garante`).
+- Opcionalmente hay **plantillas** cargadas en `plantillas_contrato` para el tipo elegido.
+- Si la moneda es `USD`, conviene tener al menos una entrada reciente en `cotizaciones_usd` para mostrar el equivalente en ARS.
 
 ## Pasos
 
