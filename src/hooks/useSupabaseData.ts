@@ -553,10 +553,10 @@ export function useContratosByPropiedad(propiedadId: string) {
 
 // ─── Helpers ──────────────────────────────────────────────
 
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number, moneda: 'ARS' | 'USD' = 'ARS'): string {
   return new Intl.NumberFormat('es-AR', {
     style: 'currency',
-    currency: 'ARS',
+    currency: moneda,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
