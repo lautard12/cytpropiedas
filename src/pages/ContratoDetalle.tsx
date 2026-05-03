@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +18,9 @@ import {
   MessageSquare, Handshake, Paperclip, Clock, BarChart3, Zap,
 } from 'lucide-react';
 import { differenceInMonths } from 'date-fns';
+import { GarantiasSection } from '@/components/contratos/GarantiasSection';
+import { RescindirDialog } from '@/components/contratos/RescindirDialog';
+import { RenovacionSection } from '@/components/contratos/RenovacionSection';
 
 const TIPO_ICON: Record<string, React.ElementType> = {
   inicio_contrato: FileText,
