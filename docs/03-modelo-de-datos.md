@@ -237,3 +237,10 @@ Ver detalle completo en [`10-auth-y-organizacion.md`](./10-auth-y-organizacion.m
 ### Nuevas funciones
 - `has_role(_user_id uuid, _role app_role)` — SECURITY DEFINER, usada en RLS.
 - `anular_pago(_pago_id uuid, _motivo text)` — RPC atómica que anula el pago, recalcula la liquidación, registra evento y entrada de auditoría.
+
+### Plantillas y cotizaciones (multi-moneda y multi-tipo de contrato)
+- **`plantillas_contrato`** — biblioteca de cláusulas predefinidas por `tipo_contrato` (Vivienda/Comercial/Temporario). Al crear un contrato, la operadora puede aplicar una plantilla y editar el texto antes de guardarlo en `contratos.clausulas_particulares`. RLS: lectura autenticada, escritura solo `admin`.
+- **`cotizaciones_usd`** — histórico de cotizaciones (`Oficial` / `MEP` / `Blue` / `CCL`) con `fecha`, `valor_compra`, `valor_venta` y `fuente`. Una entrada por (fecha, tipo). Se usa para mostrar el equivalente en ARS de un alquiler en USD y para imputar pagos cruzados (campo `pagos.cotizacion`). RLS: lectura autenticada, escritura solo `admin`.
+
+### Nuevo enum
+- `tipo_cotizacion`: `Oficial` | `MEP` | `Blue` | `CCL`.
