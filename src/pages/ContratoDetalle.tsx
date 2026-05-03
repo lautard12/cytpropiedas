@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +18,9 @@ import {
   MessageSquare, Handshake, Paperclip, Clock, BarChart3, Zap,
 } from 'lucide-react';
 import { differenceInMonths } from 'date-fns';
+import { GarantiasSection } from '@/components/contratos/GarantiasSection';
+import { RescindirDialog } from '@/components/contratos/RescindirDialog';
+import { RenovacionSection } from '@/components/contratos/RenovacionSection';
 
 const TIPO_ICON: Record<string, React.ElementType> = {
   inicio_contrato: FileText,
@@ -75,6 +79,7 @@ function TimelineEvent({ evento }: { evento: EventoContrato }) {
 export default function ContratoDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [rescindirOpen, setRescindirOpen] = useState(false);
   const { data: contrato, isLoading } = useContrato(id || '');
   const { data: propiedad } = usePropiedad(contrato?.propiedad_id || '');
   const { data: propietario } = usePropietario(contrato?.propietario_id || '');
@@ -118,6 +123,11 @@ export default function ContratoDetalle() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm"><Edit className="h-4 w-4 mr-1" /> Editar</Button>
+          {contrato.estado === 'Activo' && (
+            <Button variant="outline" size="sm" onClick={() => setRescindirOpen(true)}>
+              <AlertTriangle className="h-4 w-4 mr-1 text-status-danger" /> Rescindir
+            </Button>
+          )}
           <Button size="sm" onClick={() => navigate('/generar-liquidacion')}><Calculator className="h-4 w-4 mr-1" /> Generar liquidación</Button>
         </div>
       </div>
@@ -125,6 +135,8 @@ export default function ContratoDetalle() {
       <Tabs defaultValue="resumen">
         <TabsList>
           <TabsTrigger value="resumen">Resumen</TabsTrigger>
+          <TabsTrigger value="garantias">Garantías</TabsTrigger>
+          <TabsTrigger value="renovacion">Renovación</TabsTrigger>
           <TabsTrigger value="historial">Historial</TabsTrigger>
         </TabsList>
 
@@ -176,6 +188,14 @@ export default function ContratoDetalle() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="garantias" className="space-y-6">
+          <GarantiasSection contratoId={contrato.id} />
+        </TabsContent>
+
+        <TabsContent value="renovacion" className="space-y-6">
+          <RenovacionSection contrato={contrato} />
         </TabsContent>
 
         {/* TAB HISTORIAL — 4 bloques */}
@@ -305,6 +325,8 @@ export default function ContratoDetalle() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <RescindirDialog open={rescindirOpen} onClose={() => setRescindirOpen(false)} contrato={contrato} />
     </div>
   );
 }
