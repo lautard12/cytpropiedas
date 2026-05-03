@@ -36,11 +36,13 @@ export default function NuevoContrato() {
   const [propiedadId, setPropiedadId] = useState('');
   const [propietarioId, setPropietarioId] = useState('');
   const [inquilinoId, setInquilinoId] = useState('');
+  const [tipoContrato, setTipoContrato] = useState<'Vivienda' | 'Comercial' | 'Temporario'>('Vivienda');
+  const [moneda, setMoneda] = useState<'ARS' | 'USD'>('ARS');
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
   const [alquilerBase, setAlquilerBase] = useState('');
   const [diaVencimiento, setDiaVencimiento] = useState('10');
-  const [tipoAjuste, setTipoAjuste] = useState('ICL (Índice Casa Propia)');
+  const [indiceAjuste, setIndiceAjuste] = useState<'ICL' | 'IPC' | 'Libre acuerdo'>('ICL');
   const [frecuenciaAjuste, setFrecuenciaAjuste] = useState('Trimestral');
   const [comision, setComision] = useState('10');
   const [iva, setIva] = useState(false);
@@ -50,6 +52,7 @@ export default function NuevoContrato() {
   const [expExtraordinarias, setExpExtraordinarias] = useState<Responsable>('Propietario');
   const [seguro, setSeguro] = useState<Responsable>('Inquilino');
   const [servicios, setServicios] = useState<Responsable>('Inquilino');
+  const [clausulasParticulares, setClausulasParticulares] = useState('');
   const [observaciones, setObservaciones] = useState('');
 
   const propiedad = findById(propiedades, propiedadId);
