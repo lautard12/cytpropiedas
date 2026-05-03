@@ -208,6 +208,36 @@ export type Database = {
           },
         ]
       }
+      cotizaciones_usd: {
+        Row: {
+          created_at: string
+          fecha: string
+          fuente: string
+          id: string
+          tipo: Database["public"]["Enums"]["tipo_cotizacion"]
+          valor_compra: number
+          valor_venta: number
+        }
+        Insert: {
+          created_at?: string
+          fecha?: string
+          fuente?: string
+          id?: string
+          tipo?: Database["public"]["Enums"]["tipo_cotizacion"]
+          valor_compra?: number
+          valor_venta: number
+        }
+        Update: {
+          created_at?: string
+          fecha?: string
+          fuente?: string
+          id?: string
+          tipo?: Database["public"]["Enums"]["tipo_cotizacion"]
+          valor_compra?: number
+          valor_venta?: number
+        }
+        Relationships: []
+      }
       eventos_contrato: {
         Row: {
           categoria: string
@@ -586,6 +616,39 @@ export type Database = {
           },
         ]
       }
+      plantillas_contrato: {
+        Row: {
+          activa: boolean
+          clausulas: string
+          created_at: string
+          descripcion: string
+          id: string
+          nombre: string
+          tipo: Database["public"]["Enums"]["tipo_contrato"]
+          updated_at: string
+        }
+        Insert: {
+          activa?: boolean
+          clausulas?: string
+          created_at?: string
+          descripcion?: string
+          id?: string
+          nombre: string
+          tipo: Database["public"]["Enums"]["tipo_contrato"]
+          updated_at?: string
+        }
+        Update: {
+          activa?: boolean
+          clausulas?: string
+          created_at?: string
+          descripcion?: string
+          id?: string
+          nombre?: string
+          tipo?: Database["public"]["Enums"]["tipo_contrato"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       propiedades: {
         Row: {
           ambientes: number
@@ -923,6 +986,7 @@ export type Database = {
       medio_pago: "Transferencia" | "Efectivo" | "Cheque" | "Depósito"
       moneda: "ARS" | "USD"
       tipo_contrato: "Vivienda" | "Comercial" | "Temporario"
+      tipo_cotizacion: "Oficial" | "MEP" | "Blue" | "CCL"
       tipo_propiedad: "Departamento" | "Casa" | "Local" | "Oficina" | "PH"
     }
     CompositeTypes: {
@@ -1066,6 +1130,7 @@ export const Constants = {
       medio_pago: ["Transferencia", "Efectivo", "Cheque", "Depósito"],
       moneda: ["ARS", "USD"],
       tipo_contrato: ["Vivienda", "Comercial", "Temporario"],
+      tipo_cotizacion: ["Oficial", "MEP", "Blue", "CCL"],
       tipo_propiedad: ["Departamento", "Casa", "Local", "Oficina", "PH"],
     },
   },

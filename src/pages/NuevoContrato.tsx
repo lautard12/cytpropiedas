@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { usePropiedades, usePropietarios, useInquilinos, findById, formatCurrency } from '@/hooks/useSupabaseData';
+import { usePropiedades, usePropietarios, useInquilinos, usePlantillasContrato, useCotizacionUSD, findById, formatCurrency, formatDate } from '@/hooks/useSupabaseData';
 import { ArrowLeft, ArrowRight, Check, Building2, Users, FileText, Settings, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -32,6 +32,7 @@ export default function NuevoContrato() {
   const { data: propiedades = [], isLoading: loadingP } = usePropiedades();
   const { data: propietarios = [], isLoading: loadingO } = usePropietarios();
   const { data: inquilinos = [], isLoading: loadingI } = useInquilinos();
+  const { data: cotizacion } = useCotizacionUSD();
 
   const [propiedadId, setPropiedadId] = useState('');
   const [propietarioId, setPropietarioId] = useState('');
@@ -58,6 +59,14 @@ export default function NuevoContrato() {
   const propiedad = findById(propiedades, propiedadId);
   const propietario = findById(propietarios, propietarioId);
   const inquilino = findById(inquilinos, inquilinoId);
+  const { data: plantillas = [] } = usePlantillasContrato(tipoContrato);
+  const [plantillaId, setPlantillaId] = useState<string>('');
+
+  const aplicarPlantilla = (id: string) => {
+    setPlantillaId(id);
+    const p = plantillas.find((x: any) => x.id === id);
+    if (p) setClausulasParticulares(p.clausulas);
+  };
 
   const handlePropiedadChange = (val: string) => {
     setPropiedadId(val);
@@ -159,6 +168,12 @@ export default function NuevoContrato() {
                 <div className="space-y-1.5"><Label>Índice de ajuste</Label><Select value={indiceAjuste} onValueChange={(v) => setIndiceAjuste(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ICL">ICL (BCRA)</SelectItem><SelectItem value="IPC">IPC (INDEC)</SelectItem><SelectItem value="Libre acuerdo">Libre acuerdo</SelectItem></SelectContent></Select></div>
                 <div className="space-y-1.5"><Label>Frecuencia de ajuste</Label><Select value={frecuenciaAjuste} onValueChange={setFrecuenciaAjuste}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Trimestral">Trimestral</SelectItem><SelectItem value="Cuatrimestral">Cuatrimestral</SelectItem><SelectItem value="Semestral">Semestral</SelectItem><SelectItem value="Anual">Anual</SelectItem></SelectContent></Select></div>
               </div>
+              {moneda === 'USD' && cotizacion && (
+                <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
+                  Cotización USD vigente ({cotizacion.tipo}, {formatDate(cotizacion.fecha)}): <strong>${Number(cotizacion.valor_venta).toLocaleString('es-AR')}</strong>
+                  {' '}— equivalente: <strong>{formatCurrency(Number(alquilerBase) * Number(cotizacion.valor_venta) || 0, 'ARS')}</strong>
+                </div>
+              )}
             </div>
           )}
 
@@ -176,7 +191,16 @@ export default function NuevoContrato() {
                 <ResponsableSelect label="Seguro" value={seguro} onChange={setSeguro} />
                 <ResponsableSelect label="Servicios (EPE, gas, agua)" value={servicios} onChange={setServicios} />
               </div>
-              <div className="space-y-1.5"><Label>Cláusulas particulares</Label><Textarea value={clausulasParticulares} onChange={e => setClausulasParticulares(e.target.value)} placeholder="Cláusulas específicas pactadas..." rows={4} /></div>
+              <div className="space-y-1.5">
+                <Label>Plantilla de cláusulas ({tipoContrato})</Label>
+                <Select value={plantillaId} onValueChange={aplicarPlantilla}>
+                  <SelectTrigger><SelectValue placeholder={plantillas.length ? 'Aplicar plantilla...' : 'No hay plantillas'} /></SelectTrigger>
+                  <SelectContent>
+                    {plantillas.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5"><Label>Cláusulas particulares</Label><Textarea value={clausulasParticulares} onChange={e => setClausulasParticulares(e.target.value)} placeholder="Cláusulas específicas pactadas..." rows={6} /></div>
               <div className="space-y-1.5"><Label>Observaciones</Label><Textarea value={observaciones} onChange={e => setObservaciones(e.target.value)} placeholder="Notas adicionales sobre este contrato..." /></div>
             </div>
           )}

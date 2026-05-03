@@ -551,6 +551,50 @@ export function useContratosByPropiedad(propiedadId: string) {
   });
 }
 
+export function usePlantillasContrato(tipo?: 'Vivienda' | 'Comercial' | 'Temporario') {
+  return useQuery({
+    queryKey: ['plantillas_contrato', tipo ?? 'all'],
+    queryFn: async () => {
+      let q = supabase.from('plantillas_contrato').select('*').eq('activa', true).order('nombre');
+      if (tipo) q = q.eq('tipo', tipo);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useCotizacionUSD() {
+  return useQuery({
+    queryKey: ['cotizacion_usd_latest'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cotizaciones_usd')
+        .select('*')
+        .order('fecha', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useCotizacionesUSD() {
+  return useQuery({
+    queryKey: ['cotizaciones_usd'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cotizaciones_usd')
+        .select('*')
+        .order('fecha', { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
 // ─── Helpers ──────────────────────────────────────────────
 
 export function formatCurrency(amount: number, moneda: 'ARS' | 'USD' = 'ARS'): string {
