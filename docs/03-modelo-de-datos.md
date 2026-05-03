@@ -28,6 +28,9 @@ CREATE TYPE estado_liquidacion AS ENUM ('Borrador','Pendiente','Parcial','Cobrad
 CREATE TYPE estado_pago AS ENUM ('Pendiente','Confirmado','Anulado');
 CREATE TYPE medio_pago AS ENUM ('Transferencia','Efectivo','Cheque','Mercado Pago','Débito automático');
 CREATE TYPE app_role AS ENUM ('admin','administrativo');
+CREATE TYPE tipo_contrato AS ENUM ('Vivienda','Comercial','Temporario');
+CREATE TYPE moneda AS ENUM ('ARS','USD');
+CREATE TYPE indice_ajuste AS ENUM ('ICL','IPC','Libre acuerdo');
 ```
 
 ## Detalle por entidad
@@ -130,15 +133,19 @@ Vincula una persona con la sucursal donde trabaja y registra su ciclo laboral (a
 |---|---|---|
 | id, codigo | uuid / text | `codigo` legible (ej. `CTR-2025-001`) |
 | propiedad_id, propietario_id, inquilino_id | uuid FK | |
+| **tipo_contrato** | `tipo_contrato` | `Vivienda` / `Comercial` / `Temporario` (default `Vivienda`) |
+| **moneda** | `moneda` | `ARS` / `USD` (aplica a `alquiler_base` y propaga a liquidaciones/pagos) |
 | fecha_inicio, fecha_fin | date | |
 | estado | `estado_contrato` | |
-| alquiler_base | numeric | monto mensual al inicio |
-| tipo_ajuste | text | `ICL`, `IPC`, `Fijo`, `Negociado` |
-| frecuencia_ajuste | text | `Trimestral`, `Cuatrimestral`, `Semestral`, `Anual` |
+| alquiler_base | numeric | monto mensual al inicio (en `moneda`) |
+| **indice_ajuste** | `indice_ajuste` | `ICL` / `IPC` / `Libre acuerdo` (default `ICL`) |
+| tipo_ajuste | text | *legacy*, se mantiene por compatibilidad |
+| frecuencia_ajuste | text | `Trimestral` (default), `Cuatrimestral`, `Semestral`, `Anual` |
 | dia_vencimiento | int | día del mes |
 | comision_porcentaje | numeric | % sobre alquiler |
 | iva | boolean | si la comisión lleva IVA |
 | tgi, api, expensas_ordinarias, expensas_extraordinarias, seguro, servicios | text | quién paga: `Inquilino` / `Propietario` / `No aplica` |
+| **clausulas_particulares** | text | cláusulas específicas pactadas (texto libre por contrato) |
 | reglas_observaciones | text | |
 | created_at | timestamptz | |
 

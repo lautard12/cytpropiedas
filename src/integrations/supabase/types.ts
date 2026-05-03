@@ -103,6 +103,7 @@ export type Database = {
         Row: {
           alquiler_base: number
           api: string
+          clausulas_particulares: string
           codigo: string
           comision_porcentaje: number
           created_at: string
@@ -114,8 +115,10 @@ export type Database = {
           fecha_inicio: string
           frecuencia_ajuste: string
           id: string
+          indice_ajuste: Database["public"]["Enums"]["indice_ajuste"]
           inquilino_id: string | null
           iva: boolean
+          moneda: Database["public"]["Enums"]["moneda"]
           propiedad_id: string | null
           propietario_id: string | null
           reglas_observaciones: string
@@ -123,10 +126,12 @@ export type Database = {
           servicios: string
           tgi: string
           tipo_ajuste: string
+          tipo_contrato: Database["public"]["Enums"]["tipo_contrato"]
         }
         Insert: {
           alquiler_base?: number
           api?: string
+          clausulas_particulares?: string
           codigo: string
           comision_porcentaje?: number
           created_at?: string
@@ -138,8 +143,10 @@ export type Database = {
           fecha_inicio: string
           frecuencia_ajuste?: string
           id?: string
+          indice_ajuste?: Database["public"]["Enums"]["indice_ajuste"]
           inquilino_id?: string | null
           iva?: boolean
+          moneda?: Database["public"]["Enums"]["moneda"]
           propiedad_id?: string | null
           propietario_id?: string | null
           reglas_observaciones?: string
@@ -147,10 +154,12 @@ export type Database = {
           servicios?: string
           tgi?: string
           tipo_ajuste?: string
+          tipo_contrato?: Database["public"]["Enums"]["tipo_contrato"]
         }
         Update: {
           alquiler_base?: number
           api?: string
+          clausulas_particulares?: string
           codigo?: string
           comision_porcentaje?: number
           created_at?: string
@@ -162,8 +171,10 @@ export type Database = {
           fecha_inicio?: string
           frecuencia_ajuste?: string
           id?: string
+          indice_ajuste?: Database["public"]["Enums"]["indice_ajuste"]
           inquilino_id?: string | null
           iva?: boolean
+          moneda?: Database["public"]["Enums"]["moneda"]
           propiedad_id?: string | null
           propietario_id?: string | null
           reglas_observaciones?: string
@@ -171,6 +182,7 @@ export type Database = {
           servicios?: string
           tgi?: string
           tipo_ajuste?: string
+          tipo_contrato?: Database["public"]["Enums"]["tipo_contrato"]
         }
         Relationships: [
           {
@@ -308,6 +320,7 @@ export type Database = {
           estado: Database["public"]["Enums"]["estado_liquidacion"]
           fecha_emision: string
           id: string
+          moneda: Database["public"]["Enums"]["moneda"]
           neto_propietario: number
           observaciones: string
           pendiente: number
@@ -325,6 +338,7 @@ export type Database = {
           estado?: Database["public"]["Enums"]["estado_liquidacion"]
           fecha_emision?: string
           id?: string
+          moneda?: Database["public"]["Enums"]["moneda"]
           neto_propietario?: number
           observaciones?: string
           pendiente?: number
@@ -342,6 +356,7 @@ export type Database = {
           estado?: Database["public"]["Enums"]["estado_liquidacion"]
           fecha_emision?: string
           id?: string
+          moneda?: Database["public"]["Enums"]["moneda"]
           neto_propietario?: number
           observaciones?: string
           pendiente?: number
@@ -407,36 +422,42 @@ export type Database = {
       pagos: {
         Row: {
           contrato_id: string
+          cotizacion: number | null
           created_at: string
           estado: Database["public"]["Enums"]["estado_pago"]
           fecha: string
           id: string
           liquidacion_id: string
           medio_pago: Database["public"]["Enums"]["medio_pago"]
+          moneda: Database["public"]["Enums"]["moneda"]
           monto: number
           observaciones: string
           referencia: string
         }
         Insert: {
           contrato_id: string
+          cotizacion?: number | null
           created_at?: string
           estado?: Database["public"]["Enums"]["estado_pago"]
           fecha?: string
           id?: string
           liquidacion_id: string
           medio_pago?: Database["public"]["Enums"]["medio_pago"]
+          moneda?: Database["public"]["Enums"]["moneda"]
           monto?: number
           observaciones?: string
           referencia?: string
         }
         Update: {
           contrato_id?: string
+          cotizacion?: number | null
           created_at?: string
           estado?: Database["public"]["Enums"]["estado_pago"]
           fecha?: string
           id?: string
           liquidacion_id?: string
           medio_pago?: Database["public"]["Enums"]["medio_pago"]
+          moneda?: Database["public"]["Enums"]["moneda"]
           monto?: number
           observaciones?: string
           referencia?: string
@@ -898,7 +919,10 @@ export type Database = {
         | "Transferida"
       estado_pago: "Confirmado" | "Pendiente" | "Rechazado"
       estado_propiedad: "Ocupada" | "Vacante" | "En refacción"
+      indice_ajuste: "ICL" | "IPC" | "Libre acuerdo"
       medio_pago: "Transferencia" | "Efectivo" | "Cheque" | "Depósito"
+      moneda: "ARS" | "USD"
+      tipo_contrato: "Vivienda" | "Comercial" | "Temporario"
       tipo_propiedad: "Departamento" | "Casa" | "Local" | "Oficina" | "PH"
     }
     CompositeTypes: {
@@ -1038,7 +1062,10 @@ export const Constants = {
       ],
       estado_pago: ["Confirmado", "Pendiente", "Rechazado"],
       estado_propiedad: ["Ocupada", "Vacante", "En refacción"],
+      indice_ajuste: ["ICL", "IPC", "Libre acuerdo"],
       medio_pago: ["Transferencia", "Efectivo", "Cheque", "Depósito"],
+      moneda: ["ARS", "USD"],
+      tipo_contrato: ["Vivienda", "Comercial", "Temporario"],
       tipo_propiedad: ["Departamento", "Casa", "Local", "Oficina", "PH"],
     },
   },

@@ -11,6 +11,9 @@ CREATE TYPE estado_liquidacion AS ENUM ('Borrador','Pendiente','Parcial','Cobrad
 CREATE TYPE estado_pago       AS ENUM ('Pendiente','Confirmado','Anulado');
 CREATE TYPE medio_pago        AS ENUM ('Transferencia','Efectivo','Cheque','Mercado Pago','Débito automático');
 CREATE TYPE app_role          AS ENUM ('admin','administrativo');
+CREATE TYPE tipo_contrato     AS ENUM ('Vivienda','Comercial','Temporario');
+CREATE TYPE moneda            AS ENUM ('ARS','USD');
+CREATE TYPE indice_ajuste     AS ENUM ('ICL','IPC','Libre acuerdo');
 -- NOTA: el enum rol_persona y la tabla personas_roles fueron eliminados.
 -- Los roles de dominio (propietario/inquilino) se derivan de la existencia
 -- de filas en propietarios/inquilinos.
@@ -140,9 +143,12 @@ CREATE TABLE public.contratos (
   fecha_inicio date NOT NULL,
   fecha_fin date NOT NULL,
   estado estado_contrato NOT NULL DEFAULT 'Activo',
+  tipo_contrato tipo_contrato NOT NULL DEFAULT 'Vivienda',
+  moneda moneda NOT NULL DEFAULT 'ARS',
   alquiler_base numeric NOT NULL DEFAULT 0,
-  tipo_ajuste text NOT NULL DEFAULT '',
-  frecuencia_ajuste text NOT NULL DEFAULT '',
+  indice_ajuste indice_ajuste NOT NULL DEFAULT 'ICL',
+  tipo_ajuste text NOT NULL DEFAULT '',          -- legacy (compat)
+  frecuencia_ajuste text NOT NULL DEFAULT 'Trimestral',
   dia_vencimiento int NOT NULL DEFAULT 10,
   comision_porcentaje numeric NOT NULL DEFAULT 10,
   iva boolean NOT NULL DEFAULT false,
@@ -152,6 +158,7 @@ CREATE TABLE public.contratos (
   expensas_extraordinarias text NOT NULL DEFAULT 'Propietario',
   seguro text NOT NULL DEFAULT 'No aplica',
   servicios text NOT NULL DEFAULT 'Inquilino',
+  clausulas_particulares text NOT NULL DEFAULT '',
   reglas_observaciones text NOT NULL DEFAULT '',
   created_at timestamptz NOT NULL DEFAULT now()
 );
@@ -170,6 +177,7 @@ CREATE TABLE public.liquidaciones (
   periodo_label text NOT NULL,
   fecha_emision date NOT NULL DEFAULT CURRENT_DATE,
   estado estado_liquidacion NOT NULL DEFAULT 'Borrador',
+  moneda moneda NOT NULL DEFAULT 'ARS',          -- heredada del contrato
   subtotal numeric NOT NULL DEFAULT 0,
   total_cobrar numeric NOT NULL DEFAULT 0,
   total_cobrado numeric NOT NULL DEFAULT 0,
@@ -196,6 +204,8 @@ CREATE TABLE public.pagos (
   contrato_id uuid NOT NULL REFERENCES public.contratos(id) ON DELETE CASCADE,
   fecha date NOT NULL DEFAULT CURRENT_DATE,
   monto numeric NOT NULL DEFAULT 0,
+  moneda moneda NOT NULL DEFAULT 'ARS',          -- moneda del pago (puede diferir del contrato)
+  cotizacion numeric,                            -- tipo de cambio aplicado si moneda <> contrato
   medio_pago medio_pago NOT NULL DEFAULT 'Transferencia',
   referencia text NOT NULL DEFAULT '',
   estado estado_pago NOT NULL DEFAULT 'Pendiente',

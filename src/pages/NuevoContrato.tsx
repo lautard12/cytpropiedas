@@ -36,11 +36,13 @@ export default function NuevoContrato() {
   const [propiedadId, setPropiedadId] = useState('');
   const [propietarioId, setPropietarioId] = useState('');
   const [inquilinoId, setInquilinoId] = useState('');
+  const [tipoContrato, setTipoContrato] = useState<'Vivienda' | 'Comercial' | 'Temporario'>('Vivienda');
+  const [moneda, setMoneda] = useState<'ARS' | 'USD'>('ARS');
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
   const [alquilerBase, setAlquilerBase] = useState('');
   const [diaVencimiento, setDiaVencimiento] = useState('10');
-  const [tipoAjuste, setTipoAjuste] = useState('ICL (Índice Casa Propia)');
+  const [indiceAjuste, setIndiceAjuste] = useState<'ICL' | 'IPC' | 'Libre acuerdo'>('ICL');
   const [frecuenciaAjuste, setFrecuenciaAjuste] = useState('Trimestral');
   const [comision, setComision] = useState('10');
   const [iva, setIva] = useState(false);
@@ -50,6 +52,7 @@ export default function NuevoContrato() {
   const [expExtraordinarias, setExpExtraordinarias] = useState<Responsable>('Propietario');
   const [seguro, setSeguro] = useState<Responsable>('Inquilino');
   const [servicios, setServicios] = useState<Responsable>('Inquilino');
+  const [clausulasParticulares, setClausulasParticulares] = useState('');
   const [observaciones, setObservaciones] = useState('');
 
   const propiedad = findById(propiedades, propiedadId);
@@ -147,12 +150,14 @@ export default function NuevoContrato() {
             <div className="space-y-4">
               <CardTitle className="text-lg">Datos generales del contrato</CardTitle>
               <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-1.5"><Label>Tipo de contrato</Label><Select value={tipoContrato} onValueChange={(v) => setTipoContrato(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Vivienda">Vivienda</SelectItem><SelectItem value="Comercial">Comercial</SelectItem><SelectItem value="Temporario">Temporario</SelectItem></SelectContent></Select></div>
+                <div className="space-y-1.5"><Label>Moneda</Label><Select value={moneda} onValueChange={(v) => setMoneda(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ARS">Pesos (ARS)</SelectItem><SelectItem value="USD">Dólares (USD)</SelectItem></SelectContent></Select></div>
                 <div className="space-y-1.5"><Label>Fecha de inicio</Label><Input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} /></div>
                 <div className="space-y-1.5"><Label>Fecha de fin</Label><Input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)} /></div>
-                <div className="space-y-1.5"><Label>Alquiler base ($)</Label><Input type="number" value={alquilerBase} onChange={e => setAlquilerBase(e.target.value)} placeholder="450000" /></div>
+                <div className="space-y-1.5"><Label>Alquiler base ({moneda === 'USD' ? 'US$' : '$'})</Label><Input type="number" value={alquilerBase} onChange={e => setAlquilerBase(e.target.value)} placeholder="450000" /></div>
                 <div className="space-y-1.5"><Label>Día de vencimiento mensual</Label><Input type="number" value={diaVencimiento} onChange={e => setDiaVencimiento(e.target.value)} min="1" max="28" /></div>
-                <div className="space-y-1.5"><Label>Tipo de ajuste</Label><Select value={tipoAjuste} onValueChange={setTipoAjuste}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ICL (Índice Casa Propia)">ICL (Índice Casa Propia)</SelectItem><SelectItem value="IPC (INDEC)">IPC (INDEC)</SelectItem><SelectItem value="Acuerdo de partes">Acuerdo de partes</SelectItem></SelectContent></Select></div>
-                <div className="space-y-1.5"><Label>Frecuencia de ajuste</Label><Select value={frecuenciaAjuste} onValueChange={setFrecuenciaAjuste}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Trimestral">Trimestral</SelectItem><SelectItem value="Semestral">Semestral</SelectItem><SelectItem value="Anual">Anual</SelectItem></SelectContent></Select></div>
+                <div className="space-y-1.5"><Label>Índice de ajuste</Label><Select value={indiceAjuste} onValueChange={(v) => setIndiceAjuste(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ICL">ICL (BCRA)</SelectItem><SelectItem value="IPC">IPC (INDEC)</SelectItem><SelectItem value="Libre acuerdo">Libre acuerdo</SelectItem></SelectContent></Select></div>
+                <div className="space-y-1.5"><Label>Frecuencia de ajuste</Label><Select value={frecuenciaAjuste} onValueChange={setFrecuenciaAjuste}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Trimestral">Trimestral</SelectItem><SelectItem value="Cuatrimestral">Cuatrimestral</SelectItem><SelectItem value="Semestral">Semestral</SelectItem><SelectItem value="Anual">Anual</SelectItem></SelectContent></Select></div>
               </div>
             </div>
           )}
@@ -171,7 +176,8 @@ export default function NuevoContrato() {
                 <ResponsableSelect label="Seguro" value={seguro} onChange={setSeguro} />
                 <ResponsableSelect label="Servicios (EPE, gas, agua)" value={servicios} onChange={setServicios} />
               </div>
-              <div className="space-y-1.5"><Label>Observaciones especiales</Label><Textarea value={observaciones} onChange={e => setObservaciones(e.target.value)} placeholder="Notas adicionales sobre este contrato..." /></div>
+              <div className="space-y-1.5"><Label>Cláusulas particulares</Label><Textarea value={clausulasParticulares} onChange={e => setClausulasParticulares(e.target.value)} placeholder="Cláusulas específicas pactadas..." rows={4} /></div>
+              <div className="space-y-1.5"><Label>Observaciones</Label><Textarea value={observaciones} onChange={e => setObservaciones(e.target.value)} placeholder="Notas adicionales sobre este contrato..." /></div>
             </div>
           )}
 
@@ -182,7 +188,7 @@ export default function NuevoContrato() {
               <div className="grid md:grid-cols-2 gap-4">
                 <Card><CardContent className="p-4 text-sm space-y-1"><p className="font-semibold mb-2">Propiedad</p><p>{propiedad?.direccion} — {propiedad?.unidad}</p><p className="text-muted-foreground">{propiedad?.tipo}</p></CardContent></Card>
                 <Card><CardContent className="p-4 text-sm space-y-1"><p className="font-semibold mb-2">Partes</p><p>Propietario: {propietario?.nombre}</p><p>Inquilino: {inquilino?.nombre}</p></CardContent></Card>
-                <Card><CardContent className="p-4 text-sm space-y-1"><p className="font-semibold mb-2">Datos generales</p><p>Inicio: {fechaInicio}</p><p>Fin: {fechaFin}</p><p>Alquiler: {formatCurrency(Number(alquilerBase) || 0)}</p><p>Vencimiento: día {diaVencimiento}</p><p>Ajuste: {tipoAjuste} — {frecuenciaAjuste}</p></CardContent></Card>
+                <Card><CardContent className="p-4 text-sm space-y-1"><p className="font-semibold mb-2">Datos generales</p><p>Tipo: {tipoContrato} · Moneda: {moneda}</p><p>Inicio: {fechaInicio}</p><p>Fin: {fechaFin}</p><p>Alquiler: {formatCurrency(Number(alquilerBase) || 0, moneda)}</p><p>Vencimiento: día {diaVencimiento}</p><p>Ajuste: {indiceAjuste} — {frecuenciaAjuste}</p></CardContent></Card>
                 <Card><CardContent className="p-4 text-sm space-y-1"><p className="font-semibold mb-2">Reglas de liquidación</p><p>Comisión: {comision}%</p><p>IVA: {iva ? 'Sí' : 'No'}</p><p>TGI: {tgi} · API: {api}</p><p>Exp. ord.: {expOrdinarias}</p><p>Exp. ext.: {expExtraordinarias}</p><p>Seguro: {seguro} · Servicios: {servicios}</p></CardContent></Card>
               </div>
             </div>
