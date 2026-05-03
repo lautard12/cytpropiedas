@@ -141,8 +141,9 @@ export default function ContratoDetalle() {
             <Card>
               <CardHeader><CardTitle className="text-base">Condiciones económicas</CardTitle></CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between border-b pb-2"><span className="text-muted-foreground">Alquiler base</span><span className="font-semibold">{formatCurrency(contrato.alquiler_base)}</span></div>
-                <div className="flex justify-between border-b pb-2"><span className="text-muted-foreground">Tipo de ajuste</span><span>{contrato.tipo_ajuste}</span></div>
+                <div className="flex justify-between border-b pb-2"><span className="text-muted-foreground">Alquiler base</span><span className="font-semibold">{formatCurrency(contrato.alquiler_base, (contrato as any).moneda ?? 'ARS')}</span></div>
+                <div className="flex justify-between border-b pb-2"><span className="text-muted-foreground">Moneda</span><span>{(contrato as any).moneda ?? 'ARS'}</span></div>
+                <div className="flex justify-between border-b pb-2"><span className="text-muted-foreground">Índice de ajuste</span><span>{(contrato as any).indice_ajuste ?? contrato.tipo_ajuste}</span></div>
                 <div className="flex justify-between border-b pb-2"><span className="text-muted-foreground">Frecuencia de ajuste</span><span>{contrato.frecuencia_ajuste}</span></div>
                 <div className="flex justify-between border-b pb-2"><span className="text-muted-foreground">Comisión inmobiliaria</span><span className="font-semibold">{contrato.comision_porcentaje}%</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">IVA</span><span>{contrato.iva ? 'Sí (21%)' : 'No'}</span></div>
