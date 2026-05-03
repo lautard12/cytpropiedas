@@ -204,6 +204,8 @@ CREATE TABLE public.pagos (
   contrato_id uuid NOT NULL REFERENCES public.contratos(id) ON DELETE CASCADE,
   fecha date NOT NULL DEFAULT CURRENT_DATE,
   monto numeric NOT NULL DEFAULT 0,
+  moneda moneda NOT NULL DEFAULT 'ARS',          -- moneda del pago (puede diferir del contrato)
+  cotizacion numeric,                            -- tipo de cambio aplicado si moneda <> contrato
   medio_pago medio_pago NOT NULL DEFAULT 'Transferencia',
   referencia text NOT NULL DEFAULT '',
   estado estado_pago NOT NULL DEFAULT 'Pendiente',
