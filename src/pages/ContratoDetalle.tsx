@@ -123,6 +123,11 @@ export default function ContratoDetalle() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm"><Edit className="h-4 w-4 mr-1" /> Editar</Button>
+          {contrato.estado === 'Activo' && (
+            <Button variant="outline" size="sm" onClick={() => setRescindirOpen(true)}>
+              <AlertTriangle className="h-4 w-4 mr-1 text-status-danger" /> Rescindir
+            </Button>
+          )}
           <Button size="sm" onClick={() => navigate('/generar-liquidacion')}><Calculator className="h-4 w-4 mr-1" /> Generar liquidación</Button>
         </div>
       </div>
@@ -130,6 +135,8 @@ export default function ContratoDetalle() {
       <Tabs defaultValue="resumen">
         <TabsList>
           <TabsTrigger value="resumen">Resumen</TabsTrigger>
+          <TabsTrigger value="garantias">Garantías</TabsTrigger>
+          <TabsTrigger value="renovacion">Renovación</TabsTrigger>
           <TabsTrigger value="historial">Historial</TabsTrigger>
         </TabsList>
 
