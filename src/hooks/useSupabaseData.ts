@@ -595,6 +595,106 @@ export function useCotizacionesUSD() {
   });
 }
 
+// ─── Garantías, Rescisiones, Renovaciones ─────────────────
+
+export type TipoGarantia = 'Propietaria' | 'Garante' | 'Seguro_Caucion' | 'Recibo_Sueldo' | 'Otro';
+export type EstadoGarantia = 'Vigente' | 'Vencida' | 'Reemplazada' | 'Anulada';
+
+export interface GarantiaContrato {
+  id: string;
+  contrato_id: string;
+  tipo: TipoGarantia;
+  descripcion: string;
+  persona_id: string | null;
+  monto_cobertura: number | null;
+  aseguradora: string;
+  numero_poliza: string;
+  empleador: string;
+  fecha_emision: string | null;
+  fecha_vencimiento: string | null;
+  documento_url: string | null;
+  estado: EstadoGarantia;
+  observaciones: string;
+}
+
+export function useGarantiasContrato(contratoId: string) {
+  return useQuery({
+    queryKey: ['garantias_contrato', contratoId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('garantias_contrato').select('*')
+        .eq('contrato_id', contratoId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as GarantiaContrato[];
+    },
+    enabled: !!contratoId,
+  });
+}
+
+export function useGarantiasPorVencer(dias = 60) {
+  return useQuery({
+    queryKey: ['garantias_por_vencer', dias],
+    queryFn: async () => {
+      const hoy = new Date();
+      const limite = new Date(); limite.setDate(hoy.getDate() + dias);
+      const { data, error } = await (supabase as any)
+        .from('garantias_contrato').select('*, contratos:contrato_id(codigo)')
+        .eq('estado', 'Vigente')
+        .not('fecha_vencimiento', 'is', null)
+        .lte('fecha_vencimiento', limite.toISOString().slice(0,10))
+        .order('fecha_vencimiento', { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useRescisiones(contratoId?: string) {
+  return useQuery({
+    queryKey: ['rescisiones', contratoId ?? 'all'],
+    queryFn: async () => {
+      let q = (supabase as any).from('rescisiones').select('*').order('fecha_efectiva', { ascending: false });
+      if (contratoId) q = q.eq('contrato_id', contratoId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useRenovaciones(contratoId: string) {
+  return useQuery({
+    queryKey: ['renovaciones', contratoId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('renovaciones_contrato').select('*')
+        .eq('contrato_id', contratoId)
+        .order('fecha_consulta', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!contratoId,
+  });
+}
+
+export function useContratosPorVencer(dias = 90) {
+  return useQuery({
+    queryKey: ['contratos_por_vencer', dias],
+    queryFn: async () => {
+      const hoy = new Date();
+      const limite = new Date(); limite.setDate(hoy.getDate() + dias);
+      const { data, error } = await supabase
+        .from('contratos').select('*')
+        .eq('estado', 'Activo' as any)
+        .lte('fecha_fin', limite.toISOString().slice(0,10))
+        .order('fecha_fin', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as Contrato[];
+    },
+  });
+}
+
 // ─── Helpers ──────────────────────────────────────────────
 
 export function formatCurrency(amount: number, moneda: 'ARS' | 'USD' = 'ARS'): string {
