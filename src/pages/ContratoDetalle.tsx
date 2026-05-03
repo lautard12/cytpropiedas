@@ -106,13 +106,15 @@ export default function ContratoDetalle() {
 
       <div className="flex items-start justify-between">
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <FileText className="h-6 w-6 text-muted-foreground" />
             <h1 className="text-2xl font-bold">Contrato {contrato.codigo}</h1>
             <Badge className={estadoBadge}>{contrato.estado}</Badge>
+            <Badge variant="outline">{(contrato as any).tipo_contrato ?? 'Vivienda'}</Badge>
+            <Badge variant="secondary">{(contrato as any).moneda ?? 'ARS'}</Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">{propiedad?.direccion} {propiedad?.unidad} · {formatDate(contrato.fecha_inicio)} — {formatDate(contrato.fecha_fin)}</p>
-          <p className="text-sm text-muted-foreground">Alquiler base: <strong>{formatCurrency(contrato.alquiler_base)}</strong> · Vencimiento mensual: día {contrato.dia_vencimiento}</p>
+          <p className="text-sm text-muted-foreground">Alquiler base: <strong>{formatCurrency(contrato.alquiler_base, (contrato as any).moneda ?? 'ARS')}</strong> · Vencimiento mensual: día {contrato.dia_vencimiento}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm"><Edit className="h-4 w-4 mr-1" /> Editar</Button>
