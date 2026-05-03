@@ -177,6 +177,7 @@ CREATE TABLE public.liquidaciones (
   periodo_label text NOT NULL,
   fecha_emision date NOT NULL DEFAULT CURRENT_DATE,
   estado estado_liquidacion NOT NULL DEFAULT 'Borrador',
+  moneda moneda NOT NULL DEFAULT 'ARS',          -- heredada del contrato
   subtotal numeric NOT NULL DEFAULT 0,
   total_cobrar numeric NOT NULL DEFAULT 0,
   total_cobrado numeric NOT NULL DEFAULT 0,
