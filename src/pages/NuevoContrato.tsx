@@ -32,6 +32,7 @@ export default function NuevoContrato() {
   const { data: propiedades = [], isLoading: loadingP } = usePropiedades();
   const { data: propietarios = [], isLoading: loadingO } = usePropietarios();
   const { data: inquilinos = [], isLoading: loadingI } = useInquilinos();
+  const { data: cotizacion } = useCotizacionUSD();
 
   const [propiedadId, setPropiedadId] = useState('');
   const [propietarioId, setPropietarioId] = useState('');
