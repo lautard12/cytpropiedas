@@ -168,10 +168,12 @@ export default function NuevoContrato() {
                 <div className="space-y-1.5"><Label>Índice de ajuste</Label><Select value={indiceAjuste} onValueChange={(v) => setIndiceAjuste(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ICL">ICL (BCRA)</SelectItem><SelectItem value="IPC">IPC (INDEC)</SelectItem><SelectItem value="Libre acuerdo">Libre acuerdo</SelectItem></SelectContent></Select></div>
                 <div className="space-y-1.5"><Label>Frecuencia de ajuste</Label><Select value={frecuenciaAjuste} onValueChange={setFrecuenciaAjuste}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Trimestral">Trimestral</SelectItem><SelectItem value="Cuatrimestral">Cuatrimestral</SelectItem><SelectItem value="Semestral">Semestral</SelectItem><SelectItem value="Anual">Anual</SelectItem></SelectContent></Select></div>
               </div>
-            </div>
-          )}
-
-          {paso === 3 && (
+              {moneda === 'USD' && cotizacion && (
+                <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
+                  Cotización USD vigente ({cotizacion.tipo}, {formatDate(cotizacion.fecha)}): <strong>${Number(cotizacion.valor_venta).toLocaleString('es-AR')}</strong>
+                  {' '}— equivalente: <strong>{formatCurrency(Number(alquilerBase) * Number(cotizacion.valor_venta) || 0, 'ARS')}</strong>
+                </div>
+              )}
             <div className="space-y-4">
               <CardTitle className="text-lg">Configurar reglas del contrato</CardTitle>
               <p className="text-sm text-muted-foreground">Estos parámetros definen cómo se calculará cada liquidación mensual de este contrato.</p>
