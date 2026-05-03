@@ -226,3 +226,29 @@ CREATE TABLE public.eventos_contrato (
   documento_url text,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- ─── Plantillas de contrato ──────────────────────────────────────
+CREATE TABLE public.plantillas_contrato (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tipo tipo_contrato NOT NULL,
+  nombre text NOT NULL,
+  descripcion text NOT NULL DEFAULT '',
+  clausulas text NOT NULL DEFAULT '',           -- texto plantilla precargado al crear contrato
+  activa boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- ─── Cotizaciones USD ────────────────────────────────────────────
+CREATE TYPE tipo_cotizacion AS ENUM ('Oficial','MEP','Blue','CCL');
+
+CREATE TABLE public.cotizaciones_usd (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  fecha date NOT NULL DEFAULT CURRENT_DATE,
+  tipo tipo_cotizacion NOT NULL DEFAULT 'Oficial',
+  valor_compra numeric(14,4) NOT NULL DEFAULT 0,
+  valor_venta numeric(14,4) NOT NULL,
+  fuente text NOT NULL DEFAULT '',              -- BCRA / dolarapi / manual
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (fecha, tipo)
+);
