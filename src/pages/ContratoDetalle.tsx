@@ -190,6 +190,14 @@ export default function ContratoDetalle() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="garantias" className="space-y-6">
+          <GarantiasSection contratoId={contrato.id} />
+        </TabsContent>
+
+        <TabsContent value="renovacion" className="space-y-6">
+          <RenovacionSection contrato={contrato} />
+        </TabsContent>
+
         {/* TAB HISTORIAL — 4 bloques */}
         <TabsContent value="historial" className="space-y-6">
           {/* 1. Resumen ejecutivo */}
