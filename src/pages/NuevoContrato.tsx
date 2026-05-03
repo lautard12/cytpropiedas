@@ -54,6 +54,9 @@ export default function NuevoContrato() {
   const [seguro, setSeguro] = useState<Responsable>('Inquilino');
   const [servicios, setServicios] = useState<Responsable>('Inquilino');
   const [clausulasParticulares, setClausulasParticulares] = useState('');
+  const [permiteRescision, setPermiteRescision] = useState(true);
+  const [multaPct, setMultaPct] = useState('0');
+  const [multaObs, setMultaObs] = useState('');
   const [observaciones, setObservaciones] = useState('');
 
   const propiedad = findById(propiedades, propiedadId);
