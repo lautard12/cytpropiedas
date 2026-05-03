@@ -11,6 +11,9 @@ CREATE TYPE estado_liquidacion AS ENUM ('Borrador','Pendiente','Parcial','Cobrad
 CREATE TYPE estado_pago       AS ENUM ('Pendiente','Confirmado','Anulado');
 CREATE TYPE medio_pago        AS ENUM ('Transferencia','Efectivo','Cheque','Mercado Pago','Débito automático');
 CREATE TYPE app_role          AS ENUM ('admin','administrativo');
+CREATE TYPE tipo_contrato     AS ENUM ('Vivienda','Comercial','Temporario');
+CREATE TYPE moneda            AS ENUM ('ARS','USD');
+CREATE TYPE indice_ajuste     AS ENUM ('ICL','IPC','Libre acuerdo');
 -- NOTA: el enum rol_persona y la tabla personas_roles fueron eliminados.
 -- Los roles de dominio (propietario/inquilino) se derivan de la existencia
 -- de filas en propietarios/inquilinos.
