@@ -119,6 +119,9 @@ export type Database = {
           inquilino_id: string | null
           iva: boolean
           moneda: Database["public"]["Enums"]["moneda"]
+          multa_rescision_observaciones: string
+          multa_rescision_porcentaje: number
+          permite_rescision_anticipada: boolean
           propiedad_id: string | null
           propietario_id: string | null
           reglas_observaciones: string
@@ -147,6 +150,9 @@ export type Database = {
           inquilino_id?: string | null
           iva?: boolean
           moneda?: Database["public"]["Enums"]["moneda"]
+          multa_rescision_observaciones?: string
+          multa_rescision_porcentaje?: number
+          permite_rescision_anticipada?: boolean
           propiedad_id?: string | null
           propietario_id?: string | null
           reglas_observaciones?: string
@@ -175,6 +181,9 @@ export type Database = {
           inquilino_id?: string | null
           iva?: boolean
           moneda?: Database["public"]["Enums"]["moneda"]
+          multa_rescision_observaciones?: string
+          multa_rescision_porcentaje?: number
+          permite_rescision_anticipada?: boolean
           propiedad_id?: string | null
           propietario_id?: string | null
           reglas_observaciones?: string
@@ -291,6 +300,78 @@ export type Database = {
             columns: ["liquidacion_id"]
             isOneToOne: false
             referencedRelation: "liquidaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      garantias_contrato: {
+        Row: {
+          aseguradora: string
+          contrato_id: string
+          created_at: string
+          descripcion: string
+          documento_url: string | null
+          empleador: string
+          estado: Database["public"]["Enums"]["estado_garantia"]
+          fecha_emision: string | null
+          fecha_vencimiento: string | null
+          id: string
+          monto_cobertura: number | null
+          numero_poliza: string
+          observaciones: string
+          persona_id: string | null
+          tipo: Database["public"]["Enums"]["tipo_garantia"]
+          updated_at: string
+        }
+        Insert: {
+          aseguradora?: string
+          contrato_id: string
+          created_at?: string
+          descripcion?: string
+          documento_url?: string | null
+          empleador?: string
+          estado?: Database["public"]["Enums"]["estado_garantia"]
+          fecha_emision?: string | null
+          fecha_vencimiento?: string | null
+          id?: string
+          monto_cobertura?: number | null
+          numero_poliza?: string
+          observaciones?: string
+          persona_id?: string | null
+          tipo: Database["public"]["Enums"]["tipo_garantia"]
+          updated_at?: string
+        }
+        Update: {
+          aseguradora?: string
+          contrato_id?: string
+          created_at?: string
+          descripcion?: string
+          documento_url?: string | null
+          empleador?: string
+          estado?: Database["public"]["Enums"]["estado_garantia"]
+          fecha_emision?: string | null
+          fecha_vencimiento?: string | null
+          id?: string
+          monto_cobertura?: number | null
+          numero_poliza?: string
+          observaciones?: string
+          persona_id?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_garantia"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "garantias_contrato_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "garantias_contrato_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: false
+            referencedRelation: "personas"
             referencedColumns: ["id"]
           },
         ]
@@ -759,6 +840,120 @@ export type Database = {
           },
         ]
       }
+      renovaciones_contrato: {
+        Row: {
+          contrato_id: string
+          contrato_nuevo_id: string | null
+          created_at: string
+          fecha_consulta: string
+          fecha_respuesta_inquilino: string | null
+          fecha_respuesta_propietario: string | null
+          id: string
+          observaciones: string
+          respuesta_inquilino: Database["public"]["Enums"]["respuesta_renovacion"]
+          respuesta_propietario: Database["public"]["Enums"]["respuesta_renovacion"]
+          resultado: Database["public"]["Enums"]["resultado_renovacion"]
+          updated_at: string
+        }
+        Insert: {
+          contrato_id: string
+          contrato_nuevo_id?: string | null
+          created_at?: string
+          fecha_consulta?: string
+          fecha_respuesta_inquilino?: string | null
+          fecha_respuesta_propietario?: string | null
+          id?: string
+          observaciones?: string
+          respuesta_inquilino?: Database["public"]["Enums"]["respuesta_renovacion"]
+          respuesta_propietario?: Database["public"]["Enums"]["respuesta_renovacion"]
+          resultado?: Database["public"]["Enums"]["resultado_renovacion"]
+          updated_at?: string
+        }
+        Update: {
+          contrato_id?: string
+          contrato_nuevo_id?: string | null
+          created_at?: string
+          fecha_consulta?: string
+          fecha_respuesta_inquilino?: string | null
+          fecha_respuesta_propietario?: string | null
+          id?: string
+          observaciones?: string
+          respuesta_inquilino?: Database["public"]["Enums"]["respuesta_renovacion"]
+          respuesta_propietario?: Database["public"]["Enums"]["respuesta_renovacion"]
+          resultado?: Database["public"]["Enums"]["resultado_renovacion"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovaciones_contrato_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovaciones_contrato_contrato_nuevo_id_fkey"
+            columns: ["contrato_nuevo_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rescisiones: {
+        Row: {
+          contrato_id: string
+          created_at: string
+          fecha_efectiva: string
+          id: string
+          liquidacion_multa_id: string | null
+          meses_restantes: number
+          motivo: string
+          multa_monto: number
+          multa_porcentaje: number
+          valor_restante: number
+        }
+        Insert: {
+          contrato_id: string
+          created_at?: string
+          fecha_efectiva: string
+          id?: string
+          liquidacion_multa_id?: string | null
+          meses_restantes?: number
+          motivo?: string
+          multa_monto?: number
+          multa_porcentaje?: number
+          valor_restante?: number
+        }
+        Update: {
+          contrato_id?: string
+          created_at?: string
+          fecha_efectiva?: string
+          id?: string
+          liquidacion_multa_id?: string | null
+          meses_restantes?: number
+          motivo?: string
+          multa_monto?: number
+          multa_porcentaje?: number
+          valor_restante?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rescisiones_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rescisiones_liquidacion_multa_id_fkey"
+            columns: ["liquidacion_multa_id"]
+            isOneToOne: false
+            referencedRelation: "liquidaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       roles: {
         Row: {
           codigo: Database["public"]["Enums"]["app_role"]
@@ -933,6 +1128,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      marcar_garantias_vencidas: { Args: never; Returns: number }
+      rescindir_contrato: {
+        Args: { _contrato_id: string; _fecha_efectiva: string; _motivo: string }
+        Returns: Json
+      }
       upsert_inquilino: {
         Args: {
           _cuit: string
@@ -974,6 +1174,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "administrativo"
       estado_contrato: "Activo" | "Vencido" | "Por vencer" | "Rescindido"
+      estado_garantia: "Vigente" | "Vencida" | "Reemplazada" | "Anulada"
       estado_liquidacion:
         | "Borrador"
         | "Pendiente"
@@ -985,8 +1186,16 @@ export type Database = {
       indice_ajuste: "ICL" | "IPC" | "Libre acuerdo"
       medio_pago: "Transferencia" | "Efectivo" | "Cheque" | "Depósito"
       moneda: "ARS" | "USD"
+      respuesta_renovacion: "Pendiente" | "Acepta" | "Rechaza"
+      resultado_renovacion: "Pendiente" | "Renovado" | "No_Renovado"
       tipo_contrato: "Vivienda" | "Comercial" | "Temporario"
       tipo_cotizacion: "Oficial" | "MEP" | "Blue" | "CCL"
+      tipo_garantia:
+        | "Propietaria"
+        | "Garante"
+        | "Seguro_Caucion"
+        | "Recibo_Sueldo"
+        | "Otro"
       tipo_propiedad: "Departamento" | "Casa" | "Local" | "Oficina" | "PH"
     }
     CompositeTypes: {
@@ -1117,6 +1326,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "administrativo"],
       estado_contrato: ["Activo", "Vencido", "Por vencer", "Rescindido"],
+      estado_garantia: ["Vigente", "Vencida", "Reemplazada", "Anulada"],
       estado_liquidacion: [
         "Borrador",
         "Pendiente",
@@ -1129,8 +1339,17 @@ export const Constants = {
       indice_ajuste: ["ICL", "IPC", "Libre acuerdo"],
       medio_pago: ["Transferencia", "Efectivo", "Cheque", "Depósito"],
       moneda: ["ARS", "USD"],
+      respuesta_renovacion: ["Pendiente", "Acepta", "Rechaza"],
+      resultado_renovacion: ["Pendiente", "Renovado", "No_Renovado"],
       tipo_contrato: ["Vivienda", "Comercial", "Temporario"],
       tipo_cotizacion: ["Oficial", "MEP", "Blue", "CCL"],
+      tipo_garantia: [
+        "Propietaria",
+        "Garante",
+        "Seguro_Caucion",
+        "Recibo_Sueldo",
+        "Otro",
+      ],
       tipo_propiedad: ["Departamento", "Casa", "Local", "Oficina", "PH"],
     },
   },
