@@ -194,6 +194,15 @@ export default function NuevoContrato() {
                 <ResponsableSelect label="Seguro" value={seguro} onChange={setSeguro} />
                 <ResponsableSelect label="Servicios (EPE, gas, agua)" value={servicios} onChange={setServicios} />
               </div>
+              <div className="rounded-md border p-3 space-y-3">
+                <p className="text-sm font-medium flex items-center gap-2">Rescisión anticipada</p>
+                <div className="grid md:grid-cols-2 gap-3">
+                  <div className="flex items-center gap-3 rounded-md border p-3"><Switch checked={permiteRescision} onCheckedChange={setPermiteRescision} /><Label className="text-sm">Permite rescisión anticipada</Label></div>
+                  <div className="space-y-1.5"><Label className="text-sm">Multa (% sobre valor restante)</Label><Input type="number" value={multaPct} onChange={e => setMultaPct(e.target.value)} min="0" max="100" disabled={!permiteRescision} /></div>
+                </div>
+                <div className="space-y-1.5"><Label className="text-sm">Observaciones de la cláusula de rescisión</Label><Textarea value={multaObs} onChange={e => setMultaObs(e.target.value)} rows={2} placeholder="Ej. La multa equivale a X meses, exenta si avisa con 60 días..." disabled={!permiteRescision} /></div>
+                <p className="text-xs text-muted-foreground">Dejar el % en 0 si todavía no se pactó. Se puede editar en cualquier momento desde el detalle del contrato.</p>
+              </div>
               <div className="space-y-1.5">
                 <Label>Plantilla de cláusulas ({tipoContrato})</Label>
                 <Select value={plantillaId} onValueChange={aplicarPlantilla}>
