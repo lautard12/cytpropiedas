@@ -80,6 +80,7 @@ export default function Contratos() {
             <TableHeader>
               <TableRow>
                 <TableHead>Código</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Propiedad</TableHead>
                 <TableHead>Propietario</TableHead>
                 <TableHead>Inquilino</TableHead>
@@ -96,15 +97,17 @@ export default function Contratos() {
                 const prop = findById(propiedades, c.propiedad_id);
                 const owner = findById(propietarios, c.propietario_id);
                 const inq = findById(inquilinos, c.inquilino_id);
+                const moneda = (c as any).moneda ?? 'ARS';
                 return (
                   <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/contratos/${c.id}`)}>
                     <TableCell className="font-medium">{c.codigo}</TableCell>
+                    <TableCell><Badge variant="outline">{(c as any).tipo_contrato ?? 'Vivienda'}</Badge></TableCell>
                     <TableCell>{prop?.direccion} {prop?.unidad}</TableCell>
                     <TableCell>{owner?.nombre}</TableCell>
                     <TableCell>{inq?.nombre}</TableCell>
                     <TableCell>{formatDate(c.fecha_inicio)}</TableCell>
                     <TableCell>{formatDate(c.fecha_fin)}</TableCell>
-                    <TableCell>{formatCurrency(c.alquiler_base)}</TableCell>
+                    <TableCell>{formatCurrency(c.alquiler_base, moneda)}</TableCell>
                     <TableCell>{c.comision_porcentaje}%</TableCell>
                     <TableCell><Badge className={estadoBadge(c.estado)}>{c.estado}</Badge></TableCell>
                     <TableCell><Button variant="ghost" size="sm"><Eye className="h-4 w-4" /></Button></TableCell>
