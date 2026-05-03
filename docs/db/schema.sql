@@ -143,9 +143,12 @@ CREATE TABLE public.contratos (
   fecha_inicio date NOT NULL,
   fecha_fin date NOT NULL,
   estado estado_contrato NOT NULL DEFAULT 'Activo',
+  tipo_contrato tipo_contrato NOT NULL DEFAULT 'Vivienda',
+  moneda moneda NOT NULL DEFAULT 'ARS',
   alquiler_base numeric NOT NULL DEFAULT 0,
-  tipo_ajuste text NOT NULL DEFAULT '',
-  frecuencia_ajuste text NOT NULL DEFAULT '',
+  indice_ajuste indice_ajuste NOT NULL DEFAULT 'ICL',
+  tipo_ajuste text NOT NULL DEFAULT '',          -- legacy (compat)
+  frecuencia_ajuste text NOT NULL DEFAULT 'Trimestral',
   dia_vencimiento int NOT NULL DEFAULT 10,
   comision_porcentaje numeric NOT NULL DEFAULT 10,
   iva boolean NOT NULL DEFAULT false,
@@ -155,6 +158,7 @@ CREATE TABLE public.contratos (
   expensas_extraordinarias text NOT NULL DEFAULT 'Propietario',
   seguro text NOT NULL DEFAULT 'No aplica',
   servicios text NOT NULL DEFAULT 'Inquilino',
+  clausulas_particulares text NOT NULL DEFAULT '',
   reglas_observaciones text NOT NULL DEFAULT '',
   created_at timestamptz NOT NULL DEFAULT now()
 );
