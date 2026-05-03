@@ -176,7 +176,8 @@ export default function NuevoContrato() {
                 <ResponsableSelect label="Seguro" value={seguro} onChange={setSeguro} />
                 <ResponsableSelect label="Servicios (EPE, gas, agua)" value={servicios} onChange={setServicios} />
               </div>
-              <div className="space-y-1.5"><Label>Observaciones especiales</Label><Textarea value={observaciones} onChange={e => setObservaciones(e.target.value)} placeholder="Notas adicionales sobre este contrato..." /></div>
+              <div className="space-y-1.5"><Label>Cláusulas particulares</Label><Textarea value={clausulasParticulares} onChange={e => setClausulasParticulares(e.target.value)} placeholder="Cláusulas específicas pactadas..." rows={4} /></div>
+              <div className="space-y-1.5"><Label>Observaciones</Label><Textarea value={observaciones} onChange={e => setObservaciones(e.target.value)} placeholder="Notas adicionales sobre este contrato..." /></div>
             </div>
           )}
 
@@ -187,7 +188,7 @@ export default function NuevoContrato() {
               <div className="grid md:grid-cols-2 gap-4">
                 <Card><CardContent className="p-4 text-sm space-y-1"><p className="font-semibold mb-2">Propiedad</p><p>{propiedad?.direccion} — {propiedad?.unidad}</p><p className="text-muted-foreground">{propiedad?.tipo}</p></CardContent></Card>
                 <Card><CardContent className="p-4 text-sm space-y-1"><p className="font-semibold mb-2">Partes</p><p>Propietario: {propietario?.nombre}</p><p>Inquilino: {inquilino?.nombre}</p></CardContent></Card>
-                <Card><CardContent className="p-4 text-sm space-y-1"><p className="font-semibold mb-2">Datos generales</p><p>Inicio: {fechaInicio}</p><p>Fin: {fechaFin}</p><p>Alquiler: {formatCurrency(Number(alquilerBase) || 0)}</p><p>Vencimiento: día {diaVencimiento}</p><p>Ajuste: {tipoAjuste} — {frecuenciaAjuste}</p></CardContent></Card>
+                <Card><CardContent className="p-4 text-sm space-y-1"><p className="font-semibold mb-2">Datos generales</p><p>Tipo: {tipoContrato} · Moneda: {moneda}</p><p>Inicio: {fechaInicio}</p><p>Fin: {fechaFin}</p><p>Alquiler: {formatCurrency(Number(alquilerBase) || 0, moneda)}</p><p>Vencimiento: día {diaVencimiento}</p><p>Ajuste: {indiceAjuste} — {frecuenciaAjuste}</p></CardContent></Card>
                 <Card><CardContent className="p-4 text-sm space-y-1"><p className="font-semibold mb-2">Reglas de liquidación</p><p>Comisión: {comision}%</p><p>IVA: {iva ? 'Sí' : 'No'}</p><p>TGI: {tgi} · API: {api}</p><p>Exp. ord.: {expOrdinarias}</p><p>Exp. ext.: {expExtraordinarias}</p><p>Seguro: {seguro} · Servicios: {servicios}</p></CardContent></Card>
               </div>
             </div>
