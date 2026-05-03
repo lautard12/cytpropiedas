@@ -13,11 +13,13 @@
 2. Selecciona propiedad. El sistema autocompleta `propietario_id` desde
    `propiedades.propietario_id`.
 3. Selecciona inquilino (filtra `personas` por rol `inquilino`).
-4. Define fechas, alquiler base, día de vencimiento.
-5. Define **reglas comerciales** (quién paga TGI, API, expensas, seguro, servicios,
-   expensas extraordinarias).
-6. Define **comisión** (porcentaje + IVA si corresponde).
-7. Define **ajuste** (`tipo_ajuste`, `frecuencia_ajuste`).
+4. Define **tipo de contrato** (`Vivienda` / `Comercial` / `Temporario`),
+   **moneda** (`ARS` / `USD`), fechas, alquiler base y día de vencimiento.
+5. Define **índice de ajuste** (`ICL` / `IPC` / `Libre acuerdo`) y
+   **frecuencia** (`Trimestral` por defecto, `Cuatrimestral`, `Semestral`, `Anual`).
+6. Define **reglas comerciales** (quién paga TGI, API, expensas, seguro, servicios,
+   expensas extraordinarias) y **cláusulas particulares** (texto libre).
+7. Define **comisión** (porcentaje + IVA si corresponde).
 8. Submit ⇒ valida con zod ⇒ `POST /rest/v1/contratos`.
 9. Trigger `sync_propiedad_estado` actualiza `propiedades.estado='Alquilada'` y setea
    `contrato_activo_id`.
