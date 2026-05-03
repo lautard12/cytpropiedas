@@ -59,6 +59,14 @@ export default function NuevoContrato() {
   const propiedad = findById(propiedades, propiedadId);
   const propietario = findById(propietarios, propietarioId);
   const inquilino = findById(inquilinos, inquilinoId);
+  const { data: plantillas = [] } = usePlantillasContrato(tipoContrato);
+  const [plantillaId, setPlantillaId] = useState<string>('');
+
+  const aplicarPlantilla = (id: string) => {
+    setPlantillaId(id);
+    const p = plantillas.find((x: any) => x.id === id);
+    if (p) setClausulasParticulares(p.clausulas);
+  };
 
   const handlePropiedadChange = (val: string) => {
     setPropiedadId(val);
