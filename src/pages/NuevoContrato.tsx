@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { usePropiedades, usePropietarios, useInquilinos, usePlantillasContrato, useCotizacionUSD, findById, formatCurrency } from '@/hooks/useSupabaseData';
+import { usePropiedades, usePropietarios, useInquilinos, usePlantillasContrato, useCotizacionUSD, findById, formatCurrency, formatDate } from '@/hooks/useSupabaseData';
 import { ArrowLeft, ArrowRight, Check, Building2, Users, FileText, Settings, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
