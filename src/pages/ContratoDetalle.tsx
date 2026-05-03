@@ -79,6 +79,7 @@ function TimelineEvent({ evento }: { evento: EventoContrato }) {
 export default function ContratoDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [rescindirOpen, setRescindirOpen] = useState(false);
   const { data: contrato, isLoading } = useContrato(id || '');
   const { data: propiedad } = usePropiedad(contrato?.propiedad_id || '');
   const { data: propietario } = usePropietario(contrato?.propietario_id || '');
