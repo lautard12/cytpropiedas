@@ -174,6 +174,10 @@ export default function NuevoContrato() {
                   {' '}— equivalente: <strong>{formatCurrency(Number(alquilerBase) * Number(cotizacion.valor_venta) || 0, 'ARS')}</strong>
                 </div>
               )}
+            </div>
+          )}
+
+          {paso === 3 && (
             <div className="space-y-4">
               <CardTitle className="text-lg">Configurar reglas del contrato</CardTitle>
               <p className="text-sm text-muted-foreground">Estos parámetros definen cómo se calculará cada liquidación mensual de este contrato.</p>
