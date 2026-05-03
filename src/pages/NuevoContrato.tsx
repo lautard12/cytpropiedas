@@ -191,7 +191,16 @@ export default function NuevoContrato() {
                 <ResponsableSelect label="Seguro" value={seguro} onChange={setSeguro} />
                 <ResponsableSelect label="Servicios (EPE, gas, agua)" value={servicios} onChange={setServicios} />
               </div>
-              <div className="space-y-1.5"><Label>Cláusulas particulares</Label><Textarea value={clausulasParticulares} onChange={e => setClausulasParticulares(e.target.value)} placeholder="Cláusulas específicas pactadas..." rows={4} /></div>
+              <div className="space-y-1.5">
+                <Label>Plantilla de cláusulas ({tipoContrato})</Label>
+                <Select value={plantillaId} onValueChange={aplicarPlantilla}>
+                  <SelectTrigger><SelectValue placeholder={plantillas.length ? 'Aplicar plantilla...' : 'No hay plantillas'} /></SelectTrigger>
+                  <SelectContent>
+                    {plantillas.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5"><Label>Cláusulas particulares</Label><Textarea value={clausulasParticulares} onChange={e => setClausulasParticulares(e.target.value)} placeholder="Cláusulas específicas pactadas..." rows={6} /></div>
               <div className="space-y-1.5"><Label>Observaciones</Label><Textarea value={observaciones} onChange={e => setObservaciones(e.target.value)} placeholder="Notas adicionales sobre este contrato..." /></div>
             </div>
           )}
