@@ -325,6 +325,8 @@ export default function ContratoDetalle() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <RescindirDialog open={rescindirOpen} onClose={() => setRescindirOpen(false)} contrato={contrato} />
     </div>
   );
 }
