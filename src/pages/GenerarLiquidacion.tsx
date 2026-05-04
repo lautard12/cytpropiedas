@@ -15,10 +15,19 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 
-const PERIODO_LABELS: Record<string, string> = {
-  '2025-04': 'Abril 2025',
-  '2025-03': 'Marzo 2025',
-};
+const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function buildPeriodos() {
+  // 12 últimos + mes actual + 3 futuros
+  const out: { value: string; label: string }[] = [];
+  const now = new Date();
+  for (let offset = 3; offset >= -12; offset--) {
+    const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    out.push({ value, label: `${MESES_ES[d.getMonth()]} ${d.getFullYear()}` });
+  }
+  return out;
+}
 
 export default function GenerarLiquidacion() {
   const navigate = useNavigate();
