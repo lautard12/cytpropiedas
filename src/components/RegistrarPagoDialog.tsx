@@ -34,13 +34,20 @@ const IVA_RATE = 0.21;
 export default function RegistrarPagoDialog({
   open, onOpenChange, liquidacionId, contratoId,
   totalCobrar, totalCobrado, pendiente, comisionTotal, periodoLabel,
+  mediosPagoAceptados, destinoCobro, diaVencimiento,
 }: Props) {
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const today = new Date().toISOString().split('T')[0];
 
+  const mediosDisponibles = useMemo(() => {
+    const todos = ['Transferencia', 'Efectivo', 'Cheque', 'Mercado Pago', 'Débito automático'];
+    if (!mediosPagoAceptados || mediosPagoAceptados.length === 0) return todos;
+    return todos.filter(m => mediosPagoAceptados.includes(m));
+  }, [mediosPagoAceptados]);
+
   const [monto, setMonto] = useState(pendiente.toString());
-  const [medioPago, setMedioPago] = useState<string>('Transferencia');
+  const [medioPago, setMedioPago] = useState<string>(mediosDisponibles[0] || 'Transferencia');
   const [referencia, setReferencia] = useState('');
   const [fecha, setFecha] = useState(today);
   const [observaciones, setObservaciones] = useState('');
