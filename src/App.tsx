@@ -15,6 +15,7 @@ import ContratoDetalle from "./pages/ContratoDetalle";
 import Liquidaciones from "./pages/Liquidaciones";
 import LiquidacionDetalle from "./pages/LiquidacionDetalle";
 import Pagos from "./pages/Pagos";
+import Rendiciones from "./pages/Rendiciones";
 import Propietarios from "./pages/Propietarios";
 import PropietarioDetalle from "./pages/PropietarioDetalle";
 import Inquilinos from "./pages/Inquilinos";
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/liquidaciones" element={<Liquidaciones />} />
               <Route path="/liquidaciones/:id" element={<LiquidacionDetalle />} />
               <Route path="/pagos" element={<Pagos />} />
+              <Route path="/rendiciones" element={<Rendiciones />} />
               <Route path="/propietarios" element={<Propietarios />} />
               <Route path="/propietarios/:id" element={<PropietarioDetalle />} />
               <Route path="/inquilinos" element={<Inquilinos />} />

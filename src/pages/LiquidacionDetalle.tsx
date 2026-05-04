@@ -1,22 +1,27 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   useLiquidacion, useContrato, usePropiedad, usePropietario, useInquilino,
   useConceptosLiquidacion, usePagosByLiquidacion, useLiquidaciones,
-  useEventosPorPeriodo,
+  useEventosPorPeriodo, useRendicionByLiquidacion,
   formatCurrency, formatDate,
 } from '@/hooks/useSupabaseData';
 import {
   ArrowLeft, CreditCard, CheckCircle, FileText, ChevronLeft, ChevronRight,
-  MessageSquare, AlertTriangle, DollarSign, Zap, Ban,
+  MessageSquare, AlertTriangle, DollarSign, Zap, Ban, Send, Clock,
 } from 'lucide-react';
 import RegistrarPagoDialog from '@/components/RegistrarPagoDialog';
 import AnularPagoDialog from '@/components/AnularPagoDialog';
+import RendirPropietarioDialog from '@/components/RendirPropietarioDialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from '@/hooks/use-toast';
 
 const TIPO_ICON: Record<string, React.ElementType> = {
   punitorio: AlertTriangle,
@@ -29,7 +34,11 @@ export default function LiquidacionDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [pagoOpen, setPagoOpen] = useState(false);
+  const [rendirOpen, setRendirOpen] = useState(false);
+  const [aplicandoMora, setAplicandoMora] = useState(false);
+  const [acreditando, setAcreditando] = useState(false);
   const [anularPago, setAnularPago] = useState<{ id: string; monto: number } | null>(null);
+  const queryClient = useQueryClient();
   const { data: liq, isLoading } = useLiquidacion(id || '');
   const { data: contrato } = useContrato(liq?.contrato_id || '');
   const { data: propiedad } = usePropiedad(contrato?.propiedad_id || '');
@@ -39,6 +48,29 @@ export default function LiquidacionDetalle() {
   const { data: pagos = [] } = usePagosByLiquidacion(liq?.id || '');
   const { data: allLiquidaciones = [] } = useLiquidaciones();
   const { data: eventosPeriodo = [] } = useEventosPorPeriodo(liq?.contrato_id || '', liq?.periodo || '');
+  const { data: rendicion } = useRendicionByLiquidacion(liq?.id || '');
+
+  // IVA acumulado de los pagos
+  const ivaComisionTotal = useMemo(
+    () => pagos.filter(p => p.estado === 'Confirmado').reduce((s, p) => s + (Number(p.iva_comision) || 0), 0),
+    [pagos]
+  );
+
+  // Días de mora estimados
+  const moraInfo = useMemo(() => {
+    if (!liq || !contrato || liq.pendiente <= 0) return null;
+    const tasa = Number(contrato.tasa_mora_diaria || 0);
+    if (tasa <= 0) return null;
+    const [yStr, mStr] = liq.periodo.split('-');
+    const venc = new Date(Number(yStr), Number(mStr) - 1, contrato.dia_vencimiento);
+    venc.setDate(venc.getDate() + Number(contrato.dias_gracia_mora || 0));
+    const hoy = new Date();
+    const dias = Math.max(0, Math.floor((hoy.getTime() - venc.getTime()) / 86400000));
+    if (dias === 0) return null;
+    const interes = liq.pendiente * (Math.pow(1 + tasa / 100, dias) - 1);
+    return { dias, interes: Math.round(interes * 100) / 100, tasa };
+  }, [liq, contrato]);
+
 
   if (isLoading) return <div className="p-8"><Skeleton className="h-64" /></div>;
   if (!liq) return <div className="p-8 text-center text-muted-foreground">Liquidación no encontrada</div>;
@@ -51,10 +83,47 @@ export default function LiquidacionDetalle() {
   const prevLiq = currentIdx > 0 ? contratoLiqs[currentIdx - 1] : null;
   const nextLiq = currentIdx < contratoLiqs.length - 1 ? contratoLiqs[currentIdx + 1] : null;
 
-  const estadoBadge = liq.estado === 'Cobrada' || liq.estado === 'Transferida' ? 'bg-status-success text-status-success-foreground'
+  const estadoBadge =
+    liq.estado === 'Transferida' ? 'bg-status-success text-status-success-foreground'
+    : liq.estado === 'Acreditada' ? 'bg-status-info text-status-info-foreground'
+    : liq.estado === 'Cobrada' ? 'bg-status-success text-status-success-foreground'
     : liq.estado === 'Pendiente' ? 'bg-status-warning text-status-warning-foreground'
     : liq.estado === 'Parcial' ? 'bg-status-danger text-status-danger-foreground'
     : 'bg-muted text-muted-foreground';
+
+  const handleAplicarMora = async () => {
+    if (!liq) return;
+    setAplicandoMora(true);
+    try {
+      const { error } = await (supabase as any).rpc('aplicar_punitorios', { _liquidacion_id: liq.id });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['liquidaciones'] });
+      queryClient.invalidateQueries({ queryKey: ['conceptos_liquidacion'] });
+      queryClient.invalidateQueries({ queryKey: ['eventos_contrato'] });
+      toast({ title: 'Punitorios aplicados', description: 'Se agregó el concepto de mora a la liquidación.' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally { setAplicandoMora(false); }
+  };
+
+  const handleAcreditar = async () => {
+    if (!liq) return;
+    setAcreditando(true);
+    try {
+      const { error } = await (supabase as any).rpc('marcar_acreditada', {
+        _liquidacion_id: liq.id,
+        _fecha_acreditacion: new Date().toISOString().split('T')[0],
+      });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['liquidaciones'] });
+      queryClient.invalidateQueries({ queryKey: ['rendiciones_propietario'] });
+      queryClient.invalidateQueries({ queryKey: ['eventos_contrato'] });
+      toast({ title: 'Liquidación acreditada', description: 'Lista para rendir al propietario.' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally { setAcreditando(false); }
+  };
+
 
   const medioBadge = (medio: string) => {
     switch (medio) {
@@ -92,9 +161,35 @@ export default function LiquidacionDetalle() {
           {(liq.estado === 'Pendiente' || liq.estado === 'Parcial' || liq.estado === 'Borrador') && (
             <Button variant="outline" size="sm" onClick={() => setPagoOpen(true)}><CreditCard className="h-4 w-4 mr-1" /> Registrar pago</Button>
           )}
-          {liq.estado === 'Cobrada' && <Button size="sm"><CheckCircle className="h-4 w-4 mr-1" /> Marcar transferido</Button>}
+          {liq.estado === 'Cobrada' && (
+            <Button size="sm" onClick={handleAcreditar} disabled={acreditando}>
+              <CheckCircle className="h-4 w-4 mr-1" /> {acreditando ? 'Procesando...' : 'Marcar acreditada'}
+            </Button>
+          )}
+          {liq.estado === 'Acreditada' && (
+            <Button size="sm" onClick={() => setRendirOpen(true)}>
+              <Send className="h-4 w-4 mr-1" /> Rendir al propietario
+            </Button>
+          )}
         </div>
       </div>
+
+      {moraInfo && (
+        <Alert className="border-status-danger/40 bg-status-danger/5">
+          <Clock className="h-4 w-4 text-status-danger" />
+          <AlertDescription className="flex items-center justify-between gap-3">
+            <span>
+              <strong className="text-status-danger">En mora — {moraInfo.dias} días.</strong>{' '}
+              Punitorios estimados al día de hoy ({moraInfo.tasa}% diario):{' '}
+              <strong>{formatCurrency(moraInfo.interes)}</strong>
+            </span>
+            <Button size="sm" variant="outline" onClick={handleAplicarMora} disabled={aplicandoMora}>
+              {aplicandoMora ? 'Aplicando...' : 'Aplicar punitorios'}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -211,9 +306,20 @@ export default function LiquidacionDetalle() {
               <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Pendiente</span><span className={liq.pendiente > 0 ? 'text-status-danger font-semibold' : ''}>{formatCurrency(liq.pendiente)}</span></div>
               <div className="h-px bg-border my-2"></div>
               <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Comisión inmobiliaria</span><span className="text-status-info font-semibold">{formatCurrency(liq.comision_inmobiliaria)}</span></div>
+              {ivaComisionTotal > 0 && (
+                <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">IVA s/ comisión (facturado)</span><span className="text-status-info font-semibold">{formatCurrency(ivaComisionTotal)}</span></div>
+              )}
               <div className="flex justify-between py-1.5 bg-muted/50 rounded px-2"><span className="font-semibold">Neto propietario</span><span className="font-bold">{formatCurrency(liq.neto_propietario)}</span></div>
+              {rendicion && (
+                <div className="mt-2 rounded-md border border-status-info/30 bg-status-info/5 p-2 text-xs space-y-0.5">
+                  <p className="font-semibold text-status-info">Rendición</p>
+                  <p>Acreditada: {formatDate(rendicion.fecha_acreditacion)}</p>
+                  {rendicion.fecha_transferencia && <p>Transferida: {formatDate(rendicion.fecha_transferencia)} · {rendicion.medio}{rendicion.referencia ? ` · ${rendicion.referencia}` : ''}</p>}
+                </div>
+              )}
             </CardContent>
           </Card>
+
 
           <Card>
             <CardHeader><CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" /> Contrato asociado</CardTitle></CardHeader>
@@ -240,6 +346,16 @@ export default function LiquidacionDetalle() {
         totalCobrar={liq.total_cobrar}
         totalCobrado={liq.total_cobrado}
         pendiente={liq.pendiente}
+        comisionTotal={liq.comision_inmobiliaria}
+        periodoLabel={liq.periodo_label}
+      />
+
+      <RendirPropietarioDialog
+        open={rendirOpen}
+        onOpenChange={setRendirOpen}
+        liquidacionId={liq.id}
+        netoPropietario={liq.neto_propietario}
+        propietarioNombre={propietario?.nombre}
         periodoLabel={liq.periodo_label}
       />
 

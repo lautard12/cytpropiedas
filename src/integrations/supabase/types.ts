@@ -108,6 +108,7 @@ export type Database = {
           comision_porcentaje: number
           created_at: string
           dia_vencimiento: number
+          dias_gracia_mora: number
           estado: Database["public"]["Enums"]["estado_contrato"]
           expensas_extraordinarias: string
           expensas_ordinarias: string
@@ -127,6 +128,7 @@ export type Database = {
           reglas_observaciones: string
           seguro: string
           servicios: string
+          tasa_mora_diaria: number
           tgi: string
           tipo_ajuste: string
           tipo_contrato: Database["public"]["Enums"]["tipo_contrato"]
@@ -139,6 +141,7 @@ export type Database = {
           comision_porcentaje?: number
           created_at?: string
           dia_vencimiento?: number
+          dias_gracia_mora?: number
           estado?: Database["public"]["Enums"]["estado_contrato"]
           expensas_extraordinarias?: string
           expensas_ordinarias?: string
@@ -158,6 +161,7 @@ export type Database = {
           reglas_observaciones?: string
           seguro?: string
           servicios?: string
+          tasa_mora_diaria?: number
           tgi?: string
           tipo_ajuste?: string
           tipo_contrato?: Database["public"]["Enums"]["tipo_contrato"]
@@ -170,6 +174,7 @@ export type Database = {
           comision_porcentaje?: number
           created_at?: string
           dia_vencimiento?: number
+          dias_gracia_mora?: number
           estado?: Database["public"]["Enums"]["estado_contrato"]
           expensas_extraordinarias?: string
           expensas_ordinarias?: string
@@ -189,6 +194,7 @@ export type Database = {
           reglas_observaciones?: string
           seguro?: string
           servicios?: string
+          tasa_mora_diaria?: number
           tgi?: string
           tipo_ajuste?: string
           tipo_contrato?: Database["public"]["Enums"]["tipo_contrato"]
@@ -537,13 +543,17 @@ export type Database = {
           created_at: string
           estado: Database["public"]["Enums"]["estado_pago"]
           fecha: string
+          genera_factura: boolean
           id: string
+          iva_comision: number
           liquidacion_id: string
           medio_pago: Database["public"]["Enums"]["medio_pago"]
           moneda: Database["public"]["Enums"]["moneda"]
           monto: number
+          numero_factura: string
           observaciones: string
           referencia: string
+          tipo_factura: string | null
         }
         Insert: {
           contrato_id: string
@@ -551,13 +561,17 @@ export type Database = {
           created_at?: string
           estado?: Database["public"]["Enums"]["estado_pago"]
           fecha?: string
+          genera_factura?: boolean
           id?: string
+          iva_comision?: number
           liquidacion_id: string
           medio_pago?: Database["public"]["Enums"]["medio_pago"]
           moneda?: Database["public"]["Enums"]["moneda"]
           monto?: number
+          numero_factura?: string
           observaciones?: string
           referencia?: string
+          tipo_factura?: string | null
         }
         Update: {
           contrato_id?: string
@@ -565,13 +579,17 @@ export type Database = {
           created_at?: string
           estado?: Database["public"]["Enums"]["estado_pago"]
           fecha?: string
+          genera_factura?: boolean
           id?: string
+          iva_comision?: number
           liquidacion_id?: string
           medio_pago?: Database["public"]["Enums"]["medio_pago"]
           moneda?: Database["public"]["Enums"]["moneda"]
           monto?: number
+          numero_factura?: string
           observaciones?: string
           referencia?: string
+          tipo_factura?: string | null
         }
         Relationships: [
           {
@@ -839,6 +857,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      rendiciones_propietario: {
+        Row: {
+          comision_retenida: number
+          comprobante_url: string | null
+          created_at: string
+          estado: string
+          fecha_acreditacion: string
+          fecha_transferencia: string | null
+          id: string
+          iva_retenido: number
+          liquidacion_id: string
+          medio: Database["public"]["Enums"]["medio_pago"]
+          monto_neto: number
+          observaciones: string
+          propietario_id: string | null
+          referencia: string
+          updated_at: string
+        }
+        Insert: {
+          comision_retenida?: number
+          comprobante_url?: string | null
+          created_at?: string
+          estado?: string
+          fecha_acreditacion?: string
+          fecha_transferencia?: string | null
+          id?: string
+          iva_retenido?: number
+          liquidacion_id: string
+          medio?: Database["public"]["Enums"]["medio_pago"]
+          monto_neto?: number
+          observaciones?: string
+          propietario_id?: string | null
+          referencia?: string
+          updated_at?: string
+        }
+        Update: {
+          comision_retenida?: number
+          comprobante_url?: string | null
+          created_at?: string
+          estado?: string
+          fecha_acreditacion?: string
+          fecha_transferencia?: string | null
+          id?: string
+          iva_retenido?: number
+          liquidacion_id?: string
+          medio?: Database["public"]["Enums"]["medio_pago"]
+          monto_neto?: number
+          observaciones?: string
+          propietario_id?: string | null
+          referencia?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       renovaciones_contrato: {
         Row: {
@@ -1121,6 +1193,11 @@ export type Database = {
         Args: { _motivo?: string; _pago_id: string }
         Returns: Json
       }
+      aplicar_punitorios: { Args: { _liquidacion_id: string }; Returns: Json }
+      calcular_punitorio: {
+        Args: { _fecha?: string; _liquidacion_id: string }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1128,7 +1205,22 @@ export type Database = {
         }
         Returns: boolean
       }
+      marcar_acreditada: {
+        Args: { _fecha_acreditacion?: string; _liquidacion_id: string }
+        Returns: Json
+      }
       marcar_garantias_vencidas: { Args: never; Returns: number }
+      rendir_propietario: {
+        Args: {
+          _comprobante_url?: string
+          _fecha_transferencia: string
+          _liquidacion_id: string
+          _medio: Database["public"]["Enums"]["medio_pago"]
+          _observaciones?: string
+          _referencia: string
+        }
+        Returns: Json
+      }
       rescindir_contrato: {
         Args: { _contrato_id: string; _fecha_efectiva: string; _motivo: string }
         Returns: Json
@@ -1180,6 +1272,7 @@ export type Database = {
         | "Pendiente"
         | "Parcial"
         | "Cobrada"
+        | "Acreditada"
         | "Transferida"
       estado_pago: "Confirmado" | "Pendiente" | "Rechazado"
       estado_propiedad: "Ocupada" | "Vacante" | "En refacción"
@@ -1332,6 +1425,7 @@ export const Constants = {
         "Pendiente",
         "Parcial",
         "Cobrada",
+        "Acreditada",
         "Transferida",
       ],
       estado_pago: ["Confirmado", "Pendiente", "Rechazado"],

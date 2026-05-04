@@ -15,10 +15,19 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 
-const PERIODO_LABELS: Record<string, string> = {
-  '2025-04': 'Abril 2025',
-  '2025-03': 'Marzo 2025',
-};
+const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function buildPeriodos() {
+  // 12 últimos + mes actual + 3 futuros
+  const out: { value: string; label: string }[] = [];
+  const now = new Date();
+  for (let offset = 3; offset >= -12; offset--) {
+    const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    out.push({ value, label: `${MESES_ES[d.getMonth()]} ${d.getFullYear()}` });
+  }
+  return out;
+}
 
 export default function GenerarLiquidacion() {
   const navigate = useNavigate();
@@ -32,8 +41,10 @@ export default function GenerarLiquidacion() {
 
   const contratosActivos = contratos.filter(c => c.estado === 'Activo' || c.estado === 'Por vencer');
 
+  const periodos = useMemo(() => buildPeriodos(), []);
+  const periodoActual = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   const [contratoId, setContratoId] = useState('');
-  const [periodo, setPeriodo] = useState('2025-04');
+  const [periodo, setPeriodo] = useState(periodoActual);
   const [alquiler, setAlquiler] = useState('');
   const [expOrdinarias, setExpOrdinarias] = useState('');
   const [expExtraordinarias, setExpExtraordinarias] = useState('');
@@ -62,11 +73,10 @@ export default function GenerarLiquidacion() {
   const nums = useMemo(() => {
     const n = (v: string) => Number(v) || 0;
     const subtotal = n(alquiler) + n(expOrdinarias) + n(expExtraordinarias) + n(tgiMonto) + n(apiMonto) + n(epeMonto) + n(gasMonto) + n(aguasMonto) + n(seguroMonto) + n(ajustes) - n(descuentos) + n(saldoAnterior);
-    const ivaAmount = contrato?.iva ? subtotal * 0.21 : 0;
-    const totalCobrar = subtotal + ivaAmount;
+    const totalCobrar = subtotal;
     const comision = contrato ? (n(alquiler) * contrato.comision_porcentaje / 100) : 0;
     const neto = totalCobrar - comision;
-    return { subtotal, ivaAmount, totalCobrar, comision, neto };
+    return { subtotal, totalCobrar, comision, neto };
   }, [alquiler, expOrdinarias, expExtraordinarias, tgiMonto, apiMonto, epeMonto, gasMonto, aguasMonto, seguroMonto, ajustes, descuentos, saldoAnterior, contrato]);
 
   const handleGuardar = async (estado: 'borrador' | 'pendiente') => {
@@ -74,7 +84,7 @@ export default function GenerarLiquidacion() {
     setSaving(true);
     try {
       const estadoFinal = estado === 'borrador' ? 'Borrador' : 'Pendiente';
-      const periodoLabel = PERIODO_LABELS[periodo] ?? periodo;
+      const periodoLabel = periodos.find(p => p.value === periodo)?.label ?? periodo;
       const n = (v: string) => Number(v) || 0;
 
       const { data: liq, error: liqErr } = await supabase.from('liquidaciones').insert({
@@ -157,8 +167,7 @@ export default function GenerarLiquidacion() {
                   <Select value={periodo} onValueChange={setPeriodo}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="2025-04">Abril 2025</SelectItem>
-                      <SelectItem value="2025-03">Marzo 2025</SelectItem>
+                      {periodos.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -173,7 +182,7 @@ export default function GenerarLiquidacion() {
           </Card>
 
           {contrato && (
-            <Alert><Info className="h-4 w-4" /><AlertDescription>Reglas del contrato {contrato.codigo}: Comisión {contrato.comision_porcentaje}% · IVA {contrato.iva ? 'Sí' : 'No'} · TGI: {contrato.tgi} · API: {contrato.api} · Exp. ord.: {contrato.expensas_ordinarias} · Seguro: {contrato.seguro}</AlertDescription></Alert>
+            <Alert><Info className="h-4 w-4" /><AlertDescription>Reglas del contrato {contrato.codigo}: Comisión {contrato.comision_porcentaje}% sobre alquiler bruto · TGI: {contrato.tgi} · API: {contrato.api} · Exp. ord.: {contrato.expensas_ordinarias} · Seguro: {contrato.seguro}. El IVA s/ comisión se aplica al registrar pagos por transferencia.</AlertDescription></Alert>
           )}
 
           <Card>
@@ -208,7 +217,6 @@ export default function GenerarLiquidacion() {
             <CardHeader><CardTitle className="text-base">Resumen en vivo</CardTitle></CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Total conceptos</span><span className="font-semibold">{formatCurrency(nums.subtotal)}</span></div>
-              {contrato?.iva && <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">IVA (21%)</span><span className="font-semibold">{formatCurrency(nums.ivaAmount)}</span></div>}
               <div className="flex justify-between py-1.5 border-b"><span className="font-semibold">Total a cobrar</span><span className="font-bold text-lg">{formatCurrency(nums.totalCobrar)}</span></div>
               <div className="h-px bg-border my-2" />
               <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Comisión administración ({contrato?.comision_porcentaje || 0}%)</span><span className="font-semibold text-status-info">{formatCurrency(nums.comision)}</span></div>

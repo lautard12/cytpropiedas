@@ -86,6 +86,24 @@ export interface Contrato {
   seguro: string;
   servicios: string;
   reglas_observaciones: string;
+  tasa_mora_diaria?: number;
+  dias_gracia_mora?: number;
+}
+
+export interface Rendicion {
+  id: string;
+  liquidacion_id: string;
+  propietario_id: string | null;
+  fecha_acreditacion: string;
+  fecha_transferencia: string | null;
+  monto_neto: number;
+  comision_retenida: number;
+  iva_retenido: number;
+  medio: string;
+  referencia: string;
+  comprobante_url: string | null;
+  observaciones: string;
+  estado: string;
 }
 
 export interface Liquidacion {
@@ -118,6 +136,10 @@ export interface Pago {
   id: string;
   liquidacion_id: string;
   contrato_id: string;
+  genera_factura?: boolean;
+  tipo_factura?: string | null;
+  numero_factura?: string;
+  iva_comision?: number;
   fecha: string;
   monto: number;
   medio_pago: string;
@@ -472,6 +494,36 @@ export function usePagosByLiquidacion(liquidacionId: string) {
       const { data, error } = await supabase.from('pagos').select('*').eq('liquidacion_id', liquidacionId);
       if (error) throw error;
       return data as Pago[];
+    },
+    enabled: !!liquidacionId,
+  });
+}
+
+export function useRendiciones() {
+  return useQuery({
+    queryKey: ['rendiciones_propietario'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('rendiciones_propietario')
+        .select('*')
+        .order('fecha_acreditacion', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Rendicion[];
+    },
+  });
+}
+
+export function useRendicionByLiquidacion(liquidacionId: string) {
+  return useQuery({
+    queryKey: ['rendiciones_propietario', 'liquidacion', liquidacionId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('rendiciones_propietario')
+        .select('*')
+        .eq('liquidacion_id', liquidacionId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as Rendicion | null;
     },
     enabled: !!liquidacionId,
   });
