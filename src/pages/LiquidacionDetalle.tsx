@@ -83,10 +83,47 @@ export default function LiquidacionDetalle() {
   const prevLiq = currentIdx > 0 ? contratoLiqs[currentIdx - 1] : null;
   const nextLiq = currentIdx < contratoLiqs.length - 1 ? contratoLiqs[currentIdx + 1] : null;
 
-  const estadoBadge = liq.estado === 'Cobrada' || liq.estado === 'Transferida' ? 'bg-status-success text-status-success-foreground'
+  const estadoBadge =
+    liq.estado === 'Transferida' ? 'bg-status-success text-status-success-foreground'
+    : liq.estado === 'Acreditada' ? 'bg-status-info text-status-info-foreground'
+    : liq.estado === 'Cobrada' ? 'bg-status-success text-status-success-foreground'
     : liq.estado === 'Pendiente' ? 'bg-status-warning text-status-warning-foreground'
     : liq.estado === 'Parcial' ? 'bg-status-danger text-status-danger-foreground'
     : 'bg-muted text-muted-foreground';
+
+  const handleAplicarMora = async () => {
+    if (!liq) return;
+    setAplicandoMora(true);
+    try {
+      const { error } = await (supabase as any).rpc('aplicar_punitorios', { _liquidacion_id: liq.id });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['liquidaciones'] });
+      queryClient.invalidateQueries({ queryKey: ['conceptos_liquidacion'] });
+      queryClient.invalidateQueries({ queryKey: ['eventos_contrato'] });
+      toast({ title: 'Punitorios aplicados', description: 'Se agregó el concepto de mora a la liquidación.' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally { setAplicandoMora(false); }
+  };
+
+  const handleAcreditar = async () => {
+    if (!liq) return;
+    setAcreditando(true);
+    try {
+      const { error } = await (supabase as any).rpc('marcar_acreditada', {
+        _liquidacion_id: liq.id,
+        _fecha_acreditacion: new Date().toISOString().split('T')[0],
+      });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['liquidaciones'] });
+      queryClient.invalidateQueries({ queryKey: ['rendiciones_propietario'] });
+      queryClient.invalidateQueries({ queryKey: ['eventos_contrato'] });
+      toast({ title: 'Liquidación acreditada', description: 'Lista para rendir al propietario.' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally { setAcreditando(false); }
+  };
+
 
   const medioBadge = (medio: string) => {
     switch (medio) {
@@ -124,9 +161,35 @@ export default function LiquidacionDetalle() {
           {(liq.estado === 'Pendiente' || liq.estado === 'Parcial' || liq.estado === 'Borrador') && (
             <Button variant="outline" size="sm" onClick={() => setPagoOpen(true)}><CreditCard className="h-4 w-4 mr-1" /> Registrar pago</Button>
           )}
-          {liq.estado === 'Cobrada' && <Button size="sm"><CheckCircle className="h-4 w-4 mr-1" /> Marcar transferido</Button>}
+          {liq.estado === 'Cobrada' && (
+            <Button size="sm" onClick={handleAcreditar} disabled={acreditando}>
+              <CheckCircle className="h-4 w-4 mr-1" /> {acreditando ? 'Procesando...' : 'Marcar acreditada'}
+            </Button>
+          )}
+          {liq.estado === 'Acreditada' && (
+            <Button size="sm" onClick={() => setRendirOpen(true)}>
+              <Send className="h-4 w-4 mr-1" /> Rendir al propietario
+            </Button>
+          )}
         </div>
       </div>
+
+      {moraInfo && (
+        <Alert className="border-status-danger/40 bg-status-danger/5">
+          <Clock className="h-4 w-4 text-status-danger" />
+          <AlertDescription className="flex items-center justify-between gap-3">
+            <span>
+              <strong className="text-status-danger">En mora — {moraInfo.dias} días.</strong>{' '}
+              Punitorios estimados al día de hoy ({moraInfo.tasa}% diario):{' '}
+              <strong>{formatCurrency(moraInfo.interes)}</strong>
+            </span>
+            <Button size="sm" variant="outline" onClick={handleAplicarMora} disabled={aplicandoMora}>
+              {aplicandoMora ? 'Aplicando...' : 'Aplicar punitorios'}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
