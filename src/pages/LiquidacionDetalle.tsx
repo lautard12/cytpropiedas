@@ -1,22 +1,27 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   useLiquidacion, useContrato, usePropiedad, usePropietario, useInquilino,
   useConceptosLiquidacion, usePagosByLiquidacion, useLiquidaciones,
-  useEventosPorPeriodo,
+  useEventosPorPeriodo, useRendicionByLiquidacion,
   formatCurrency, formatDate,
 } from '@/hooks/useSupabaseData';
 import {
   ArrowLeft, CreditCard, CheckCircle, FileText, ChevronLeft, ChevronRight,
-  MessageSquare, AlertTriangle, DollarSign, Zap, Ban,
+  MessageSquare, AlertTriangle, DollarSign, Zap, Ban, Send, Clock,
 } from 'lucide-react';
 import RegistrarPagoDialog from '@/components/RegistrarPagoDialog';
 import AnularPagoDialog from '@/components/AnularPagoDialog';
+import RendirPropietarioDialog from '@/components/RendirPropietarioDialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from '@/hooks/use-toast';
 
 const TIPO_ICON: Record<string, React.ElementType> = {
   punitorio: AlertTriangle,
