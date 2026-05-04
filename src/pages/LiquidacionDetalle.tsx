@@ -423,7 +423,22 @@ export default function LiquidacionDetalle() {
         pendiente={liq.pendiente}
         comisionTotal={liq.comision_inmobiliaria}
         periodoLabel={liq.periodo_label}
+        mediosPagoAceptados={contrato?.medios_pago_aceptados}
+        destinoCobro={contrato?.destino_cobro}
+        diaVencimiento={contrato?.dia_vencimiento}
       />
+
+      {moraInfo && (
+        <ConsultarMoraDialog
+          open={consultaOpen}
+          onOpenChange={setConsultaOpen}
+          liquidacionId={liq.id}
+          diasAtraso={moraInfo.dias}
+          montoEstimado={moraInfo.interes}
+          tasaDiaria={moraInfo.tasa}
+          propietarioNombre={propietario?.nombre}
+        />
+      )}
 
       <RendirPropietarioDialog
         open={rendirOpen}
