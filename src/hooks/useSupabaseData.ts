@@ -784,6 +784,24 @@ export function findById<T extends { id: string }>(arr: T[] | undefined, id: str
   return arr.find(item => item.id === id);
 }
 
+export function useConsultaMoraByLiquidacion(liquidacionId: string) {
+  return useQuery({
+    queryKey: ['consultas_mora', liquidacionId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('consultas_mora')
+        .select('*')
+        .eq('liquidacion_id', liquidacionId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data as ConsultaMora | null;
+    },
+    enabled: !!liquidacionId,
+  });
+}
+
 export const evolucionMensual = [
   { mes: 'Oct 2024', cobrado: 1850000, pendiente: 120000, comision: 185000 },
   { mes: 'Nov 2024', cobrado: 1920000, pendiente: 95000, comision: 192000 },
