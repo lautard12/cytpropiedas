@@ -86,6 +86,24 @@ export interface Contrato {
   seguro: string;
   servicios: string;
   reglas_observaciones: string;
+  tasa_mora_diaria?: number;
+  dias_gracia_mora?: number;
+}
+
+export interface Rendicion {
+  id: string;
+  liquidacion_id: string;
+  propietario_id: string | null;
+  fecha_acreditacion: string;
+  fecha_transferencia: string | null;
+  monto_neto: number;
+  comision_retenida: number;
+  iva_retenido: number;
+  medio: string;
+  referencia: string;
+  comprobante_url: string | null;
+  observaciones: string;
+  estado: string;
 }
 
 export interface Liquidacion {
@@ -118,6 +136,10 @@ export interface Pago {
   id: string;
   liquidacion_id: string;
   contrato_id: string;
+  genera_factura?: boolean;
+  tipo_factura?: string | null;
+  numero_factura?: string;
+  iva_comision?: number;
   fecha: string;
   monto: number;
   medio_pago: string;
