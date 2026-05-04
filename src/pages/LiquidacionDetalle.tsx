@@ -9,16 +9,18 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   useLiquidacion, useContrato, usePropiedad, usePropietario, useInquilino,
   useConceptosLiquidacion, usePagosByLiquidacion, useLiquidaciones,
-  useEventosPorPeriodo, useRendicionByLiquidacion,
+  useEventosPorPeriodo, useRendicionByLiquidacion, useConsultaMoraByLiquidacion,
   formatCurrency, formatDate,
 } from '@/hooks/useSupabaseData';
 import {
   ArrowLeft, CreditCard, CheckCircle, FileText, ChevronLeft, ChevronRight,
-  MessageSquare, AlertTriangle, DollarSign, Zap, Ban, Send, Clock,
+  MessageSquare, AlertTriangle, DollarSign, Zap, Ban, Send, Clock, MessageCircle,
+  ThumbsUp, ThumbsDown,
 } from 'lucide-react';
 import RegistrarPagoDialog from '@/components/RegistrarPagoDialog';
 import AnularPagoDialog from '@/components/AnularPagoDialog';
 import RendirPropietarioDialog from '@/components/RendirPropietarioDialog';
+import ConsultarMoraDialog from '@/components/ConsultarMoraDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
