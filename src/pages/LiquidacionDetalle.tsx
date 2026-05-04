@@ -37,7 +37,8 @@ export default function LiquidacionDetalle() {
   const navigate = useNavigate();
   const [pagoOpen, setPagoOpen] = useState(false);
   const [rendirOpen, setRendirOpen] = useState(false);
-  const [aplicandoMora, setAplicandoMora] = useState(false);
+  const [consultaOpen, setConsultaOpen] = useState(false);
+  const [resolviendo, setResolviendo] = useState(false);
   const [acreditando, setAcreditando] = useState(false);
   const [anularPago, setAnularPago] = useState<{ id: string; monto: number } | null>(null);
   const queryClient = useQueryClient();
@@ -51,6 +52,7 @@ export default function LiquidacionDetalle() {
   const { data: allLiquidaciones = [] } = useLiquidaciones();
   const { data: eventosPeriodo = [] } = useEventosPorPeriodo(liq?.contrato_id || '', liq?.periodo || '');
   const { data: rendicion } = useRendicionByLiquidacion(liq?.id || '');
+  const { data: consultaMora } = useConsultaMoraByLiquidacion(liq?.id || '');
 
   // IVA acumulado de los pagos
   const ivaComisionTotal = useMemo(
