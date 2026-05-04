@@ -306,9 +306,20 @@ export default function LiquidacionDetalle() {
               <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Pendiente</span><span className={liq.pendiente > 0 ? 'text-status-danger font-semibold' : ''}>{formatCurrency(liq.pendiente)}</span></div>
               <div className="h-px bg-border my-2"></div>
               <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Comisión inmobiliaria</span><span className="text-status-info font-semibold">{formatCurrency(liq.comision_inmobiliaria)}</span></div>
+              {ivaComisionTotal > 0 && (
+                <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">IVA s/ comisión (facturado)</span><span className="text-status-info font-semibold">{formatCurrency(ivaComisionTotal)}</span></div>
+              )}
               <div className="flex justify-between py-1.5 bg-muted/50 rounded px-2"><span className="font-semibold">Neto propietario</span><span className="font-bold">{formatCurrency(liq.neto_propietario)}</span></div>
+              {rendicion && (
+                <div className="mt-2 rounded-md border border-status-info/30 bg-status-info/5 p-2 text-xs space-y-0.5">
+                  <p className="font-semibold text-status-info">Rendición</p>
+                  <p>Acreditada: {formatDate(rendicion.fecha_acreditacion)}</p>
+                  {rendicion.fecha_transferencia && <p>Transferida: {formatDate(rendicion.fecha_transferencia)} · {rendicion.medio}{rendicion.referencia ? ` · ${rendicion.referencia}` : ''}</p>}
+                </div>
+              )}
             </CardContent>
           </Card>
+
 
           <Card>
             <CardHeader><CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" /> Contrato asociado</CardTitle></CardHeader>
@@ -335,6 +346,16 @@ export default function LiquidacionDetalle() {
         totalCobrar={liq.total_cobrar}
         totalCobrado={liq.total_cobrado}
         pendiente={liq.pendiente}
+        comisionTotal={liq.comision_inmobiliaria}
+        periodoLabel={liq.periodo_label}
+      />
+
+      <RendirPropietarioDialog
+        open={rendirOpen}
+        onOpenChange={setRendirOpen}
+        liquidacionId={liq.id}
+        netoPropietario={liq.neto_propietario}
+        propietarioNombre={propietario?.nombre}
         periodoLabel={liq.periodo_label}
       />
 
