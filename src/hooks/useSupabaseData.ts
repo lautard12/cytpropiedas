@@ -88,6 +88,22 @@ export interface Contrato {
   reglas_observaciones: string;
   tasa_mora_diaria?: number;
   dias_gracia_mora?: number;
+  medios_pago_aceptados?: string[];
+  destino_cobro?: string;
+}
+
+export interface ConsultaMora {
+  id: string;
+  liquidacion_id: string;
+  contrato_id: string;
+  fecha_consulta: string;
+  monto_estimado: number;
+  dias_atraso: number;
+  estado: 'Pendiente' | 'Aprobada' | 'Rechazada';
+  fecha_respuesta: string | null;
+  observaciones: string;
+  decidido_por: string | null;
+  created_at: string;
 }
 
 export interface Rendicion {
