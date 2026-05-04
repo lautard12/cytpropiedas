@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, FileText, Calculator, CreditCard,
   Users, UserCheck, BarChart3, ChevronLeft, ChevronRight,
-  Building, Shield,
+  Building, Shield, Send,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,6 +14,7 @@ const baseItems = [
   { label: 'Contratos', icon: FileText, path: '/contratos' },
   { label: 'Liquidaciones', icon: Calculator, path: '/liquidaciones' },
   { label: 'Pagos', icon: CreditCard, path: '/pagos' },
+  { label: 'Rendiciones', icon: Send, path: '/rendiciones' },
   { label: 'Propietarios', icon: Users, path: '/propietarios' },
   { label: 'Inquilinos', icon: UserCheck, path: '/inquilinos' },
   { label: 'Reportes', icon: BarChart3, path: '/reportes' },
