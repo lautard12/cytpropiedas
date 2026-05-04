@@ -186,6 +186,27 @@ export default function ContratoDetalle() {
               {contrato.reglas_observaciones && (
                 <div className="mt-4 rounded-md bg-muted p-3 text-sm"><span className="text-muted-foreground font-medium">Observaciones: </span>{contrato.reglas_observaciones}</div>
               )}
+
+              <div className="mt-4 grid md:grid-cols-3 gap-3">
+                <div className="rounded-md border p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Medios de pago aceptados</p>
+                  <p className="font-medium text-sm">
+                    {contrato.medios_pago_aceptados && contrato.medios_pago_aceptados.length > 0
+                      ? contrato.medios_pago_aceptados.join(', ')
+                      : '—'}
+                  </p>
+                </div>
+                <div className="rounded-md border p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Destino del cobro</p>
+                  <p className="font-medium text-sm">{contrato.destino_cobro || 'Inmobiliaria'}</p>
+                </div>
+                <div className="rounded-md border p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Tasa de mora diaria</p>
+                  <p className="font-medium text-sm">
+                    {contrato.tasa_mora_diaria ? `${contrato.tasa_mora_diaria}% (compuesto)` : 'Sin tasa configurada'}
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
