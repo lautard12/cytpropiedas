@@ -99,6 +99,51 @@ export type Database = {
           },
         ]
       }
+      consultas_mora: {
+        Row: {
+          contrato_id: string
+          created_at: string
+          decidido_por: string | null
+          dias_atraso: number
+          estado: string
+          fecha_consulta: string
+          fecha_respuesta: string | null
+          id: string
+          liquidacion_id: string
+          monto_estimado: number
+          observaciones: string
+          updated_at: string
+        }
+        Insert: {
+          contrato_id: string
+          created_at?: string
+          decidido_por?: string | null
+          dias_atraso?: number
+          estado?: string
+          fecha_consulta?: string
+          fecha_respuesta?: string | null
+          id?: string
+          liquidacion_id: string
+          monto_estimado?: number
+          observaciones?: string
+          updated_at?: string
+        }
+        Update: {
+          contrato_id?: string
+          created_at?: string
+          decidido_por?: string | null
+          dias_atraso?: number
+          estado?: string
+          fecha_consulta?: string
+          fecha_respuesta?: string | null
+          id?: string
+          liquidacion_id?: string
+          monto_estimado?: number
+          observaciones?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contratos: {
         Row: {
           alquiler_base: number
@@ -107,6 +152,7 @@ export type Database = {
           codigo: string
           comision_porcentaje: number
           created_at: string
+          destino_cobro: string
           dia_vencimiento: number
           dias_gracia_mora: number
           estado: Database["public"]["Enums"]["estado_contrato"]
@@ -119,6 +165,7 @@ export type Database = {
           indice_ajuste: Database["public"]["Enums"]["indice_ajuste"]
           inquilino_id: string | null
           iva: boolean
+          medios_pago_aceptados: string[]
           moneda: Database["public"]["Enums"]["moneda"]
           multa_rescision_observaciones: string
           multa_rescision_porcentaje: number
@@ -140,6 +187,7 @@ export type Database = {
           codigo: string
           comision_porcentaje?: number
           created_at?: string
+          destino_cobro?: string
           dia_vencimiento?: number
           dias_gracia_mora?: number
           estado?: Database["public"]["Enums"]["estado_contrato"]
@@ -152,6 +200,7 @@ export type Database = {
           indice_ajuste?: Database["public"]["Enums"]["indice_ajuste"]
           inquilino_id?: string | null
           iva?: boolean
+          medios_pago_aceptados?: string[]
           moneda?: Database["public"]["Enums"]["moneda"]
           multa_rescision_observaciones?: string
           multa_rescision_porcentaje?: number
@@ -173,6 +222,7 @@ export type Database = {
           codigo?: string
           comision_porcentaje?: number
           created_at?: string
+          destino_cobro?: string
           dia_vencimiento?: number
           dias_gracia_mora?: number
           estado?: Database["public"]["Enums"]["estado_contrato"]
@@ -185,6 +235,7 @@ export type Database = {
           indice_ajuste?: Database["public"]["Enums"]["indice_ajuste"]
           inquilino_id?: string | null
           iva?: boolean
+          medios_pago_aceptados?: string[]
           moneda?: Database["public"]["Enums"]["moneda"]
           multa_rescision_observaciones?: string
           multa_rescision_porcentaje?: number
@@ -1223,6 +1274,18 @@ export type Database = {
       }
       rescindir_contrato: {
         Args: { _contrato_id: string; _fecha_efectiva: string; _motivo: string }
+        Returns: Json
+      }
+      resolver_consulta_mora: {
+        Args: {
+          _aprobada: boolean
+          _consulta_id: string
+          _observaciones?: string
+        }
+        Returns: Json
+      }
+      solicitar_autorizacion_mora: {
+        Args: { _liquidacion_id: string; _observaciones?: string }
         Returns: Json
       }
       upsert_inquilino: {
