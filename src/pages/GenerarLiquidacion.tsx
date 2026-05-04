@@ -41,8 +41,10 @@ export default function GenerarLiquidacion() {
 
   const contratosActivos = contratos.filter(c => c.estado === 'Activo' || c.estado === 'Por vencer');
 
+  const periodos = useMemo(() => buildPeriodos(), []);
+  const periodoActual = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   const [contratoId, setContratoId] = useState('');
-  const [periodo, setPeriodo] = useState('2025-04');
+  const [periodo, setPeriodo] = useState(periodoActual);
   const [alquiler, setAlquiler] = useState('');
   const [expOrdinarias, setExpOrdinarias] = useState('');
   const [expExtraordinarias, setExpExtraordinarias] = useState('');
@@ -71,11 +73,10 @@ export default function GenerarLiquidacion() {
   const nums = useMemo(() => {
     const n = (v: string) => Number(v) || 0;
     const subtotal = n(alquiler) + n(expOrdinarias) + n(expExtraordinarias) + n(tgiMonto) + n(apiMonto) + n(epeMonto) + n(gasMonto) + n(aguasMonto) + n(seguroMonto) + n(ajustes) - n(descuentos) + n(saldoAnterior);
-    const ivaAmount = contrato?.iva ? subtotal * 0.21 : 0;
-    const totalCobrar = subtotal + ivaAmount;
+    const totalCobrar = subtotal;
     const comision = contrato ? (n(alquiler) * contrato.comision_porcentaje / 100) : 0;
     const neto = totalCobrar - comision;
-    return { subtotal, ivaAmount, totalCobrar, comision, neto };
+    return { subtotal, totalCobrar, comision, neto };
   }, [alquiler, expOrdinarias, expExtraordinarias, tgiMonto, apiMonto, epeMonto, gasMonto, aguasMonto, seguroMonto, ajustes, descuentos, saldoAnterior, contrato]);
 
   const handleGuardar = async (estado: 'borrador' | 'pendiente') => {
@@ -83,7 +84,7 @@ export default function GenerarLiquidacion() {
     setSaving(true);
     try {
       const estadoFinal = estado === 'borrador' ? 'Borrador' : 'Pendiente';
-      const periodoLabel = PERIODO_LABELS[periodo] ?? periodo;
+      const periodoLabel = periodos.find(p => p.value === periodo)?.label ?? periodo;
       const n = (v: string) => Number(v) || 0;
 
       const { data: liq, error: liqErr } = await supabase.from('liquidaciones').insert({
