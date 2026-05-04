@@ -88,6 +88,22 @@ export interface Contrato {
   reglas_observaciones: string;
   tasa_mora_diaria?: number;
   dias_gracia_mora?: number;
+  medios_pago_aceptados?: string[];
+  destino_cobro?: string;
+}
+
+export interface ConsultaMora {
+  id: string;
+  liquidacion_id: string;
+  contrato_id: string;
+  fecha_consulta: string;
+  monto_estimado: number;
+  dias_atraso: number;
+  estado: 'Pendiente' | 'Aprobada' | 'Rechazada';
+  fecha_respuesta: string | null;
+  observaciones: string;
+  decidido_por: string | null;
+  created_at: string;
 }
 
 export interface Rendicion {
@@ -766,6 +782,24 @@ export function formatDate(dateStr: string): string {
 export function findById<T extends { id: string }>(arr: T[] | undefined, id: string | null): T | undefined {
   if (!arr || !id) return undefined;
   return arr.find(item => item.id === id);
+}
+
+export function useConsultaMoraByLiquidacion(liquidacionId: string) {
+  return useQuery({
+    queryKey: ['consultas_mora', liquidacionId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('consultas_mora')
+        .select('*')
+        .eq('liquidacion_id', liquidacionId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data as ConsultaMora | null;
+    },
+    enabled: !!liquidacionId,
+  });
 }
 
 export const evolucionMensual = [

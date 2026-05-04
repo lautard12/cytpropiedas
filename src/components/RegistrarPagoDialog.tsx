@@ -24,6 +24,9 @@ interface Props {
   pendiente: number;
   comisionTotal: number;
   periodoLabel: string;
+  mediosPagoAceptados?: string[];
+  destinoCobro?: string;
+  diaVencimiento?: number;
 }
 
 const IVA_RATE = 0.21;
@@ -31,13 +34,20 @@ const IVA_RATE = 0.21;
 export default function RegistrarPagoDialog({
   open, onOpenChange, liquidacionId, contratoId,
   totalCobrar, totalCobrado, pendiente, comisionTotal, periodoLabel,
+  mediosPagoAceptados, destinoCobro, diaVencimiento,
 }: Props) {
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const today = new Date().toISOString().split('T')[0];
 
+  const mediosDisponibles = useMemo(() => {
+    const todos = ['Transferencia', 'Efectivo', 'Cheque', 'Mercado Pago', 'Débito automático'];
+    if (!mediosPagoAceptados || mediosPagoAceptados.length === 0) return todos;
+    return todos.filter(m => mediosPagoAceptados.includes(m));
+  }, [mediosPagoAceptados]);
+
   const [monto, setMonto] = useState(pendiente.toString());
-  const [medioPago, setMedioPago] = useState<string>('Transferencia');
+  const [medioPago, setMedioPago] = useState<string>(mediosDisponibles[0] || 'Transferencia');
   const [referencia, setReferencia] = useState('');
   const [fecha, setFecha] = useState(today);
   const [observaciones, setObservaciones] = useState('');
@@ -174,15 +184,27 @@ export default function RegistrarPagoDialog({
             <Select value={medioPago} onValueChange={setMedioPago}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="Transferencia">Transferencia bancaria</SelectItem>
-                <SelectItem value="Efectivo">Efectivo</SelectItem>
-                <SelectItem value="Cheque">Cheque</SelectItem>
-                <SelectItem value="Mercado Pago">Mercado Pago</SelectItem>
-                <SelectItem value="Débito automático">Débito automático</SelectItem>
+                {mediosDisponibles.map(m => (
+                  <SelectItem key={m} value={m}>{m}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
+            {destinoCobro && (
+              <p className="text-xs text-muted-foreground">
+                Acuerdo: pagar a <strong>{destinoCobro}</strong>
+                {mediosPagoAceptados && mediosPagoAceptados.length > 0 && (
+                  <> · Medios pactados: {mediosPagoAceptados.join(', ')}</>
+                )}
+              </p>
+            )}
             {!esTransferencia && (
               <p className="text-xs text-muted-foreground">Sin facturación obligatoria — no se aplica IVA sobre la comisión.</p>
+            )}
+            {montoNum > 0 && montoNum < pendiente && (
+              <p className="text-xs text-status-warning flex items-start gap-1 mt-1">
+                <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
+                <span>Si el faltante se abona después del día {diaVencimiento ?? 10}, se podrán aplicar punitorios sobre ese saldo (previa consulta al propietario).</span>
+              </p>
             )}
           </div>
 

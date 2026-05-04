@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -58,6 +60,13 @@ export default function NuevoContrato() {
   const [multaPct, setMultaPct] = useState('0');
   const [multaObs, setMultaObs] = useState('');
   const [observaciones, setObservaciones] = useState('');
+  const [mediosPago, setMediosPago] = useState<string[]>(['Transferencia', 'Efectivo']);
+  const [destinoCobro, setDestinoCobro] = useState<'Inmobiliaria' | 'Propietario'>('Inmobiliaria');
+  const [tasaMora, setTasaMora] = useState('0.5');
+
+  const toggleMedio = (m: string) => {
+    setMediosPago(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]);
+  };
 
   const propiedad = findById(propiedades, propiedadId);
   const propietario = findById(propietarios, propietarioId);
@@ -203,6 +212,31 @@ export default function NuevoContrato() {
                 <div className="space-y-1.5"><Label className="text-sm">Observaciones de la cláusula de rescisión</Label><Textarea value={multaObs} onChange={e => setMultaObs(e.target.value)} rows={2} placeholder="Ej. La multa equivale a X meses, exenta si avisa con 60 días..." disabled={!permiteRescision} /></div>
                 <p className="text-xs text-muted-foreground">Dejar el % en 0 si todavía no se pactó. Se puede editar en cualquier momento desde el detalle del contrato.</p>
               </div>
+              <div className="rounded-md border p-3 space-y-3">
+                <p className="text-sm font-medium">Medios de pago aceptados</p>
+                <p className="text-xs text-muted-foreground">Estos serán los únicos medios habilitados al registrar pagos para este contrato.</p>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {['Transferencia', 'Efectivo', 'Cheque', 'Mercado Pago', 'Débito automático'].map(m => (
+                    <label key={m} className="flex items-center gap-2 rounded-md border p-2 cursor-pointer hover:bg-muted/50">
+                      <Checkbox checked={mediosPago.includes(m)} onCheckedChange={() => toggleMedio(m)} />
+                      <span className="text-sm">{m}</span>
+                    </label>
+                  ))}
+                </div>
+                <div className="space-y-1.5 pt-2 border-t">
+                  <Label className="text-sm">Destino del cobro</Label>
+                  <RadioGroup value={destinoCobro} onValueChange={(v) => setDestinoCobro(v as any)} className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer"><RadioGroupItem value="Inmobiliaria" /> Inmobiliaria</label>
+                    <label className="flex items-center gap-2 cursor-pointer"><RadioGroupItem value="Propietario" /> Propietario directo</label>
+                  </RadioGroup>
+                </div>
+                <div className="space-y-1.5 pt-2 border-t">
+                  <Label className="text-sm">Tasa de mora diaria (%)</Label>
+                  <Input type="number" step="0.01" value={tasaMora} onChange={e => setTasaMora(e.target.value)} min="0" />
+                  <p className="text-xs text-muted-foreground">Interés diario compuesto sobre el saldo pendiente. Se aplica solo previa consulta y autorización del propietario.</p>
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <Label>Plantilla de cláusulas ({tipoContrato})</Label>
                 <Select value={plantillaId} onValueChange={aplicarPlantilla}>

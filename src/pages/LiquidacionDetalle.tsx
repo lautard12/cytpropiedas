@@ -9,16 +9,18 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   useLiquidacion, useContrato, usePropiedad, usePropietario, useInquilino,
   useConceptosLiquidacion, usePagosByLiquidacion, useLiquidaciones,
-  useEventosPorPeriodo, useRendicionByLiquidacion,
+  useEventosPorPeriodo, useRendicionByLiquidacion, useConsultaMoraByLiquidacion,
   formatCurrency, formatDate,
 } from '@/hooks/useSupabaseData';
 import {
   ArrowLeft, CreditCard, CheckCircle, FileText, ChevronLeft, ChevronRight,
-  MessageSquare, AlertTriangle, DollarSign, Zap, Ban, Send, Clock,
+  MessageSquare, AlertTriangle, DollarSign, Zap, Ban, Send, Clock, MessageCircle,
+  ThumbsUp, ThumbsDown,
 } from 'lucide-react';
 import RegistrarPagoDialog from '@/components/RegistrarPagoDialog';
 import AnularPagoDialog from '@/components/AnularPagoDialog';
 import RendirPropietarioDialog from '@/components/RendirPropietarioDialog';
+import ConsultarMoraDialog from '@/components/ConsultarMoraDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
@@ -35,7 +37,8 @@ export default function LiquidacionDetalle() {
   const navigate = useNavigate();
   const [pagoOpen, setPagoOpen] = useState(false);
   const [rendirOpen, setRendirOpen] = useState(false);
-  const [aplicandoMora, setAplicandoMora] = useState(false);
+  const [consultaOpen, setConsultaOpen] = useState(false);
+  const [resolviendo, setResolviendo] = useState(false);
   const [acreditando, setAcreditando] = useState(false);
   const [anularPago, setAnularPago] = useState<{ id: string; monto: number } | null>(null);
   const queryClient = useQueryClient();
@@ -49,6 +52,7 @@ export default function LiquidacionDetalle() {
   const { data: allLiquidaciones = [] } = useLiquidaciones();
   const { data: eventosPeriodo = [] } = useEventosPorPeriodo(liq?.contrato_id || '', liq?.periodo || '');
   const { data: rendicion } = useRendicionByLiquidacion(liq?.id || '');
+  const { data: consultaMora } = useConsultaMoraByLiquidacion(liq?.id || '');
 
   // IVA acumulado de los pagos
   const ivaComisionTotal = useMemo(
@@ -91,19 +95,58 @@ export default function LiquidacionDetalle() {
     : liq.estado === 'Parcial' ? 'bg-status-danger text-status-danger-foreground'
     : 'bg-muted text-muted-foreground';
 
-  const handleAplicarMora = async () => {
-    if (!liq) return;
-    setAplicandoMora(true);
+  const handleResolverMora = async (aprobada: boolean) => {
+    if (!consultaMora) return;
+    setResolviendo(true);
     try {
-      const { error } = await (supabase as any).rpc('aplicar_punitorios', { _liquidacion_id: liq.id });
+      const { error } = await (supabase as any).rpc('resolver_consulta_mora', {
+        _consulta_id: consultaMora.id,
+        _aprobada: aprobada,
+        _observaciones: '',
+      });
       if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['consultas_mora', liq?.id] });
       queryClient.invalidateQueries({ queryKey: ['liquidaciones'] });
       queryClient.invalidateQueries({ queryKey: ['conceptos_liquidacion'] });
       queryClient.invalidateQueries({ queryKey: ['eventos_contrato'] });
-      toast({ title: 'Punitorios aplicados', description: 'Se agregó el concepto de mora a la liquidación.' });
+      toast({
+        title: aprobada ? 'Punitorios aplicados' : 'Punitorio condonado',
+        description: aprobada ? 'Se agregó el concepto de mora a la liquidación.' : 'Se registró que el propietario no autorizó la mora.',
+      });
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
-    } finally { setAplicandoMora(false); }
+    } finally { setResolviendo(false); }
+  };
+
+  const handleNotificarWhatsApp = async () => {
+    if (!liq || !inquilino) return;
+    const tel = (inquilino as any).telefono || '';
+    if (!tel) {
+      toast({ title: 'Sin teléfono', description: 'El inquilino no tiene teléfono cargado.', variant: 'destructive' });
+      return;
+    }
+    const telLimpio = tel.replace(/[^\d]/g, '');
+    const dirCompleta = `${propiedad?.direccion ?? ''} ${propiedad?.unidad ?? ''}`.trim();
+    const venc = `${String(contrato?.dia_vencimiento ?? 10).padStart(2, '0')}/${liq.periodo.split('-')[1]}/${liq.periodo.split('-')[0]}`;
+    const msg =
+      `Hola ${inquilino.nombre}, te recordamos que la liquidación de ${liq.periodo_label} ` +
+      `(${dirCompleta}) vence el ${venc}. ` +
+      `Total: ${formatCurrency(liq.total_cobrar)}. Saldo pendiente: ${formatCurrency(liq.pendiente)}. Gracias!`;
+    const url = `https://wa.me/${telLimpio}?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+
+    try {
+      await supabase.from('eventos_contrato').insert({
+        contrato_id: liq.contrato_id,
+        liquidacion_id: liq.id,
+        periodo: liq.periodo,
+        fecha: new Date().toISOString().split('T')[0],
+        tipo: 'notificacion_enviada',
+        categoria: 'comunicacion',
+        descripcion: `Recordatorio de cobranza enviado por WhatsApp a ${inquilino.nombre}`,
+      } as any);
+      queryClient.invalidateQueries({ queryKey: ['eventos_contrato'] });
+    } catch { /* no bloquea */ }
   };
 
   const handleAcreditar = async () => {
@@ -156,8 +199,13 @@ export default function LiquidacionDetalle() {
           <h1 className="text-2xl font-bold">Liquidación mensual — Contrato {contrato?.codigo} — {liq.periodo_label}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{propiedad?.direccion} {propiedad?.unidad} · Inquilino: {inquilino?.nombre} · Propietario: {propietario?.nombre}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <Badge className={estadoBadge}>{liq.estado}</Badge>
+          {(liq.estado === 'Pendiente' || liq.estado === 'Parcial') && (
+            <Button variant="outline" size="sm" onClick={handleNotificarWhatsApp}>
+              <MessageCircle className="h-4 w-4 mr-1" /> Avisar por WhatsApp
+            </Button>
+          )}
           {(liq.estado === 'Pendiente' || liq.estado === 'Parcial' || liq.estado === 'Borrador') && (
             <Button variant="outline" size="sm" onClick={() => setPagoOpen(true)}><CreditCard className="h-4 w-4 mr-1" /> Registrar pago</Button>
           )}
@@ -177,15 +225,42 @@ export default function LiquidacionDetalle() {
       {moraInfo && (
         <Alert className="border-status-danger/40 bg-status-danger/5">
           <Clock className="h-4 w-4 text-status-danger" />
-          <AlertDescription className="flex items-center justify-between gap-3">
+          <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <span>
               <strong className="text-status-danger">En mora — {moraInfo.dias} días.</strong>{' '}
-              Punitorios estimados al día de hoy ({moraInfo.tasa}% diario):{' '}
+              Punitorios estimados ({moraInfo.tasa}% diario):{' '}
               <strong>{formatCurrency(moraInfo.interes)}</strong>
             </span>
-            <Button size="sm" variant="outline" onClick={handleAplicarMora} disabled={aplicandoMora}>
-              {aplicandoMora ? 'Aplicando...' : 'Aplicar punitorios'}
-            </Button>
+
+            {!consultaMora && (
+              <Button size="sm" variant="outline" onClick={() => setConsultaOpen(true)}>
+                <MessageSquare className="h-4 w-4 mr-1" /> Consultar al propietario
+              </Button>
+            )}
+
+            {consultaMora?.estado === 'Pendiente' && (
+              <div className="flex gap-2 items-center">
+                <Badge className="bg-status-warning text-status-warning-foreground">Esperando respuesta</Badge>
+                <Button size="sm" variant="outline" onClick={() => handleResolverMora(true)} disabled={resolviendo}>
+                  <ThumbsUp className="h-4 w-4 mr-1" /> Aprobar
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleResolverMora(false)} disabled={resolviendo}>
+                  <ThumbsDown className="h-4 w-4 mr-1" /> Rechazar
+                </Button>
+              </div>
+            )}
+
+            {consultaMora?.estado === 'Aprobada' && (
+              <Badge className="bg-status-success text-status-success-foreground">
+                Punitorio aprobado · {consultaMora.fecha_respuesta && formatDate(consultaMora.fecha_respuesta)}
+              </Badge>
+            )}
+
+            {consultaMora?.estado === 'Rechazada' && (
+              <Badge variant="outline" className="border-status-info/40 text-status-info">
+                Punitorio condonado por el propietario · {consultaMora.fecha_respuesta && formatDate(consultaMora.fecha_respuesta)}
+              </Badge>
+            )}
           </AlertDescription>
         </Alert>
       )}
@@ -348,7 +423,22 @@ export default function LiquidacionDetalle() {
         pendiente={liq.pendiente}
         comisionTotal={liq.comision_inmobiliaria}
         periodoLabel={liq.periodo_label}
+        mediosPagoAceptados={contrato?.medios_pago_aceptados}
+        destinoCobro={contrato?.destino_cobro}
+        diaVencimiento={contrato?.dia_vencimiento}
       />
+
+      {moraInfo && (
+        <ConsultarMoraDialog
+          open={consultaOpen}
+          onOpenChange={setConsultaOpen}
+          liquidacionId={liq.id}
+          diasAtraso={moraInfo.dias}
+          montoEstimado={moraInfo.interes}
+          tasaDiaria={moraInfo.tasa}
+          propietarioNombre={propietario?.nombre}
+        />
+      )}
 
       <RendirPropietarioDialog
         open={rendirOpen}
