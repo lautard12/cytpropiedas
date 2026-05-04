@@ -499,6 +499,36 @@ export function usePagosByLiquidacion(liquidacionId: string) {
   });
 }
 
+export function useRendiciones() {
+  return useQuery({
+    queryKey: ['rendiciones_propietario'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('rendiciones_propietario')
+        .select('*')
+        .order('fecha_acreditacion', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Rendicion[];
+    },
+  });
+}
+
+export function useRendicionByLiquidacion(liquidacionId: string) {
+  return useQuery({
+    queryKey: ['rendiciones_propietario', 'liquidacion', liquidacionId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('rendiciones_propietario')
+        .select('*')
+        .eq('liquidacion_id', liquidacionId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as Rendicion | null;
+    },
+    enabled: !!liquidacionId,
+  });
+}
+
 export function useEventosContrato(contratoId: string) {
   return useQuery({
     queryKey: ['eventos_contrato', contratoId],
