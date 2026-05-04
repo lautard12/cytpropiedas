@@ -24,6 +24,9 @@ interface Props {
   pendiente: number;
   comisionTotal: number;
   periodoLabel: string;
+  mediosPagoAceptados?: string[];
+  destinoCobro?: string;
+  diaVencimiento?: number;
 }
 
 const IVA_RATE = 0.21;
