@@ -199,8 +199,13 @@ export default function LiquidacionDetalle() {
           <h1 className="text-2xl font-bold">Liquidación mensual — Contrato {contrato?.codigo} — {liq.periodo_label}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{propiedad?.direccion} {propiedad?.unidad} · Inquilino: {inquilino?.nombre} · Propietario: {propietario?.nombre}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <Badge className={estadoBadge}>{liq.estado}</Badge>
+          {(liq.estado === 'Pendiente' || liq.estado === 'Parcial') && (
+            <Button variant="outline" size="sm" onClick={handleNotificarWhatsApp}>
+              <MessageCircle className="h-4 w-4 mr-1" /> Avisar por WhatsApp
+            </Button>
+          )}
           {(liq.estado === 'Pendiente' || liq.estado === 'Parcial' || liq.estado === 'Borrador') && (
             <Button variant="outline" size="sm" onClick={() => setPagoOpen(true)}><CreditCard className="h-4 w-4 mr-1" /> Registrar pago</Button>
           )}
@@ -220,15 +225,42 @@ export default function LiquidacionDetalle() {
       {moraInfo && (
         <Alert className="border-status-danger/40 bg-status-danger/5">
           <Clock className="h-4 w-4 text-status-danger" />
-          <AlertDescription className="flex items-center justify-between gap-3">
+          <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <span>
               <strong className="text-status-danger">En mora — {moraInfo.dias} días.</strong>{' '}
-              Punitorios estimados al día de hoy ({moraInfo.tasa}% diario):{' '}
+              Punitorios estimados ({moraInfo.tasa}% diario):{' '}
               <strong>{formatCurrency(moraInfo.interes)}</strong>
             </span>
-            <Button size="sm" variant="outline" onClick={handleAplicarMora} disabled={aplicandoMora}>
-              {aplicandoMora ? 'Aplicando...' : 'Aplicar punitorios'}
-            </Button>
+
+            {!consultaMora && (
+              <Button size="sm" variant="outline" onClick={() => setConsultaOpen(true)}>
+                <MessageSquare className="h-4 w-4 mr-1" /> Consultar al propietario
+              </Button>
+            )}
+
+            {consultaMora?.estado === 'Pendiente' && (
+              <div className="flex gap-2 items-center">
+                <Badge className="bg-status-warning text-status-warning-foreground">Esperando respuesta</Badge>
+                <Button size="sm" variant="outline" onClick={() => handleResolverMora(true)} disabled={resolviendo}>
+                  <ThumbsUp className="h-4 w-4 mr-1" /> Aprobar
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleResolverMora(false)} disabled={resolviendo}>
+                  <ThumbsDown className="h-4 w-4 mr-1" /> Rechazar
+                </Button>
+              </div>
+            )}
+
+            {consultaMora?.estado === 'Aprobada' && (
+              <Badge className="bg-status-success text-status-success-foreground">
+                Punitorio aprobado · {consultaMora.fecha_respuesta && formatDate(consultaMora.fecha_respuesta)}
+              </Badge>
+            )}
+
+            {consultaMora?.estado === 'Rechazada' && (
+              <Badge variant="outline" className="border-status-info/40 text-status-info">
+                Punitorio condonado por el propietario · {consultaMora.fecha_respuesta && formatDate(consultaMora.fecha_respuesta)}
+              </Badge>
+            )}
           </AlertDescription>
         </Alert>
       )}
