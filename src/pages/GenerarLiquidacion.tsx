@@ -167,8 +167,7 @@ export default function GenerarLiquidacion() {
                   <Select value={periodo} onValueChange={setPeriodo}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="2025-04">Abril 2025</SelectItem>
-                      <SelectItem value="2025-03">Marzo 2025</SelectItem>
+                      {periodos.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -183,7 +182,7 @@ export default function GenerarLiquidacion() {
           </Card>
 
           {contrato && (
-            <Alert><Info className="h-4 w-4" /><AlertDescription>Reglas del contrato {contrato.codigo}: Comisión {contrato.comision_porcentaje}% · IVA {contrato.iva ? 'Sí' : 'No'} · TGI: {contrato.tgi} · API: {contrato.api} · Exp. ord.: {contrato.expensas_ordinarias} · Seguro: {contrato.seguro}</AlertDescription></Alert>
+            <Alert><Info className="h-4 w-4" /><AlertDescription>Reglas del contrato {contrato.codigo}: Comisión {contrato.comision_porcentaje}% sobre alquiler bruto · TGI: {contrato.tgi} · API: {contrato.api} · Exp. ord.: {contrato.expensas_ordinarias} · Seguro: {contrato.seguro}. El IVA s/ comisión se aplica al registrar pagos por transferencia.</AlertDescription></Alert>
           )}
 
           <Card>
@@ -218,7 +217,6 @@ export default function GenerarLiquidacion() {
             <CardHeader><CardTitle className="text-base">Resumen en vivo</CardTitle></CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Total conceptos</span><span className="font-semibold">{formatCurrency(nums.subtotal)}</span></div>
-              {contrato?.iva && <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">IVA (21%)</span><span className="font-semibold">{formatCurrency(nums.ivaAmount)}</span></div>}
               <div className="flex justify-between py-1.5 border-b"><span className="font-semibold">Total a cobrar</span><span className="font-bold text-lg">{formatCurrency(nums.totalCobrar)}</span></div>
               <div className="h-px bg-border my-2" />
               <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Comisión administración ({contrato?.comision_porcentaje || 0}%)</span><span className="font-semibold text-status-info">{formatCurrency(nums.comision)}</span></div>
