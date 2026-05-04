@@ -58,6 +58,13 @@ export default function NuevoContrato() {
   const [multaPct, setMultaPct] = useState('0');
   const [multaObs, setMultaObs] = useState('');
   const [observaciones, setObservaciones] = useState('');
+  const [mediosPago, setMediosPago] = useState<string[]>(['Transferencia', 'Efectivo']);
+  const [destinoCobro, setDestinoCobro] = useState<'Inmobiliaria' | 'Propietario'>('Inmobiliaria');
+  const [tasaMora, setTasaMora] = useState('0.5');
+
+  const toggleMedio = (m: string) => {
+    setMediosPago(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]);
+  };
 
   const propiedad = findById(propiedades, propiedadId);
   const propietario = findById(propietarios, propietarioId);
