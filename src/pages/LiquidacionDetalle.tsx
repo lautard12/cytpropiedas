@@ -95,19 +95,58 @@ export default function LiquidacionDetalle() {
     : liq.estado === 'Parcial' ? 'bg-status-danger text-status-danger-foreground'
     : 'bg-muted text-muted-foreground';
 
-  const handleAplicarMora = async () => {
-    if (!liq) return;
-    setAplicandoMora(true);
+  const handleResolverMora = async (aprobada: boolean) => {
+    if (!consultaMora) return;
+    setResolviendo(true);
     try {
-      const { error } = await (supabase as any).rpc('aplicar_punitorios', { _liquidacion_id: liq.id });
+      const { error } = await (supabase as any).rpc('resolver_consulta_mora', {
+        _consulta_id: consultaMora.id,
+        _aprobada: aprobada,
+        _observaciones: '',
+      });
       if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['consultas_mora', liq?.id] });
       queryClient.invalidateQueries({ queryKey: ['liquidaciones'] });
       queryClient.invalidateQueries({ queryKey: ['conceptos_liquidacion'] });
       queryClient.invalidateQueries({ queryKey: ['eventos_contrato'] });
-      toast({ title: 'Punitorios aplicados', description: 'Se agregó el concepto de mora a la liquidación.' });
+      toast({
+        title: aprobada ? 'Punitorios aplicados' : 'Punitorio condonado',
+        description: aprobada ? 'Se agregó el concepto de mora a la liquidación.' : 'Se registró que el propietario no autorizó la mora.',
+      });
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
-    } finally { setAplicandoMora(false); }
+    } finally { setResolviendo(false); }
+  };
+
+  const handleNotificarWhatsApp = async () => {
+    if (!liq || !inquilino) return;
+    const tel = (inquilino as any).telefono || '';
+    if (!tel) {
+      toast({ title: 'Sin teléfono', description: 'El inquilino no tiene teléfono cargado.', variant: 'destructive' });
+      return;
+    }
+    const telLimpio = tel.replace(/[^\d]/g, '');
+    const dirCompleta = `${propiedad?.direccion ?? ''} ${propiedad?.unidad ?? ''}`.trim();
+    const venc = `${String(contrato?.dia_vencimiento ?? 10).padStart(2, '0')}/${liq.periodo.split('-')[1]}/${liq.periodo.split('-')[0]}`;
+    const msg =
+      `Hola ${inquilino.nombre}, te recordamos que la liquidación de ${liq.periodo_label} ` +
+      `(${dirCompleta}) vence el ${venc}. ` +
+      `Total: ${formatCurrency(liq.total_cobrar)}. Saldo pendiente: ${formatCurrency(liq.pendiente)}. Gracias!`;
+    const url = `https://wa.me/${telLimpio}?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+
+    try {
+      await supabase.from('eventos_contrato').insert({
+        contrato_id: liq.contrato_id,
+        liquidacion_id: liq.id,
+        periodo: liq.periodo,
+        fecha: new Date().toISOString().split('T')[0],
+        tipo: 'notificacion_enviada',
+        categoria: 'comunicacion',
+        descripcion: `Recordatorio de cobranza enviado por WhatsApp a ${inquilino.nombre}`,
+      } as any);
+      queryClient.invalidateQueries({ queryKey: ['eventos_contrato'] });
+    } catch { /* no bloquea */ }
   };
 
   const handleAcreditar = async () => {
