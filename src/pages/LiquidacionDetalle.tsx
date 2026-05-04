@@ -34,7 +34,11 @@ export default function LiquidacionDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [pagoOpen, setPagoOpen] = useState(false);
+  const [rendirOpen, setRendirOpen] = useState(false);
+  const [aplicandoMora, setAplicandoMora] = useState(false);
+  const [acreditando, setAcreditando] = useState(false);
   const [anularPago, setAnularPago] = useState<{ id: string; monto: number } | null>(null);
+  const queryClient = useQueryClient();
   const { data: liq, isLoading } = useLiquidacion(id || '');
   const { data: contrato } = useContrato(liq?.contrato_id || '');
   const { data: propiedad } = usePropiedad(contrato?.propiedad_id || '');
@@ -44,6 +48,29 @@ export default function LiquidacionDetalle() {
   const { data: pagos = [] } = usePagosByLiquidacion(liq?.id || '');
   const { data: allLiquidaciones = [] } = useLiquidaciones();
   const { data: eventosPeriodo = [] } = useEventosPorPeriodo(liq?.contrato_id || '', liq?.periodo || '');
+  const { data: rendicion } = useRendicionByLiquidacion(liq?.id || '');
+
+  // IVA acumulado de los pagos
+  const ivaComisionTotal = useMemo(
+    () => pagos.filter(p => p.estado === 'Confirmado').reduce((s, p) => s + (Number(p.iva_comision) || 0), 0),
+    [pagos]
+  );
+
+  // Días de mora estimados
+  const moraInfo = useMemo(() => {
+    if (!liq || !contrato || liq.pendiente <= 0) return null;
+    const tasa = Number(contrato.tasa_mora_diaria || 0);
+    if (tasa <= 0) return null;
+    const [yStr, mStr] = liq.periodo.split('-');
+    const venc = new Date(Number(yStr), Number(mStr) - 1, contrato.dia_vencimiento);
+    venc.setDate(venc.getDate() + Number(contrato.dias_gracia_mora || 0));
+    const hoy = new Date();
+    const dias = Math.max(0, Math.floor((hoy.getTime() - venc.getTime()) / 86400000));
+    if (dias === 0) return null;
+    const interes = liq.pendiente * (Math.pow(1 + tasa / 100, dias) - 1);
+    return { dias, interes: Math.round(interes * 100) / 100, tasa };
+  }, [liq, contrato]);
+
 
   if (isLoading) return <div className="p-8"><Skeleton className="h-64" /></div>;
   if (!liq) return <div className="p-8 text-center text-muted-foreground">Liquidación no encontrada</div>;
