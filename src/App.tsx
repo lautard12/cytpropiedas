@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useParams } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,16 +16,20 @@ import Liquidaciones from "./pages/Liquidaciones";
 import LiquidacionDetalle from "./pages/LiquidacionDetalle";
 import Pagos from "./pages/Pagos";
 import Rendiciones from "./pages/Rendiciones";
-import Propietarios from "./pages/Propietarios";
-import PropietarioDetalle from "./pages/PropietarioDetalle";
-import Inquilinos from "./pages/Inquilinos";
-import InquilinoDetalle from "./pages/InquilinoDetalle";
+import Personas from "./pages/Personas";
+import PersonaDetalle from "./pages/PersonaDetalle";
 import Reportes from "./pages/Reportes";
 import NuevoContrato from "./pages/NuevoContrato";
 import GenerarLiquidacion from "./pages/GenerarLiquidacion";
 import MiOrganizacion from "./pages/MiOrganizacion";
 import Auditoria from "./pages/Auditoria";
 import NotFound from "./pages/NotFound";
+
+// Redirecciones legacy: /propietarios/:id -> /personas/:id?rol=propietario
+const RedirectToPersona = ({ rol }: { rol: 'propietario' | 'inquilino' }) => {
+  const { id } = useParams();
+  return <Navigate to={`/personas/${id}?rol=${rol}`} replace />;
+};
 
 const queryClient = new QueryClient();
 
@@ -48,10 +52,13 @@ const App = () => (
               <Route path="/liquidaciones/:id" element={<LiquidacionDetalle />} />
               <Route path="/pagos" element={<Pagos />} />
               <Route path="/rendiciones" element={<Rendiciones />} />
-              <Route path="/propietarios" element={<Propietarios />} />
-              <Route path="/propietarios/:id" element={<PropietarioDetalle />} />
-              <Route path="/inquilinos" element={<Inquilinos />} />
-              <Route path="/inquilinos/:id" element={<InquilinoDetalle />} />
+              <Route path="/personas" element={<Personas />} />
+              <Route path="/personas/:id" element={<PersonaDetalle />} />
+              {/* Redirecciones legacy */}
+              <Route path="/propietarios" element={<Navigate to="/personas?tab=propietarios" replace />} />
+              <Route path="/propietarios/:id" element={<RedirectToPersona rol="propietario" />} />
+              <Route path="/inquilinos" element={<Navigate to="/personas?tab=inquilinos" replace />} />
+              <Route path="/inquilinos/:id" element={<RedirectToPersona rol="inquilino" />} />
               <Route path="/reportes" element={<Reportes />} />
               <Route path="/nuevo-contrato" element={<NuevoContrato />} />
               <Route path="/generar-liquidacion" element={<GenerarLiquidacion />} />
