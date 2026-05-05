@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  usePropietario, useInquilino, usePropiedades, useContratos, useLiquidaciones, usePagos,
+  usePropietario, useInquilino, usePropietarios, useInquilinos,
+  usePropiedades, useContratos, useLiquidaciones, usePagos,
   findById, formatCurrency, formatDate,
 } from '@/hooks/useSupabaseData';
 import { ArrowLeft, User, Building2, FileText, Wallet, AlertCircle } from 'lucide-react';
@@ -34,21 +35,12 @@ export default function PersonaDetalle() {
   const { data: liquidaciones = [] } = useLiquidaciones();
   const { data: allPagos = [] } = usePagos();
 
-  // Buscar el rol cruzado en el listado completo (más simple que un fetch extra)
-  const { data: allPropietarios = [] } = (function () {
-    // reutilizamos hook ya cacheado
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { usePropietarios } = require('@/hooks/useSupabaseData');
-    return usePropietarios();
-  })();
-  const { data: allInquilinos = [] } = (function () {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { useInquilinos } = require('@/hooks/useSupabaseData');
-    return useInquilinos();
-  })();
+  // Buscar el rol cruzado en el listado completo (cache-friendly, sin fetch extra)
+  const { data: allPropietarios = [] } = usePropietarios();
+  const { data: allInquilinos = [] } = useInquilinos();
 
-  const propietario = propPrimary ?? (personaId ? (allPropietarios as any[]).find((p: any) => p.persona_id === personaId) : undefined);
-  const inquilino = inqPrimary ?? (personaId ? (allInquilinos as any[]).find((i: any) => i.persona_id === personaId) : undefined);
+  const propietario = propPrimary ?? (personaId ? allPropietarios.find(p => p.persona_id === personaId) : undefined);
+  const inquilino = inqPrimary ?? (personaId ? allInquilinos.find(i => i.persona_id === personaId) : undefined);
 
   const persona = propietario ?? inquilino;
 
