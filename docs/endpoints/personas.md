@@ -1,8 +1,8 @@
-# Endpoints — Personas, Propietarios, Inquilinos
+# Endpoints — Personas (módulo unificado)
 
-A partir de la separación en tablas específicas, las pantallas de **Propietarios** e **Inquilinos** consumen sus propias tablas (con join a `personas` para los datos básicos), y `personas` queda como maestro común.
+Desde la unificación, **propietarios e inquilinos viven en un único módulo** `/personas` con tabs (Todas / Propietarios / Inquilinos / Garantes). Las rutas legacy `/propietarios*` e `/inquilinos*` siguen existiendo pero **redirigen** a `/personas` con el query param correspondiente (`?tab=…` o `?rol=…`). A nivel de datos, las tablas específicas (`propietarios`, `inquilinos`) siguen separadas en 1-a-1 con `personas`, y los **roles de dominio se derivan** de la presencia de filas en esas tablas.
 
-Pantallas: `/propietarios`, `/propietarios/:id`, `/inquilinos`, `/inquilinos/:id`.
+Pantallas: `/personas`, `/personas/:id` (ficha 360° con secciones dinámicas según roles).
 Hooks: `useSupabaseData.ts`, `usePersonaMutations.ts`.
 
 ---
