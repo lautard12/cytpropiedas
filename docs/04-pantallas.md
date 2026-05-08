@@ -13,10 +13,10 @@
 | `/liquidaciones/:id` | `LiquidacionDetalle.tsx` | Detalle con conceptos, pagos y anulación | `useLiquidacion`, `useConceptosLiquidacion`, `usePagosByLiquidacion` |
 | `/generar-liquidacion` | `GenerarLiquidacion.tsx` | Form: contrato + período + conceptos | `useContratos`, `useLiquidaciones` |
 | `/pagos` | `Pagos.tsx` | Listado global con filtros | `usePagos`, `useLiquidaciones`, `useContratos` |
-| `/propietarios` | `Propietarios.tsx` | ABM con búsqueda y duplicados | `usePropietarios` + mutaciones |
-| `/propietarios/:id` | `PropietarioDetalle.tsx` | Ficha + propiedades + liquidaciones | `usePersona`, `usePropiedades`, `useLiquidaciones` |
-| `/inquilinos` | `Inquilinos.tsx` | ABM con búsqueda y duplicados | `useInquilinos` + mutaciones |
-| `/inquilinos/:id` | `InquilinoDetalle.tsx` | Ficha + contratos | `usePersona`, `useContratos` |
+| `/rendiciones` | `Rendiciones.tsx` | Cálculo neto a propietario y registro de transferencias | `useLiquidaciones`, `usePagos`, `usePropietarios` |
+| `/personas` | `Personas.tsx` | **Módulo unificado** con tabs Todas / Propietarios / Inquilinos / Garantes, búsqueda global y ABM con detección de duplicados | `usePropietarios`, `useInquilinos` + mutaciones |
+| `/personas/:id` | `PersonaDetalle.tsx` | Ficha 360° con secciones dinámicas según roles (propietario/inquilino/garante) | `usePersona`, `usePropiedades`, `useContratos`, `useLiquidaciones` |
+| `/propietarios`, `/propietarios/:id`, `/inquilinos`, `/inquilinos/:id` | — | **Rutas legacy** redirigidas a `/personas?tab=…` y `/personas/:id?rol=…` (compatibilidad) | — |
 | `/reportes` | `Reportes.tsx` | Resultado financiero por período | `useLiquidaciones`, `usePagos` |
 | `/mi-organizacion` | `MiOrganizacion.tsx` | Tabs Datos / Sucursales / Personal (alta y baja) — **solo admin** | `useOrganizacion`, `useSucursales`, `usePersonalUsuarios` |
 | `/auditoria` | `Auditoria.tsx` | Bitácora inmutable filtrable — **solo admin** | `useAuditoria` |
@@ -30,5 +30,8 @@
 - `SucursalFormDialog` — ABM de sucursales por organización.
 - `PersonalFormDialog` — alta integrada (auth user + persona + rol + legajo) vía edge function `create-personal`.
 - `PersonalBajaDialog` — cierra el legajo en `personal` (fecha + causa) y desactiva el usuario.
-- `RegistrarPagoDialog` — modal para cargar un pago contra una liquidación.
+- `RegistrarPagoDialog` — modal para cargar un pago; filtra medios de pago según los pactados en el contrato (`medios_pago_aceptados`).
 - `AnularPagoDialog` — pide motivo (mín. 4 chars) e invoca la RPC `anular_pago`.
+- `ConsultarMoraDialog` — flujo de consulta al propietario para aplicar punitorio cuando la liquidación supera la fecha de vencimiento; persiste en `consultas_mora` y, si se aprueba, agrega un concepto "Punitorio" calculado con `tasa_mora_diaria` (interés compuesto diario).
+- `RendirPropietarioDialog` — registra la transferencia neta al propietario con comprobante adjunto.
+- `GarantiasSection` / `RenovacionSection` / `RescindirDialog` — gestión de garantías, renovación de contratos y rescisión anticipada.
