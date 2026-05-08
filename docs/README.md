@@ -23,7 +23,7 @@ liquidaciones mensuales y cobranzas.
 
 ### 4. API / Endpoints (firmas por pantalla)
 - [`endpoints/README.md`](./endpoints/README.md) — Convenciones y autenticación.
-- [`endpoints/personas.md`](./endpoints/personas.md) — Propietarios, inquilinos y personal del staff.
+- [`endpoints/personas.md`](./endpoints/personas.md) — Módulo unificado de personas (propietarios, inquilinos, garantes) y personal del staff.
 - [`endpoints/propiedades.md`](./endpoints/propiedades.md)
 - [`endpoints/contratos.md`](./endpoints/contratos.md)
 - [`endpoints/liquidaciones.md`](./endpoints/liquidaciones.md)
