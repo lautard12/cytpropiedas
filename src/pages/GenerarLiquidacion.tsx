@@ -64,10 +64,49 @@ export default function GenerarLiquidacion() {
   const propietario = contrato ? findById(propietarios, contrato.propietario_id) : undefined;
   const inquilino = contrato ? findById(inquilinos, contrato.inquilino_id) : undefined;
 
-  const handleContratoChange = (val: string) => {
+  const [ultimaLiq, setUltimaLiq] = useState<{ periodo_label: string; alquiler: number } | null>(null);
+
+  const handleContratoChange = async (val: string) => {
     setContratoId(val);
     const ct = contratos.find(c => c.id === val);
-    if (ct) setAlquiler(String(ct.alquiler_base));
+    if (!ct) return;
+    setAlquiler(String(ct.alquiler_base));
+    setExpOrdinarias(''); setExpExtraordinarias(''); setTgiMonto(''); setApiMonto('');
+    setEpeMonto(''); setGasMonto(''); setAguasMonto(''); setSeguroMonto('');
+    setAjustes(''); setDescuentos(''); setSaldoAnterior(''); setUltimaLiq(null);
+
+    const { data: ultLiq } = await supabase
+      .from('liquidaciones')
+      .select('id, periodo_label, pendiente')
+      .eq('contrato_id', val)
+      .order('periodo', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!ultLiq) return;
+    if (Number(ultLiq.pendiente) > 0) setSaldoAnterior(String(ultLiq.pendiente));
+
+    const { data: conceptos } = await supabase
+      .from('conceptos_liquidacion')
+      .select('concepto, monto')
+      .eq('liquidacion_id', ultLiq.id);
+
+    let alqAnterior = ct.alquiler_base;
+    (conceptos || []).forEach(c => {
+      const m = String(Math.abs(Number(c.monto) || 0));
+      switch (c.concepto) {
+        case 'Alquiler': alqAnterior = Number(c.monto) || ct.alquiler_base; setAlquiler(m); break;
+        case 'Expensas ordinarias': setExpOrdinarias(m); break;
+        case 'Expensas extraordinarias': setExpExtraordinarias(m); break;
+        case 'TGI': setTgiMonto(m); break;
+        case 'API': setApiMonto(m); break;
+        case 'EPE': setEpeMonto(m); break;
+        case 'Gas': setGasMonto(m); break;
+        case 'Aguas Santafesinas': setAguasMonto(m); break;
+        case 'Seguro': setSeguroMonto(m); break;
+      }
+    });
+    setUltimaLiq({ periodo_label: ultLiq.periodo_label, alquiler: alqAnterior });
   };
 
   const nums = useMemo(() => {
@@ -185,19 +224,41 @@ export default function GenerarLiquidacion() {
             <Alert><Info className="h-4 w-4" /><AlertDescription>Reglas del contrato {contrato.codigo}: Comisión {contrato.comision_porcentaje}% sobre alquiler bruto · TGI: {contrato.tgi} · API: {contrato.api} · Exp. ord.: {contrato.expensas_ordinarias} · Seguro: {contrato.seguro}. El IVA s/ comisión se aplica al registrar pagos por transferencia.</AlertDescription></Alert>
           )}
 
+          {contrato && ultimaLiq && (
+            <Alert className="border-status-info/40 bg-status-info/5">
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                Se precargaron los montos de la última liquidación (<strong>{ultimaLiq.periodo_label}</strong>). Revisá y ajustá según las boletas reales del período.
+                {contrato.tipo_ajuste && contrato.tipo_ajuste !== 'Fijo' && (
+                  <> · Alquiler base del contrato: <strong>{formatCurrency(contrato.alquiler_base)}</strong>. Ajuste vigente: <strong>{contrato.tipo_ajuste} {contrato.frecuencia_ajuste}</strong> — verificá si corresponde aplicar nuevo índice.</>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
           <Card>
             <CardHeader><CardTitle className="text-base">Conceptos del período</CardTitle></CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-1.5"><Label>Alquiler del período ($)</Label><Input type="number" value={alquiler} onChange={e => setAlquiler(e.target.value)} /></div>
-                <div className="space-y-1.5"><Label>Expensas ordinarias ($){contrato && <Badge variant="outline" className="ml-2 text-xs">{contrato.expensas_ordinarias}</Badge>}</Label><Input type="number" value={expOrdinarias} onChange={e => setExpOrdinarias(e.target.value)} placeholder="0" /></div>
-                <div className="space-y-1.5"><Label>Expensas extraordinarias ($){contrato && <Badge variant="outline" className="ml-2 text-xs">{contrato.expensas_extraordinarias}</Badge>}</Label><Input type="number" value={expExtraordinarias} onChange={e => setExpExtraordinarias(e.target.value)} placeholder="0" /></div>
-                <div className="space-y-1.5"><Label>TGI ($){contrato && <Badge variant="outline" className="ml-2 text-xs">{contrato.tgi}</Badge>}</Label><Input type="number" value={tgiMonto} onChange={e => setTgiMonto(e.target.value)} placeholder="0" /></div>
-                <div className="space-y-1.5"><Label>API ($){contrato && <Badge variant="outline" className="ml-2 text-xs">{contrato.api}</Badge>}</Label><Input type="number" value={apiMonto} onChange={e => setApiMonto(e.target.value)} placeholder="0" /></div>
+                {(!contrato || contrato.expensas_ordinarias === 'Inquilino' || contrato.expensas_ordinarias === '50%') && (
+                  <div className="space-y-1.5"><Label>Expensas ordinarias ($){contrato && <Badge variant="outline" className="ml-2 text-xs">{contrato.expensas_ordinarias}</Badge>}</Label><Input type="number" value={expOrdinarias} onChange={e => setExpOrdinarias(e.target.value)} placeholder="0" /></div>
+                )}
+                {(!contrato || contrato.expensas_extraordinarias === 'Inquilino' || contrato.expensas_extraordinarias === '50%') && (
+                  <div className="space-y-1.5"><Label>Expensas extraordinarias ($){contrato && <Badge variant="outline" className="ml-2 text-xs">{contrato.expensas_extraordinarias}</Badge>}</Label><Input type="number" value={expExtraordinarias} onChange={e => setExpExtraordinarias(e.target.value)} placeholder="0" /></div>
+                )}
+                {(!contrato || contrato.tgi === 'Inquilino' || contrato.tgi === '50%') && (
+                  <div className="space-y-1.5"><Label>TGI ($){contrato && <Badge variant="outline" className="ml-2 text-xs">{contrato.tgi}</Badge>}</Label><Input type="number" value={tgiMonto} onChange={e => setTgiMonto(e.target.value)} placeholder="0" /></div>
+                )}
+                {(!contrato || contrato.api === 'Inquilino' || contrato.api === '50%') && (
+                  <div className="space-y-1.5"><Label>API ($){contrato && <Badge variant="outline" className="ml-2 text-xs">{contrato.api}</Badge>}</Label><Input type="number" value={apiMonto} onChange={e => setApiMonto(e.target.value)} placeholder="0" /></div>
+                )}
                 <div className="space-y-1.5"><Label>EPE ($)</Label><Input type="number" value={epeMonto} onChange={e => setEpeMonto(e.target.value)} placeholder="0" /></div>
                 <div className="space-y-1.5"><Label>Gas ($)</Label><Input type="number" value={gasMonto} onChange={e => setGasMonto(e.target.value)} placeholder="0" /></div>
                 <div className="space-y-1.5"><Label>Aguas Santafesinas ($)</Label><Input type="number" value={aguasMonto} onChange={e => setAguasMonto(e.target.value)} placeholder="0" /></div>
-                <div className="space-y-1.5"><Label>Seguro ($){contrato && <Badge variant="outline" className="ml-2 text-xs">{contrato.seguro}</Badge>}</Label><Input type="number" value={seguroMonto} onChange={e => setSeguroMonto(e.target.value)} placeholder="0" /></div>
+                {(!contrato || contrato.seguro === 'Inquilino' || contrato.seguro === '50%') && (
+                  <div className="space-y-1.5"><Label>Seguro ($){contrato && <Badge variant="outline" className="ml-2 text-xs">{contrato.seguro}</Badge>}</Label><Input type="number" value={seguroMonto} onChange={e => setSeguroMonto(e.target.value)} placeholder="0" /></div>
+                )}
                 <div className="space-y-1.5"><Label>Ajustes manuales ($)</Label><Input type="number" value={ajustes} onChange={e => setAjustes(e.target.value)} placeholder="0" /></div>
                 <div className="space-y-1.5"><Label>Descuentos ($)</Label><Input type="number" value={descuentos} onChange={e => setDescuentos(e.target.value)} placeholder="0" /></div>
                 <div className="space-y-1.5"><Label>Saldo anterior ($)</Label><Input type="number" value={saldoAnterior} onChange={e => setSaldoAnterior(e.target.value)} placeholder="0" /></div>
@@ -205,6 +266,7 @@ export default function GenerarLiquidacion() {
               <div className="mt-4 space-y-1.5"><Label>Observaciones</Label><Textarea value={observaciones} onChange={e => setObservaciones(e.target.value)} placeholder="Notas sobre esta liquidación..." /></div>
             </CardContent>
           </Card>
+
 
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => handleGuardar('borrador')} disabled={!contratoId || saving}><Save className="h-4 w-4 mr-1" /> Guardar borrador</Button>
