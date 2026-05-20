@@ -75,38 +75,50 @@ export default function GenerarLiquidacion() {
     setEpeMonto(''); setGasMonto(''); setAguasMonto(''); setSeguroMonto('');
     setAjustes(''); setDescuentos(''); setSaldoAnterior(''); setUltimaLiq(null);
 
-    const { data: ultLiq } = await supabase
+    // Últimas liquidaciones del contrato (no anuladas) — escaneamos varias
+    // por si la más reciente no tiene todos los conceptos cargados.
+    const { data: liqs } = await supabase
       .from('liquidaciones')
-      .select('id, periodo_label, pendiente')
+      .select('id, periodo, periodo_label, pendiente, estado')
       .eq('contrato_id', val)
+      .neq('estado', 'Anulada')
       .order('periodo', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(6);
 
-    if (!ultLiq) return;
+    if (!liqs || liqs.length === 0) return;
+
+    const ultLiq = liqs[0];
     if (Number(ultLiq.pendiente) > 0) setSaldoAnterior(String(ultLiq.pendiente));
 
+    const ids = liqs.map(l => l.id);
     const { data: conceptos } = await supabase
       .from('conceptos_liquidacion')
-      .select('concepto, monto')
-      .eq('liquidacion_id', ultLiq.id);
+      .select('liquidacion_id, concepto, monto')
+      .in('liquidacion_id', ids);
 
-    let alqAnterior = ct.alquiler_base;
-    (conceptos || []).forEach(c => {
-      const m = String(Math.abs(Number(c.monto) || 0));
-      switch (c.concepto) {
-        case 'Alquiler': alqAnterior = Number(c.monto) || ct.alquiler_base; setAlquiler(m); break;
-        case 'Expensas ordinarias': setExpOrdinarias(m); break;
-        case 'Expensas extraordinarias': setExpExtraordinarias(m); break;
-        case 'TGI': setTgiMonto(m); break;
-        case 'API': setApiMonto(m); break;
-        case 'EPE': setEpeMonto(m); break;
-        case 'Gas': setGasMonto(m); break;
-        case 'Aguas Santafesinas': setAguasMonto(m); break;
-        case 'Seguro': setSeguroMonto(m); break;
-      }
-    });
-    setUltimaLiq({ periodo_label: ultLiq.periodo_label, alquiler: alqAnterior });
+    // Ordenamos conceptos por antigüedad de su liquidación (más reciente primero)
+    const orden = new Map(ids.map((id, i) => [id, i]));
+    const ordenados = (conceptos || []).slice().sort(
+      (a, b) => (orden.get(a.liquidacion_id) ?? 99) - (orden.get(b.liquidacion_id) ?? 99)
+    );
+
+    // Para cada campo, tomamos el monto más reciente disponible (matcheo flexible)
+    const tomar = (matcher: (c: string) => boolean, setter: (v: string) => void) => {
+      const found = ordenados.find(c => matcher((c.concepto || '').toLowerCase().trim()));
+      if (found && Number(found.monto)) setter(String(Math.abs(Number(found.monto))));
+    };
+
+    tomar(c => c.startsWith('alquiler'), setAlquiler);
+    tomar(c => c.includes('expensas ord'), setExpOrdinarias);
+    tomar(c => c.includes('expensas extra'), setExpExtraordinarias);
+    tomar(c => c.startsWith('tgi') || c.includes('abl'), setTgiMonto);
+    tomar(c => c === 'api' || c.startsWith('api '), setApiMonto);
+    tomar(c => c.startsWith('epe'), setEpeMonto);
+    tomar(c => c.startsWith('gas'), setGasMonto);
+    tomar(c => c.startsWith('agua'), setAguasMonto);
+    tomar(c => c.startsWith('seguro'), setSeguroMonto);
+
+    setUltimaLiq({ periodo_label: ultLiq.periodo_label, alquiler: ct.alquiler_base });
   };
 
   const nums = useMemo(() => {
