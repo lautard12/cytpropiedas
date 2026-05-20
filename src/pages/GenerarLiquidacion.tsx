@@ -229,8 +229,8 @@ export default function GenerarLiquidacion() {
               <Info className="h-4 w-4" />
               <AlertDescription>
                 Se precargaron los montos de la última liquidación (<strong>{ultimaLiq.periodo_label}</strong>). Revisá y ajustá según las boletas reales del período.
-                {contrato.indice_ajuste && contrato.indice_ajuste !== 'Fijo' && (
-                  <> · Alquiler base del contrato: <strong>{formatCurrency(contrato.alquiler_base)}</strong>. Ajuste vigente: <strong>{contrato.indice_ajuste} {contrato.frecuencia_ajuste}</strong> — verificá si corresponde aplicar nuevo índice.</>
+                {contrato.tipo_ajuste && contrato.tipo_ajuste !== 'Fijo' && (
+                  <> · Alquiler base del contrato: <strong>{formatCurrency(contrato.alquiler_base)}</strong>. Ajuste vigente: <strong>{contrato.tipo_ajuste} {contrato.frecuencia_ajuste}</strong> — verificá si corresponde aplicar nuevo índice.</>
                 )}
               </AlertDescription>
             </Alert>
