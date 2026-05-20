@@ -64,10 +64,50 @@ export default function GenerarLiquidacion() {
   const propietario = contrato ? findById(propietarios, contrato.propietario_id) : undefined;
   const inquilino = contrato ? findById(inquilinos, contrato.inquilino_id) : undefined;
 
-  const handleContratoChange = (val: string) => {
+  const [ultimaLiq, setUltimaLiq] = useState<{ periodo_label: string; alquiler: number } | null>(null);
+
+  const handleContratoChange = async (val: string) => {
     setContratoId(val);
     const ct = contratos.find(c => c.id === val);
-    if (ct) setAlquiler(String(ct.alquiler_base));
+    if (!ct) return;
+    setAlquiler(String(ct.alquiler_base));
+    setExpOrdinarias(''); setExpExtraordinarias(''); setTgiMonto(''); setApiMonto('');
+    setEpeMonto(''); setGasMonto(''); setAguasMonto(''); setSeguroMonto('');
+    setAjustes(''); setDescuentos(''); setSaldoAnterior(''); setUltimaLiq(null);
+
+    const { data: ultLiq } = await supabase
+      .from('liquidaciones')
+      .select('id, periodo_label, pendiente')
+      .eq('contrato_id', val)
+      .neq('estado', 'Anulada')
+      .order('periodo', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!ultLiq) return;
+    if (Number(ultLiq.pendiente) > 0) setSaldoAnterior(String(ultLiq.pendiente));
+
+    const { data: conceptos } = await supabase
+      .from('conceptos_liquidacion')
+      .select('concepto, monto')
+      .eq('liquidacion_id', ultLiq.id);
+
+    let alqAnterior = ct.alquiler_base;
+    (conceptos || []).forEach(c => {
+      const m = String(Math.abs(Number(c.monto) || 0));
+      switch (c.concepto) {
+        case 'Alquiler': alqAnterior = Number(c.monto) || ct.alquiler_base; setAlquiler(m); break;
+        case 'Expensas ordinarias': setExpOrdinarias(m); break;
+        case 'Expensas extraordinarias': setExpExtraordinarias(m); break;
+        case 'TGI': setTgiMonto(m); break;
+        case 'API': setApiMonto(m); break;
+        case 'EPE': setEpeMonto(m); break;
+        case 'Gas': setGasMonto(m); break;
+        case 'Aguas Santafesinas': setAguasMonto(m); break;
+        case 'Seguro': setSeguroMonto(m); break;
+      }
+    });
+    setUltimaLiq({ periodo_label: ultLiq.periodo_label, alquiler: alqAnterior });
   };
 
   const nums = useMemo(() => {
