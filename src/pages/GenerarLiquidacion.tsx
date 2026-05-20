@@ -79,7 +79,6 @@ export default function GenerarLiquidacion() {
       .from('liquidaciones')
       .select('id, periodo_label, pendiente')
       .eq('contrato_id', val)
-      .neq('estado', 'Anulada')
       .order('periodo', { ascending: false })
       .limit(1)
       .maybeSingle();
