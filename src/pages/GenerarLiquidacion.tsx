@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useContratos, usePropiedades, usePropietarios, useInquilinos, findById, formatCurrency } from '@/hooks/useSupabaseData';
-import { ArrowLeft, Calculator, Save, Info } from 'lucide-react';
+import { ArrowLeft, Calculator, Save, Info, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -58,6 +58,11 @@ export default function GenerarLiquidacion() {
   const [descuentos, setDescuentos] = useState('');
   const [saldoAnterior, setSaldoAnterior] = useState('');
   const [observaciones, setObservaciones] = useState('');
+  type ConceptoExtra = { id: string; concepto: string; monto: string; responsable: string };
+  const [extras, setExtras] = useState<ConceptoExtra[]>([]);
+  const addExtra = () => setExtras(p => [...p, { id: crypto.randomUUID(), concepto: '', monto: '', responsable: 'Inquilino' }]);
+  const updExtra = (id: string, patch: Partial<ConceptoExtra>) => setExtras(p => p.map(e => e.id === id ? { ...e, ...patch } : e));
+  const delExtra = (id: string) => setExtras(p => p.filter(e => e.id !== id));
 
   const contrato = contratos.find(c => c.id === contratoId);
   const propiedad = contrato ? findById(propiedades, contrato.propiedad_id) : undefined;
@@ -123,12 +128,13 @@ export default function GenerarLiquidacion() {
 
   const nums = useMemo(() => {
     const n = (v: string) => Number(v) || 0;
-    const subtotal = n(alquiler) + n(expOrdinarias) + n(expExtraordinarias) + n(tgiMonto) + n(apiMonto) + n(epeMonto) + n(gasMonto) + n(aguasMonto) + n(seguroMonto) + n(ajustes) - n(descuentos) + n(saldoAnterior);
+    const extrasTotal = extras.reduce((s, e) => s + n(e.monto), 0);
+    const subtotal = n(alquiler) + n(expOrdinarias) + n(expExtraordinarias) + n(tgiMonto) + n(apiMonto) + n(epeMonto) + n(gasMonto) + n(aguasMonto) + n(seguroMonto) + n(ajustes) - n(descuentos) + n(saldoAnterior) + extrasTotal;
     const totalCobrar = subtotal;
     const comision = contrato ? (n(alquiler) * contrato.comision_porcentaje / 100) : 0;
     const neto = totalCobrar - comision;
     return { subtotal, totalCobrar, comision, neto };
-  }, [alquiler, expOrdinarias, expExtraordinarias, tgiMonto, apiMonto, epeMonto, gasMonto, aguasMonto, seguroMonto, ajustes, descuentos, saldoAnterior, contrato]);
+  }, [alquiler, expOrdinarias, expExtraordinarias, tgiMonto, apiMonto, epeMonto, gasMonto, aguasMonto, seguroMonto, ajustes, descuentos, saldoAnterior, extras, contrato]);
 
   const handleGuardar = async (estado: 'borrador' | 'pendiente') => {
     if (!contrato) return;
@@ -168,6 +174,9 @@ export default function GenerarLiquidacion() {
         { concepto: 'Ajustes', monto: n(ajustes), responsable: 'Inquilino' },
         { concepto: 'Descuentos', monto: -n(descuentos), responsable: 'Inquilino' },
         { concepto: 'Saldo anterior', monto: n(saldoAnterior), responsable: 'Inquilino' },
+        ...extras
+          .filter(e => e.concepto.trim() && n(e.monto) !== 0)
+          .map(e => ({ concepto: e.concepto.trim(), monto: n(e.monto), responsable: e.responsable })),
       ].filter(c => c.monto !== 0).map(c => ({ ...c, liquidacion_id: liq.id, aplica_al_inquilino: c.responsable === 'Inquilino' }));
 
       if (conceptos.length > 0) {
@@ -278,6 +287,43 @@ export default function GenerarLiquidacion() {
               <div className="mt-4 space-y-1.5"><Label>Observaciones</Label><Textarea value={observaciones} onChange={e => setObservaciones(e.target.value)} placeholder="Notas sobre esta liquidación..." /></div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Conceptos adicionales</CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">Reparaciones, plomería, cerrajería, gastos puntuales del período.</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={addExtra}><Plus className="h-4 w-4 mr-1" /> Agregar</Button>
+            </CardHeader>
+            <CardContent>
+              {extras.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Sin conceptos adicionales. Usá "Agregar" para sumar gastos puntuales (ej: reparación caldera).</p>
+              ) : (
+                <div className="space-y-2">
+                  {extras.map(e => (
+                    <div key={e.id} className="grid grid-cols-12 gap-2 items-end">
+                      <div className="col-span-6 space-y-1"><Label className="text-xs">Concepto</Label><Input value={e.concepto} onChange={ev => updExtra(e.id, { concepto: ev.target.value })} placeholder="Ej: Reparación caldera" /></div>
+                      <div className="col-span-3 space-y-1"><Label className="text-xs">Monto ($)</Label><Input type="number" value={e.monto} onChange={ev => updExtra(e.id, { monto: ev.target.value })} placeholder="0" /></div>
+                      <div className="col-span-2 space-y-1">
+                        <Label className="text-xs">A cargo de</Label>
+                        <Select value={e.responsable} onValueChange={v => updExtra(e.id, { responsable: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Inquilino">Inquilino</SelectItem>
+                            <SelectItem value="Propietario">Propietario</SelectItem>
+                            <SelectItem value="50%">50% / 50%</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button variant="ghost" size="icon" className="col-span-1" onClick={() => delExtra(e.id)}><Trash2 className="h-4 w-4 text-status-danger" /></Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
 
 
           <div className="flex gap-3">
