@@ -288,6 +288,43 @@ export default function GenerarLiquidacion() {
             </CardContent>
           </Card>
 
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Conceptos adicionales</CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">Reparaciones, plomería, cerrajería, gastos puntuales del período.</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={addExtra}><Plus className="h-4 w-4 mr-1" /> Agregar</Button>
+            </CardHeader>
+            <CardContent>
+              {extras.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Sin conceptos adicionales. Usá "Agregar" para sumar gastos puntuales (ej: reparación caldera).</p>
+              ) : (
+                <div className="space-y-2">
+                  {extras.map(e => (
+                    <div key={e.id} className="grid grid-cols-12 gap-2 items-end">
+                      <div className="col-span-6 space-y-1"><Label className="text-xs">Concepto</Label><Input value={e.concepto} onChange={ev => updExtra(e.id, { concepto: ev.target.value })} placeholder="Ej: Reparación caldera" /></div>
+                      <div className="col-span-3 space-y-1"><Label className="text-xs">Monto ($)</Label><Input type="number" value={e.monto} onChange={ev => updExtra(e.id, { monto: ev.target.value })} placeholder="0" /></div>
+                      <div className="col-span-2 space-y-1">
+                        <Label className="text-xs">A cargo de</Label>
+                        <Select value={e.responsable} onValueChange={v => updExtra(e.id, { responsable: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Inquilino">Inquilino</SelectItem>
+                            <SelectItem value="Propietario">Propietario</SelectItem>
+                            <SelectItem value="50%">50% / 50%</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button variant="ghost" size="icon" className="col-span-1" onClick={() => delExtra(e.id)}><Trash2 className="h-4 w-4 text-status-danger" /></Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+
 
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => handleGuardar('borrador')} disabled={!contratoId || saving}><Save className="h-4 w-4 mr-1" /> Guardar borrador</Button>
