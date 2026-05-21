@@ -21,6 +21,14 @@ export default function Liquidaciones() {
 
   if (isLoading) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
 
+  const periodosDisponibles = Array.from(new Set(liquidaciones.map(l => l.periodo)))
+    .sort((a, b) => b.localeCompare(a))
+    .map(p => {
+      const [y, m] = p.split('-');
+      const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      return { value: p, label: `${meses[parseInt(m,10)-1]} ${y}` };
+    });
+
   const filtered = liquidaciones.filter(l => {
     if (filtroEstado !== 'todos' && l.estado !== filtroEstado) return false;
     if (filtroPeriodo !== 'todos' && l.periodo !== filtroPeriodo) return false;
@@ -50,11 +58,12 @@ export default function Liquidaciones() {
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-3">
             <Select value={filtroPeriodo} onValueChange={setFiltroPeriodo}>
-              <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos los períodos</SelectItem>
-                <SelectItem value="2025-03">Marzo 2025</SelectItem>
-                <SelectItem value="2025-02">Febrero 2025</SelectItem>
+                {periodosDisponibles.map(p => (
+                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={filtroEstado} onValueChange={setFiltroEstado}>
