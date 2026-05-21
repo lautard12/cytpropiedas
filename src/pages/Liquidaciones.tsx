@@ -50,11 +50,12 @@ export default function Liquidaciones() {
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-3">
             <Select value={filtroPeriodo} onValueChange={setFiltroPeriodo}>
-              <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos los períodos</SelectItem>
-                <SelectItem value="2025-03">Marzo 2025</SelectItem>
-                <SelectItem value="2025-02">Febrero 2025</SelectItem>
+                {periodosDisponibles.map(p => (
+                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={filtroEstado} onValueChange={setFiltroEstado}>
