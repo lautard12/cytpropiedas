@@ -58,6 +58,11 @@ export default function GenerarLiquidacion() {
   const [descuentos, setDescuentos] = useState('');
   const [saldoAnterior, setSaldoAnterior] = useState('');
   const [observaciones, setObservaciones] = useState('');
+  type ConceptoExtra = { id: string; concepto: string; monto: string; responsable: string };
+  const [extras, setExtras] = useState<ConceptoExtra[]>([]);
+  const addExtra = () => setExtras(p => [...p, { id: crypto.randomUUID(), concepto: '', monto: '', responsable: 'Inquilino' }]);
+  const updExtra = (id: string, patch: Partial<ConceptoExtra>) => setExtras(p => p.map(e => e.id === id ? { ...e, ...patch } : e));
+  const delExtra = (id: string) => setExtras(p => p.filter(e => e.id !== id));
 
   const contrato = contratos.find(c => c.id === contratoId);
   const propiedad = contrato ? findById(propiedades, contrato.propiedad_id) : undefined;
