@@ -21,6 +21,14 @@ export default function Liquidaciones() {
 
   if (isLoading) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
 
+  const periodosDisponibles = Array.from(new Set(liquidaciones.map(l => l.periodo)))
+    .sort((a, b) => b.localeCompare(a))
+    .map(p => {
+      const [y, m] = p.split('-');
+      const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      return { value: p, label: `${meses[parseInt(m,10)-1]} ${y}` };
+    });
+
   const filtered = liquidaciones.filter(l => {
     if (filtroEstado !== 'todos' && l.estado !== filtroEstado) return false;
     if (filtroPeriodo !== 'todos' && l.periodo !== filtroPeriodo) return false;
