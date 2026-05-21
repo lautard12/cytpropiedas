@@ -174,6 +174,9 @@ export default function GenerarLiquidacion() {
         { concepto: 'Ajustes', monto: n(ajustes), responsable: 'Inquilino' },
         { concepto: 'Descuentos', monto: -n(descuentos), responsable: 'Inquilino' },
         { concepto: 'Saldo anterior', monto: n(saldoAnterior), responsable: 'Inquilino' },
+        ...extras
+          .filter(e => e.concepto.trim() && n(e.monto) !== 0)
+          .map(e => ({ concepto: e.concepto.trim(), monto: n(e.monto), responsable: e.responsable })),
       ].filter(c => c.monto !== 0).map(c => ({ ...c, liquidacion_id: liq.id, aplica_al_inquilino: c.responsable === 'Inquilino' }));
 
       if (conceptos.length > 0) {
