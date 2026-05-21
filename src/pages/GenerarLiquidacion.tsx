@@ -128,12 +128,13 @@ export default function GenerarLiquidacion() {
 
   const nums = useMemo(() => {
     const n = (v: string) => Number(v) || 0;
-    const subtotal = n(alquiler) + n(expOrdinarias) + n(expExtraordinarias) + n(tgiMonto) + n(apiMonto) + n(epeMonto) + n(gasMonto) + n(aguasMonto) + n(seguroMonto) + n(ajustes) - n(descuentos) + n(saldoAnterior);
+    const extrasTotal = extras.reduce((s, e) => s + n(e.monto), 0);
+    const subtotal = n(alquiler) + n(expOrdinarias) + n(expExtraordinarias) + n(tgiMonto) + n(apiMonto) + n(epeMonto) + n(gasMonto) + n(aguasMonto) + n(seguroMonto) + n(ajustes) - n(descuentos) + n(saldoAnterior) + extrasTotal;
     const totalCobrar = subtotal;
     const comision = contrato ? (n(alquiler) * contrato.comision_porcentaje / 100) : 0;
     const neto = totalCobrar - comision;
     return { subtotal, totalCobrar, comision, neto };
-  }, [alquiler, expOrdinarias, expExtraordinarias, tgiMonto, apiMonto, epeMonto, gasMonto, aguasMonto, seguroMonto, ajustes, descuentos, saldoAnterior, contrato]);
+  }, [alquiler, expOrdinarias, expExtraordinarias, tgiMonto, apiMonto, epeMonto, gasMonto, aguasMonto, seguroMonto, ajustes, descuentos, saldoAnterior, extras, contrato]);
 
   const handleGuardar = async (estado: 'borrador' | 'pendiente') => {
     if (!contrato) return;
