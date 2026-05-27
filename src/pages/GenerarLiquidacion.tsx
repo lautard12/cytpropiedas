@@ -14,6 +14,7 @@ import { ArrowLeft, Calculator, Save, Info, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
+import { ContratoCombobox } from '@/components/ContratoCombobox';
 
 const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
@@ -212,15 +213,11 @@ export default function GenerarLiquidacion() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="font-semibold">Contrato</Label>
-                  <Select value={contratoId} onValueChange={handleContratoChange}>
-                    <SelectTrigger><SelectValue placeholder="Seleccionar contrato..." /></SelectTrigger>
-                    <SelectContent>
-                      {contratosActivos.map(c => {
-                        const p = findById(propiedades, c.propiedad_id);
-                        return <SelectItem key={c.id} value={c.id}>{c.codigo} — {p?.direccion} {p?.unidad}</SelectItem>;
-                      })}
-                    </SelectContent>
-                  </Select>
+                  <ContratoCombobox
+                    contratos={contratosActivos as any}
+                    value={contratoId}
+                    onChange={handleContratoChange}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Período a liquidar</Label>
