@@ -20,9 +20,7 @@ const Ctx = createContext<AuthCtx | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
-  const [bootstrapTried, setBootstrapTried] = useState(false);
 
   const loadRoles = async (uid: string | undefined) => {
     if (!uid) { setRoles([]); return; }
@@ -31,11 +29,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Suscripción primero
     const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
       setSession(sess);
       setUser(sess?.user ?? null);
-      // Diferir consultas para evitar deadlocks
       setTimeout(() => loadRoles(sess?.user?.id), 0);
     });
 
@@ -43,13 +39,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(sess);
       setUser(sess?.user ?? null);
       loadRoles(sess?.user?.id).finally(() => setLoading(false));
-
-      // Bootstrap del admin si no hay sesión activa (idempotente, una sola vez por carga)
-      if (!sess && !bootstrapTried) {
-        setBootstrapTried(true);
-        supabase.functions.invoke('bootstrap-admin').catch(() => {/* silencioso */});
-      }
     });
+
+    return () => sub.subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
     return () => sub.subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
