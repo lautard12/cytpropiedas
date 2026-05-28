@@ -37,6 +37,9 @@ const TIPO_ICON: Record<string, React.ElementType> = {
   observacion: MessageSquare,
 };
 
+export default function LiquidacionDetalle() {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [pagoOpen, setPagoOpen] = useState(false);
   const [rendirOpen, setRendirOpen] = useState(false);
   const [cobrarOpen, setCobrarOpen] = useState(false);
@@ -60,9 +63,6 @@ const TIPO_ICON: Record<string, React.ElementType> = {
   const { data: cobroComision } = useCobroComisionByLiquidacion(liq?.id || '');
   const { data: consultaMora } = useConsultaMoraByLiquidacion(liq?.id || '');
 
-  const { data: eventosPeriodo = [] } = useEventosPorPeriodo(liq?.contrato_id || '', liq?.periodo || '');
-  const { data: rendicion } = useRendicionByLiquidacion(liq?.id || '');
-  const { data: consultaMora } = useConsultaMoraByLiquidacion(liq?.id || '');
 
   // IVA acumulado de los pagos
   const ivaComisionTotal = useMemo(
