@@ -32,6 +32,7 @@ function buildPeriodos() {
 
 export default function GenerarLiquidacion() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
@@ -44,8 +45,10 @@ export default function GenerarLiquidacion() {
 
   const periodos = useMemo(() => buildPeriodos(), []);
   const periodoActual = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-  const [contratoId, setContratoId] = useState('');
-  const [periodo, setPeriodo] = useState(periodoActual);
+  const qpContrato = searchParams.get('contrato') || '';
+  const qpPeriodo = searchParams.get('periodo') || periodoActual;
+  const [contratoId, setContratoId] = useState(qpContrato);
+  const [periodo, setPeriodo] = useState(qpPeriodo);
   const [alquiler, setAlquiler] = useState('');
   const [expOrdinarias, setExpOrdinarias] = useState('');
   const [expExtraordinarias, setExpExtraordinarias] = useState('');
