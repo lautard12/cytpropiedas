@@ -89,6 +89,7 @@ export default function BandejaLiquidaciones() {
   const { data: propietarios = [] } = usePropietarios();
   const { data: inquilinos = [] } = useInquilinos();
   const { data: liquidaciones = [] } = useLiquidaciones();
+  const { data: preavisos = [] } = usePreavisosAjuste();
 
   const contratosActivos = useMemo(
     () => contratos.filter(c => c.estado === 'Activo' || c.estado === 'Por vencer'),
