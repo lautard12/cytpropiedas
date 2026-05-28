@@ -210,26 +210,48 @@ export default function LiquidacionDetalle() {
           <p className="mt-1 text-sm text-muted-foreground">{propiedad?.direccion} {propiedad?.unidad} · Inquilino: {inquilino?.nombre} · Propietario: {propietario?.nombre}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
-          <Badge className={estadoBadge}>{liq.estado}</Badge>
-          {(liq.estado === 'Pendiente' || liq.estado === 'Parcial') && (
-            <Button variant="outline" size="sm" onClick={handleNotificarWhatsApp}>
-              <MessageCircle className="h-4 w-4 mr-1" /> Avisar por WhatsApp
-            </Button>
-          )}
-          {(liq.estado === 'Pendiente' || liq.estado === 'Parcial' || liq.estado === 'Borrador') && (
-            <Button variant="outline" size="sm" onClick={() => setPagoOpen(true)}><CreditCard className="h-4 w-4 mr-1" /> Registrar pago</Button>
-          )}
-          {liq.estado === 'Cobrada' && (
-            <Button size="sm" onClick={handleAcreditar} disabled={acreditando}>
-              <CheckCircle className="h-4 w-4 mr-1" /> {acreditando ? 'Procesando...' : 'Marcar acreditada'}
-            </Button>
-          )}
-          {liq.estado === 'Acreditada' && (
-            <Button size="sm" onClick={() => setRendirOpen(true)}>
-              <Send className="h-4 w-4 mr-1" /> Rendir al propietario
-            </Button>
-          )}
+          {(() => {
+            const modalidad = (liq as any).destino_cobro ?? 'Inmobiliaria';
+            const esPropMode = modalidad === 'Propietario';
+            const estadoLabel = liq.estado === 'Transferida'
+              ? (esPropMode ? 'Comisión cobrada' : 'Rendida')
+              : liq.estado;
+            return (
+              <>
+                <Badge className={estadoBadge}>{estadoLabel}</Badge>
+                <Badge variant="outline" className={esPropMode ? 'border-status-warning/50 text-status-warning' : 'border-status-info/50 text-status-info'}>
+                  {esPropMode ? 'Cobra el propietario' : 'Cobra la inmobiliaria'}
+                </Badge>
+                {(liq.estado === 'Pendiente' || liq.estado === 'Parcial') && (
+                  <Button variant="outline" size="sm" onClick={handleNotificarWhatsApp}>
+                    <MessageCircle className="h-4 w-4 mr-1" /> Avisar por WhatsApp
+                  </Button>
+                )}
+                {(liq.estado === 'Pendiente' || liq.estado === 'Parcial' || liq.estado === 'Borrador') && (
+                  <Button variant="outline" size="sm" onClick={() => setPagoOpen(true)}>
+                    <CreditCard className="h-4 w-4 mr-1" /> {esPropMode ? 'Registrar pago directo' : 'Registrar pago'}
+                  </Button>
+                )}
+                {!esPropMode && liq.estado === 'Cobrada' && (
+                  <Button size="sm" onClick={handleAcreditar} disabled={acreditando}>
+                    <CheckCircle className="h-4 w-4 mr-1" /> {acreditando ? 'Procesando...' : 'Marcar acreditada'}
+                  </Button>
+                )}
+                {!esPropMode && liq.estado === 'Acreditada' && (
+                  <Button size="sm" onClick={() => setRendirOpen(true)}>
+                    <Send className="h-4 w-4 mr-1" /> Rendir al propietario
+                  </Button>
+                )}
+                {esPropMode && cobroComision && cobroComision.estado === 'Pendiente' && (
+                  <Button size="sm" onClick={() => setCobrarOpen(true)}>
+                    <DollarSign className="h-4 w-4 mr-1" /> Cobrar comisión al propietario
+                  </Button>
+                )}
+              </>
+            );
+          })()}
         </div>
+
       </div>
 
       {moraInfo && (
