@@ -27,6 +27,8 @@ interface Props {
   mediosPagoAceptados?: string[];
   destinoCobro?: string;
   diaVencimiento?: number;
+  /** Modalidad de cobro de la liquidación (snapshot). */
+  modalidadCobro?: 'Inmobiliaria' | 'Propietario';
   /** IDs de conceptos que se están imputando con este pago (opcional). */
   conceptoIds?: string[];
   /** Monto sugerido (suma de conceptos seleccionados). Si se pasa, prevalece sobre pendiente. */
@@ -38,9 +40,11 @@ const IVA_RATE = 0.21;
 export default function RegistrarPagoDialog({
   open, onOpenChange, liquidacionId, contratoId,
   totalCobrar, totalCobrado, pendiente, comisionTotal, periodoLabel,
-  mediosPagoAceptados, destinoCobro, diaVencimiento,
+  mediosPagoAceptados, destinoCobro, diaVencimiento, modalidadCobro,
   conceptoIds, montoSugerido,
 }: Props) {
+  const esPagoDirecto = modalidadCobro === 'Propietario';
+
 
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
