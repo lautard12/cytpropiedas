@@ -565,6 +565,20 @@ export function useRendiciones() {
   });
 }
 
+export function useCobrosComision() {
+  return useQuery({
+    queryKey: ['cobros_comision_propietario'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('cobros_comision_propietario')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+}
+
 export function useCobroComisionByLiquidacion(liquidacionId: string) {
   return useQuery({
     queryKey: ['cobros_comision_propietario', 'liquidacion', liquidacionId],
