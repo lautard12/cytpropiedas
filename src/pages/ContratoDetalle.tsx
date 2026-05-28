@@ -302,6 +302,10 @@ export default function ContratoDetalle() {
                   </p>
                 </div>
               </div>
+
+              <div className="mt-4">
+                <FechaBaseAjustesEditor contrato={contrato} />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
