@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,12 +17,16 @@ import {
 import {
   ArrowLeft, FileText, Calculator, Edit, CalendarDays, TrendingUp,
   RefreshCw, Percent, XCircle, ShieldCheck, DollarSign, AlertTriangle,
-  MessageSquare, Handshake, Paperclip, Clock, BarChart3, Zap,
+  MessageSquare, Handshake, Paperclip, Clock, BarChart3, Zap, Save, RotateCcw,
 } from 'lucide-react';
 import { differenceInMonths } from 'date-fns';
 import { GarantiasSection } from '@/components/contratos/GarantiasSection';
 import { RescindirDialog } from '@/components/contratos/RescindirDialog';
 import { RenovacionSection } from '@/components/contratos/RenovacionSection';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { mesesPorFrecuencia } from '@/lib/ajustes';
 
 const TIPO_ICON: Record<string, React.ElementType> = {
   inicio_contrato: FileText,
