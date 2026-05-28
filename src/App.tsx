@@ -62,7 +62,8 @@ const App = () => (
               <Route path="/inquilinos/:id" element={<RedirectToPersona rol="inquilino" />} />
               <Route path="/reportes" element={<Reportes />} />
               <Route path="/nuevo-contrato" element={<NuevoContrato />} />
-              <Route path="/generar-liquidacion" element={<GenerarLiquidacion />} />
+              <Route path="/generar-liquidacion" element={<BandejaLiquidaciones />} />
+              <Route path="/generar-liquidacion/nueva" element={<GenerarLiquidacion />} />
               <Route path="/mi-organizacion" element={<ProtectedRoute requireAdmin><MiOrganizacion /></ProtectedRoute>} />
               <Route path="/auditoria" element={<ProtectedRoute requireAdmin><Auditoria /></ProtectedRoute>} />
             </Route>
