@@ -20,7 +20,9 @@ const Ctx = createContext<AuthCtx | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
+
 
   const loadRoles = async (uid: string | undefined) => {
     if (!uid) { setRoles([]); return; }
