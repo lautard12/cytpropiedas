@@ -582,6 +582,19 @@ export default function LiquidacionDetalle() {
         periodoLabel={liq.periodo_label}
       />
 
+      {cobroComision && (
+        <CobrarComisionDialog
+          open={cobrarOpen}
+          onOpenChange={setCobrarOpen}
+          cobroId={cobroComision.id}
+          montoComision={Number(cobroComision.monto_comision || 0)}
+          ivaComision={Number(cobroComision.iva_comision || 0)}
+          gastosReintegroInicial={Number(cobroComision.monto_gastos_reintegro || 0)}
+          propietarioNombre={propietario?.nombre}
+          periodoLabel={liq.periodo_label}
+        />
+      )}
+
       {anularPago && (
         <AnularPagoDialog
           open={!!anularPago}
