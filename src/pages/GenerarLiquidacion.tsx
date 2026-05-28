@@ -130,6 +130,17 @@ export default function GenerarLiquidacion() {
     setUltimaLiq({ periodo_label: ultLiq.periodo_label, alquiler: ct.alquiler_base });
   };
 
+  // Auto-cargar contrato si vino por ?contrato=
+  const autoLoadedRef = useRef(false);
+  useEffect(() => {
+    if (autoLoadedRef.current) return;
+    if (!qpContrato) return;
+    if (!contratos.length) return;
+    if (!contratos.find(c => c.id === qpContrato)) return;
+    autoLoadedRef.current = true;
+    handleContratoChange(qpContrato);
+  }, [qpContrato, contratos]);
+
   const nums = useMemo(() => {
     const n = (v: string) => Number(v) || 0;
     const extrasTotal = extras.reduce((s, e) => s + n(e.monto), 0);
