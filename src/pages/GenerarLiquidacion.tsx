@@ -271,6 +271,44 @@ export default function GenerarLiquidacion() {
             </Alert>
           )}
 
+          {contrato && (() => {
+            const ajuste = getEstadoAjuste(contrato as any, periodo);
+            if (ajuste.tipo === 'ninguno') return null;
+            const preavisoEv = ajuste.tipo === 'preavisar'
+              ? preavisos.find(p => p.contrato_id === contrato.id && p.periodo === ajuste.periodoAjuste)
+              : null;
+            if (ajuste.tipo === 'aplicar') {
+              return (
+                <Alert className="border-status-danger/40 bg-status-danger/5">
+                  <AlertTriangle className="h-4 w-4 text-status-danger" />
+                  <AlertDescription>
+                    <strong>Este contrato ajusta este período</strong> ({ajuste.frecuencia.toLowerCase()}{ajuste.indice ? `, índice ${ajuste.indice}` : ''}).
+                    Cargá el nuevo alquiler base abajo antes de generar. Alquiler vigente registrado: <strong>{formatCurrency(contrato.alquiler_base)}</strong>.
+                  </AlertDescription>
+                </Alert>
+              );
+            }
+            return (
+              <Alert className="border-status-info/40 bg-status-info/5">
+                <Bell className="h-4 w-4 text-status-info" />
+                <AlertDescription>
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <span>
+                      El próximo período tiene ajuste (<strong>{ajuste.periodoAjusteLabel}</strong>, {ajuste.frecuencia.toLowerCase()}).
+                      Acordate de avisarle al propietario.
+                    </span>
+                    <AjusteBadge
+                      estado={ajuste}
+                      contratoId={contrato.id}
+                      contratoCodigo={contrato.codigo}
+                      notificadoFecha={preavisoEv?.fecha ?? null}
+                    />
+                  </div>
+                </AlertDescription>
+              </Alert>
+            );
+          })()}
+
           <Card>
             <CardHeader><CardTitle className="text-base">Conceptos del período</CardTitle></CardHeader>
             <CardContent>
