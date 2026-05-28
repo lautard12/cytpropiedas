@@ -225,9 +225,21 @@ export default function NuevoContrato() {
                 </div>
                 <div className="space-y-1.5 pt-2 border-t">
                   <Label className="text-sm">Destino del cobro</Label>
-                  <RadioGroup value={destinoCobro} onValueChange={(v) => setDestinoCobro(v as any)} className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer"><RadioGroupItem value="Inmobiliaria" /> Inmobiliaria</label>
-                    <label className="flex items-center gap-2 cursor-pointer"><RadioGroupItem value="Propietario" /> Propietario directo</label>
+                  <RadioGroup value={destinoCobro} onValueChange={(v) => setDestinoCobro(v as any)} className="space-y-2">
+                    <label className="flex items-start gap-2 cursor-pointer rounded-md border p-2 hover:bg-muted/50">
+                      <RadioGroupItem value="Inmobiliaria" className="mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Cobra la inmobiliaria</p>
+                        <p className="text-xs text-muted-foreground">El inquilino paga a la inmobiliaria, que luego rinde al propietario.</p>
+                      </div>
+                    </label>
+                    <label className="flex items-start gap-2 cursor-pointer rounded-md border p-2 hover:bg-muted/50">
+                      <RadioGroupItem value="Propietario" className="mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Cobra el propietario</p>
+                        <p className="text-xs text-muted-foreground">El inquilino paga directo al propietario; la inmobiliaria solo cobra su comisión.</p>
+                      </div>
+                    </label>
                   </RadioGroup>
                 </div>
                 <div className="space-y-1.5 pt-2 border-t">
