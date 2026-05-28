@@ -436,10 +436,19 @@ export default function BandejaLiquidaciones() {
                         {formatCurrency(Number(r.contrato.alquiler_base), (r.contrato as any).moneda ?? 'ARS')}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={meta.cls}>
-                          <Icon className="h-3 w-3 mr-1" />
-                          {meta.label}
-                        </Badge>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge variant="outline" className={meta.cls}>
+                            <Icon className="h-3 w-3 mr-1" />
+                            {meta.label}
+                          </Badge>
+                          <AjusteBadge
+                            estado={r.ajuste}
+                            contratoId={r.contrato.id}
+                            contratoCodigo={r.contrato.codigo}
+                            notificadoFecha={r.preavisoFecha}
+                            compact
+                          />
+                        </div>
                         {r.liq && (
                           <div className="text-xs text-muted-foreground mt-0.5">
                             {formatCurrency(Number(r.liq.total_cobrar))} · {Number(r.liq.pendiente) > 0 ? `pend. ${formatCurrency(Number(r.liq.pendiente))}` : 'saldada'}
