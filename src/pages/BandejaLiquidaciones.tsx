@@ -20,12 +20,15 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   useContratos, usePropiedades, usePropietarios, useInquilinos, useLiquidaciones,
+  usePreavisosAjuste,
   findById, formatCurrency,
 } from '@/hooks/useSupabaseData';
 import { Search, Calculator, Eye, CheckCircle2, AlertCircle, Clock, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { getEstadoAjuste } from '@/lib/ajustes';
+import { AjusteBadge } from '@/components/AjusteBadge';
 
 const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const PAGE_SIZE = 20;
@@ -86,6 +89,7 @@ export default function BandejaLiquidaciones() {
   const { data: propietarios = [] } = usePropietarios();
   const { data: inquilinos = [] } = useInquilinos();
   const { data: liquidaciones = [] } = useLiquidaciones();
+  const { data: preavisos = [] } = usePreavisosAjuste();
 
   const contratosActivos = useMemo(
     () => contratos.filter(c => c.estado === 'Activo' || c.estado === 'Por vencer'),
@@ -107,9 +111,18 @@ export default function BandejaLiquidaciones() {
         : estado === 'Transferida' ? 'Transferida'
         : estado === 'Parcial' ? 'Parcial'
         : 'Generada';
-      return { contrato: c, liq, propiedad: prop, inquilino: inq, propietario: own, estado: adaptado as EstadoPeriodo };
+      const ajuste = getEstadoAjuste(c as any, periodo);
+      const preavisoEv = ajuste.tipo === 'preavisar'
+        ? preavisos.find(p => p.contrato_id === c.id && p.periodo === ajuste.periodoAjuste)
+        : undefined;
+      return {
+        contrato: c, liq, propiedad: prop, inquilino: inq, propietario: own,
+        estado: adaptado as EstadoPeriodo,
+        ajuste,
+        preavisoFecha: preavisoEv?.fecha ?? null,
+      };
     });
-  }, [contratosActivos, liquidaciones, periodo, propiedades, inquilinos, propietarios]);
+  }, [contratosActivos, liquidaciones, periodo, propiedades, inquilinos, propietarios, preavisos]);
 
   const filtered = useMemo(() => {
     const q = norm(search);
@@ -423,10 +436,19 @@ export default function BandejaLiquidaciones() {
                         {formatCurrency(Number(r.contrato.alquiler_base), (r.contrato as any).moneda ?? 'ARS')}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={meta.cls}>
-                          <Icon className="h-3 w-3 mr-1" />
-                          {meta.label}
-                        </Badge>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge variant="outline" className={meta.cls}>
+                            <Icon className="h-3 w-3 mr-1" />
+                            {meta.label}
+                          </Badge>
+                          <AjusteBadge
+                            estado={r.ajuste}
+                            contratoId={r.contrato.id}
+                            contratoCodigo={r.contrato.codigo}
+                            notificadoFecha={r.preavisoFecha}
+                            compact
+                          />
+                        </div>
                         {r.liq && (
                           <div className="text-xs text-muted-foreground mt-0.5">
                             {formatCurrency(Number(r.liq.total_cobrar))} · {Number(r.liq.pendiente) > 0 ? `pend. ${formatCurrency(Number(r.liq.pendiente))}` : 'saldada'}

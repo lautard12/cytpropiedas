@@ -9,12 +9,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useContratos, usePropiedades, usePropietarios, useInquilinos, findById, formatCurrency } from '@/hooks/useSupabaseData';
-import { ArrowLeft, Calculator, Save, Info, Plus, Trash2 } from 'lucide-react';
+import { useContratos, usePropiedades, usePropietarios, useInquilinos, usePreavisosAjuste, findById, formatCurrency } from '@/hooks/useSupabaseData';
+import { ArrowLeft, Calculator, Save, Info, Plus, Trash2, AlertTriangle, Bell } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { ContratoCombobox } from '@/components/ContratoCombobox';
+import { getEstadoAjuste } from '@/lib/ajustes';
+import { AjusteBadge } from '@/components/AjusteBadge';
 
 const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
@@ -40,6 +42,7 @@ export default function GenerarLiquidacion() {
   const { data: propiedades = [] } = usePropiedades();
   const { data: propietarios = [] } = usePropietarios();
   const { data: inquilinos = [] } = useInquilinos();
+  const { data: preavisos = [] } = usePreavisosAjuste();
 
   const contratosActivos = contratos.filter(c => c.estado === 'Activo' || c.estado === 'Por vencer');
 
@@ -267,6 +270,44 @@ export default function GenerarLiquidacion() {
               </AlertDescription>
             </Alert>
           )}
+
+          {contrato && (() => {
+            const ajuste = getEstadoAjuste(contrato as any, periodo);
+            if (ajuste.tipo === 'ninguno') return null;
+            const preavisoEv = ajuste.tipo === 'preavisar'
+              ? preavisos.find(p => p.contrato_id === contrato.id && p.periodo === ajuste.periodoAjuste)
+              : null;
+            if (ajuste.tipo === 'aplicar') {
+              return (
+                <Alert className="border-status-danger/40 bg-status-danger/5">
+                  <AlertTriangle className="h-4 w-4 text-status-danger" />
+                  <AlertDescription>
+                    <strong>Este contrato ajusta este período</strong> ({ajuste.frecuencia.toLowerCase()}{ajuste.indice ? `, índice ${ajuste.indice}` : ''}).
+                    Cargá el nuevo alquiler base abajo antes de generar. Alquiler vigente registrado: <strong>{formatCurrency(contrato.alquiler_base)}</strong>.
+                  </AlertDescription>
+                </Alert>
+              );
+            }
+            return (
+              <Alert className="border-status-info/40 bg-status-info/5">
+                <Bell className="h-4 w-4 text-status-info" />
+                <AlertDescription>
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <span>
+                      El próximo período tiene ajuste (<strong>{ajuste.periodoAjusteLabel}</strong>, {ajuste.frecuencia.toLowerCase()}).
+                      Acordate de avisarle al propietario.
+                    </span>
+                    <AjusteBadge
+                      estado={ajuste}
+                      contratoId={contrato.id}
+                      contratoCodigo={contrato.codigo}
+                      notificadoFecha={preavisoEv?.fecha ?? null}
+                    />
+                  </div>
+                </AlertDescription>
+              </Alert>
+            );
+          })()}
 
           <Card>
             <CardHeader><CardTitle className="text-base">Conceptos del período</CardTitle></CardHeader>

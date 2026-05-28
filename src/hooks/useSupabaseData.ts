@@ -603,6 +603,21 @@ export function useEventosRecientes(limit = 10) {
   });
 }
 
+/** Preavisos de ajuste ya registrados (todos). Liviano: pocos eventos por contrato. */
+export function usePreavisosAjuste() {
+  return useQuery({
+    queryKey: ['eventos_contrato', 'preavisos_ajuste'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('eventos_contrato')
+        .select('contrato_id, periodo, fecha')
+        .eq('tipo', 'preaviso_ajuste');
+      if (error) throw error;
+      return data as { contrato_id: string; periodo: string | null; fecha: string }[];
+    },
+  });
+}
+
 export function useContratosByPropiedad(propiedadId: string) {
   return useQuery({
     queryKey: ['contratos', 'propiedad', propiedadId],
