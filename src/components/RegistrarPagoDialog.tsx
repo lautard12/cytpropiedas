@@ -138,8 +138,10 @@ export default function RegistrarPagoDialog({
         descripcion: `Pago registrado por ${formatCurrency(montoNum)} (${medioPago})${debeFacturar ? ` · Factura ${tipoFactura} ${numeroFactura}` : ''}`,
         datos_despues: nuevoPago, monto: montoNum,
       });
-
       queryClient.invalidateQueries({ queryKey: ['pagos'] });
+      queryClient.invalidateQueries({ queryKey: ['liquidaciones'] });
+      queryClient.invalidateQueries({ queryKey: ['conceptos_liquidacion'] });
+
       queryClient.invalidateQueries({ queryKey: ['liquidaciones'] });
 
       toast({ title: 'Pago registrado', description: `Se registró un pago de ${formatCurrency(montoNum)} por ${medioPago}.` });
