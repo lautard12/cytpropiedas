@@ -50,7 +50,8 @@ export default function RegistrarPagoDialog({
     const todos = ['Transferencia', 'Efectivo', 'Cheque', 'Mercado Pago', 'Débito automático'];
     if (!mediosPagoAceptados || mediosPagoAceptados.length === 0) return todos;
     return todos.filter(m => mediosPagoAceptados.includes(m));
-  }, [mediosPagoAceptados]);
+  const initialMonto = (montoSugerido && montoSugerido > 0 ? montoSugerido : pendiente).toString();
+  const [monto, setMonto] = useState(initialMonto);
 
   const [monto, setMonto] = useState(pendiente.toString());
   const [medioPago, setMedioPago] = useState<string>(mediosDisponibles[0] || 'Transferencia');
