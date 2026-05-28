@@ -558,7 +558,10 @@ export function useRendiciones() {
       const { data, error } = await (supabase as any)
         .from('rendiciones_propietario')
         .select('*')
-    enabled: !!liquidacionId,
+        .order('fecha_acreditacion', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Rendicion[];
+    },
   });
 }
 
@@ -578,9 +581,6 @@ export function useCobroComisionByLiquidacion(liquidacionId: string) {
   });
 }
 
-    },
-  });
-}
 
 export function useRendicionByLiquidacion(liquidacionId: string) {
   return useQuery({
