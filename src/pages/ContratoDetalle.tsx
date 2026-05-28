@@ -292,8 +292,15 @@ export default function ContratoDetalle() {
                   </p>
                 </div>
                 <div className="rounded-md border p-3">
-                  <p className="text-xs text-muted-foreground mb-1">Destino del cobro</p>
-                  <p className="font-medium text-sm">{contrato.destino_cobro || 'Inmobiliaria'}</p>
+                  <p className="text-xs text-muted-foreground mb-1">Modalidad de cobro</p>
+                  <p className="font-medium text-sm">
+                    {(contrato.destino_cobro || 'Inmobiliaria') === 'Propietario' ? 'Cobra el propietario' : 'Cobra la inmobiliaria'}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    {(contrato.destino_cobro || 'Inmobiliaria') === 'Propietario'
+                      ? 'El inquilino paga directo al propietario; la inmobiliaria solo cobra su comisión.'
+                      : 'El inquilino paga a la inmobiliaria, que luego rinde al propietario.'}
+                  </p>
                 </div>
                 <div className="rounded-md border p-3">
                   <p className="text-xs text-muted-foreground mb-1">Tasa de mora diaria</p>

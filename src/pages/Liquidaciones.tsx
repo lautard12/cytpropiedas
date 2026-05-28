@@ -105,6 +105,7 @@ export default function Liquidaciones() {
                 <TableHead>Contrato</TableHead>
                 <TableHead>Propiedad</TableHead>
                 <TableHead>Inquilino</TableHead>
+                <TableHead>Modalidad</TableHead>
                 <TableHead>Total a cobrar</TableHead>
                 <TableHead>Cobrado</TableHead>
                 <TableHead className="w-40">Conceptos</TableHead>
@@ -124,12 +125,30 @@ export default function Liquidaciones() {
                   : conc.cobrados === conc.total ? '[&>div]:bg-status-success'
                   : conc.cobrados > 0 ? '[&>div]:bg-status-warning'
                   : '[&>div]:bg-muted-foreground/40';
+                const esPropMode = ((l as any).destino_cobro ?? 'Inmobiliaria') === 'Propietario';
+                const estadoLabel = l.estado === 'Transferida'
+                  ? (esPropMode ? 'Comisión cobrada' : 'Rendida')
+                  : l.estado;
                 return (
                   <TableRow key={l.id} className="cursor-pointer" onClick={() => navigate(`/liquidaciones/${l.id}`)}>
                     <TableCell className="font-medium">{l.periodo_label}</TableCell>
                     <TableCell><Badge variant="outline">{ct?.codigo}</Badge></TableCell>
                     <TableCell className="text-muted-foreground text-sm">{prop?.direccion} {prop?.unidad}</TableCell>
                     <TableCell>{inq?.nombre}</TableCell>
+                    <TableCell>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="outline" className={esPropMode ? 'border-status-warning/50 text-status-warning' : 'border-status-info/50 text-status-info'}>
+                            {esPropMode ? 'Cobra prop.' : 'Cobra inmob.'}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs text-xs">
+                          {esPropMode
+                            ? 'El inquilino paga directo al propietario; la inmobiliaria solo cobra su comisión.'
+                            : 'El inquilino paga a la inmobiliaria, que luego rinde al propietario.'}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TableCell>
                     <TableCell>{formatCurrency(l.total_cobrar)}</TableCell>
                     <TableCell>{formatCurrency(l.total_cobrado)}</TableCell>
                     <TableCell>
@@ -159,8 +178,8 @@ export default function Liquidaciones() {
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell>{formatCurrency(l.neto_propietario)}</TableCell>
-                    <TableCell><Badge className={estadoBadge(l.estado)}>{l.estado}</Badge></TableCell>
+                    <TableCell>{esPropMode ? <span className="text-muted-foreground text-xs">N/A</span> : formatCurrency(l.neto_propietario)}</TableCell>
+                    <TableCell><Badge className={estadoBadge(l.estado)}>{estadoLabel}</Badge></TableCell>
                     <TableCell><Button variant="ghost" size="sm"><Eye className="h-4 w-4" /></Button></TableCell>
                   </TableRow>
                 );
