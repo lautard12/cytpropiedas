@@ -1279,14 +1279,23 @@ export type Database = {
         Args: { _contrato_id: string; _fecha_efectiva: string; _motivo: string }
         Returns: Json
       }
-      resolver_consulta_mora: {
-        Args: {
-          _aprobada: boolean
-          _consulta_id: string
-          _observaciones?: string
-        }
-        Returns: Json
-      }
+      resolver_consulta_mora:
+        | {
+            Args: {
+              _aprobada: boolean
+              _consulta_id: string
+              _observaciones?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _consulta_id: string
+              _decision: string
+              _observaciones: string
+            }
+            Returns: Json
+          }
       solicitar_autorizacion_mora: {
         Args: { _liquidacion_id: string; _observaciones?: string }
         Returns: Json
