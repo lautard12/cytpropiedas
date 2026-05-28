@@ -27,6 +27,10 @@ interface Props {
   mediosPagoAceptados?: string[];
   destinoCobro?: string;
   diaVencimiento?: number;
+  /** IDs de conceptos que se están imputando con este pago (opcional). */
+  conceptoIds?: string[];
+  /** Monto sugerido (suma de conceptos seleccionados). Si se pasa, prevalece sobre pendiente. */
+  montoSugerido?: number;
 }
 
 const IVA_RATE = 0.21;
@@ -35,7 +39,9 @@ export default function RegistrarPagoDialog({
   open, onOpenChange, liquidacionId, contratoId,
   totalCobrar, totalCobrado, pendiente, comisionTotal, periodoLabel,
   mediosPagoAceptados, destinoCobro, diaVencimiento,
+  conceptoIds, montoSugerido,
 }: Props) {
+
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const today = new Date().toISOString().split('T')[0];
@@ -46,7 +52,9 @@ export default function RegistrarPagoDialog({
     return todos.filter(m => mediosPagoAceptados.includes(m));
   }, [mediosPagoAceptados]);
 
-  const [monto, setMonto] = useState(pendiente.toString());
+  const initialMonto = (montoSugerido && montoSugerido > 0 ? montoSugerido : pendiente).toString();
+  const [monto, setMonto] = useState(initialMonto);
+
   const [medioPago, setMedioPago] = useState<string>(mediosDisponibles[0] || 'Transferencia');
   const [referencia, setReferencia] = useState('');
   const [fecha, setFecha] = useState(today);
@@ -108,6 +116,16 @@ export default function RegistrarPagoDialog({
       } as any).select().single();
       if (pagoError) throw pagoError;
 
+      // Imputar conceptos seleccionados al nuevo pago
+      if (conceptoIds && conceptoIds.length > 0) {
+        const { error: impError } = await supabase
+          .from('conceptos_liquidacion')
+          .update({ cobrado_at: new Date().toISOString(), pago_id: nuevoPago.id } as any)
+          .in('id', conceptoIds);
+        if (impError) throw impError;
+      }
+
+
       const { error: liqError } = await supabase.from('liquidaciones').update({
         total_cobrado: nuevoTotalCobrado,
         pendiente: Math.max(0, nuevoPendiente),
@@ -120,8 +138,10 @@ export default function RegistrarPagoDialog({
         descripcion: `Pago registrado por ${formatCurrency(montoNum)} (${medioPago})${debeFacturar ? ` · Factura ${tipoFactura} ${numeroFactura}` : ''}`,
         datos_despues: nuevoPago, monto: montoNum,
       });
-
       queryClient.invalidateQueries({ queryKey: ['pagos'] });
+      queryClient.invalidateQueries({ queryKey: ['liquidaciones'] });
+      queryClient.invalidateQueries({ queryKey: ['conceptos_liquidacion'] });
+
       queryClient.invalidateQueries({ queryKey: ['liquidaciones'] });
 
       toast({ title: 'Pago registrado', description: `Se registró un pago de ${formatCurrency(montoNum)} por ${medioPago}.` });

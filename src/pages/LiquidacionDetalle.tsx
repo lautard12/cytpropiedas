@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
+
 import {
   useLiquidacion, useContrato, usePropiedad, usePropietario, useInquilino,
   useConceptosLiquidacion, usePagosByLiquidacion, useLiquidaciones,
@@ -41,7 +43,9 @@ export default function LiquidacionDetalle() {
   const [resolviendo, setResolviendo] = useState(false);
   const [acreditando, setAcreditando] = useState(false);
   const [anularPago, setAnularPago] = useState<{ id: string; monto: number } | null>(null);
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
+
   const { data: liq, isLoading } = useLiquidacion(id || '');
   const { data: contrato } = useContrato(liq?.contrato_id || '');
   const { data: propiedad } = usePropiedad(contrato?.propiedad_id || '');
@@ -269,28 +273,90 @@ export default function LiquidacionDetalle() {
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Conceptos del período</CardTitle>
-              <p className="text-xs text-muted-foreground">Los conceptos y responsables se determinan según las reglas del contrato {contrato?.codigo}</p>
+            <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+              <div>
+                <CardTitle className="text-base">Conceptos del período</CardTitle>
+                <p className="text-xs text-muted-foreground">Tildá los conceptos a medida que el inquilino los va abonando. Después registrá el pago agrupado.</p>
+              </div>
+              {(() => {
+                const cobrablesPendientes = conceptos.filter(c => c.aplica_al_inquilino && !c.pago_id);
+                const cobradosCount = conceptos.filter(c => c.aplica_al_inquilino && c.pago_id).length;
+                const totalCobrables = conceptos.filter(c => c.aplica_al_inquilino).length;
+                const sumaSel = conceptos
+                  .filter(c => seleccionados.has(c.id))
+                  .reduce((s, c) => s + Number(c.monto || 0), 0);
+                return (
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      Cobrados {cobradosCount}/{totalCobrables}
+                    </Badge>
+                    {seleccionados.size > 0 && (
+                      <Button size="sm" onClick={() => setPagoOpen(true)}>
+                        <CreditCard className="h-4 w-4 mr-1" />
+                        Cobrar {seleccionados.size} ({formatCurrency(sumaSel)})
+                      </Button>
+                    )}
+                    {seleccionados.size === 0 && cobrablesPendientes.length > 0 && liq.estado !== 'Transferida' && liq.estado !== 'Acreditada' && (
+                      <p className="text-[10px] text-muted-foreground">Tildá conceptos para cobrar</p>
+                    )}
+                  </div>
+                );
+              })()}
             </CardHeader>
             <CardContent className="p-0">
               <Table>
-                <TableHeader><TableRow><TableHead>Concepto</TableHead><TableHead>Responsable</TableHead><TableHead className="text-right">Monto</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow>
+                  <TableHead className="w-10"></TableHead>
+                  <TableHead>Concepto</TableHead>
+                  <TableHead>Responsable</TableHead>
+                  <TableHead className="text-right">Monto</TableHead>
+                  <TableHead className="w-28">Estado</TableHead>
+                </TableRow></TableHeader>
                 <TableBody>
-                  {conceptos.map(c => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.concepto}</TableCell>
-                      <TableCell><Badge variant="outline" className="text-xs">{c.responsable}</Badge></TableCell>
-                      <TableCell className="text-right">{formatCurrency(c.monto)}</TableCell>
-                    </TableRow>
-                  ))}
+                  {conceptos.map(c => {
+                    const cobrado = !!c.pago_id;
+                    const cobrable = c.aplica_al_inquilino;
+                    const seleccionado = seleccionados.has(c.id);
+                    return (
+                      <TableRow key={c.id} className={cobrado ? 'bg-status-success/5' : ''}>
+                        <TableCell>
+                          {cobrable && !cobrado && (
+                            <Checkbox
+                              checked={seleccionado}
+                              onCheckedChange={(v) => {
+                                setSeleccionados(prev => {
+                                  const n = new Set(prev);
+                                  if (v) n.add(c.id); else n.delete(c.id);
+                                  return n;
+                                });
+                              }}
+                            />
+                          )}
+                          {cobrado && <CheckCircle className="h-4 w-4 text-status-success" />}
+                        </TableCell>
+                        <TableCell className={`font-medium ${cobrado ? 'text-muted-foreground' : ''}`}>{c.concepto}</TableCell>
+                        <TableCell><Badge variant="outline" className="text-xs">{c.responsable}</Badge></TableCell>
+                        <TableCell className="text-right">{formatCurrency(c.monto)}</TableCell>
+                        <TableCell>
+                          {cobrado ? (
+                            <Badge className="bg-status-success text-status-success-foreground text-[10px]">Cobrado</Badge>
+                          ) : cobrable ? (
+                            <Badge variant="outline" className="text-[10px] border-status-warning/40 text-status-warning">Pendiente</Badge>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground">A cargo prop.</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                   {liq.saldo_anterior !== 0 && (
-                    <TableRow><TableCell className="font-medium">Saldo anterior</TableCell><TableCell></TableCell><TableCell className="text-right">{formatCurrency(liq.saldo_anterior)}</TableCell></TableRow>
+                    <TableRow><TableCell></TableCell><TableCell className="font-medium">Saldo anterior</TableCell><TableCell></TableCell><TableCell className="text-right">{formatCurrency(liq.saldo_anterior)}</TableCell><TableCell></TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
+
 
           {/* Pagos — mini timeline */}
           <Card>
@@ -415,7 +481,10 @@ export default function LiquidacionDetalle() {
 
       <RegistrarPagoDialog
         open={pagoOpen}
-        onOpenChange={setPagoOpen}
+        onOpenChange={(open) => {
+          setPagoOpen(open);
+          if (!open) setSeleccionados(new Set());
+        }}
         liquidacionId={liq.id}
         contratoId={liq.contrato_id}
         totalCobrar={liq.total_cobrar}
@@ -426,7 +495,12 @@ export default function LiquidacionDetalle() {
         mediosPagoAceptados={contrato?.medios_pago_aceptados}
         destinoCobro={contrato?.destino_cobro}
         diaVencimiento={contrato?.dia_vencimiento}
+        conceptoIds={seleccionados.size > 0 ? Array.from(seleccionados) : undefined}
+        montoSugerido={seleccionados.size > 0
+          ? conceptos.filter(c => seleccionados.has(c.id)).reduce((s, c) => s + Number(c.monto || 0), 0)
+          : undefined}
       />
+
 
       {moraInfo && (
         <ConsultarMoraDialog
