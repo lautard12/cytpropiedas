@@ -27,6 +27,10 @@ interface Props {
   mediosPagoAceptados?: string[];
   destinoCobro?: string;
   diaVencimiento?: number;
+  /** IDs de conceptos que se están imputando con este pago (opcional). */
+  conceptoIds?: string[];
+  /** Monto sugerido (suma de conceptos seleccionados). Si se pasa, prevalece sobre pendiente. */
+  montoSugerido?: number;
 }
 
 const IVA_RATE = 0.21;
@@ -35,7 +39,9 @@ export default function RegistrarPagoDialog({
   open, onOpenChange, liquidacionId, contratoId,
   totalCobrar, totalCobrado, pendiente, comisionTotal, periodoLabel,
   mediosPagoAceptados, destinoCobro, diaVencimiento,
+  conceptoIds, montoSugerido,
 }: Props) {
+
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const today = new Date().toISOString().split('T')[0];
