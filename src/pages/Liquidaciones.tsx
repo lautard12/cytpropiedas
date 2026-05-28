@@ -16,6 +16,9 @@ export default function Liquidaciones() {
   const navigate = useNavigate();
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [filtroPeriodo, setFiltroPeriodo] = useState('todos');
+
+  const { data: liquidaciones = [], isLoading } = useLiquidaciones();
+  const { data: contratos = [] } = useContratos();
   const { data: propiedades = [] } = usePropiedades();
   const { data: inquilinos = [] } = useInquilinos();
   const { data: allConceptos = [] } = useAllConceptos();
@@ -31,9 +34,6 @@ export default function Liquidaciones() {
 
   if (isLoading) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
 
-  const { data: inquilinos = [] } = useInquilinos();
-
-  if (isLoading) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
 
   const periodosDisponibles = Array.from(new Set(liquidaciones.map(l => l.periodo)))
     .sort((a, b) => b.localeCompare(a))
