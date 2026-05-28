@@ -37,11 +37,9 @@ const TIPO_ICON: Record<string, React.ElementType> = {
   observacion: MessageSquare,
 };
 
-export default function LiquidacionDetalle() {
-  const { id } = useParams();
-  const navigate = useNavigate();
   const [pagoOpen, setPagoOpen] = useState(false);
   const [rendirOpen, setRendirOpen] = useState(false);
+  const [cobrarOpen, setCobrarOpen] = useState(false);
   const [consultaOpen, setConsultaOpen] = useState(false);
   const [resolviendo, setResolviendo] = useState(false);
   const [acreditando, setAcreditando] = useState(false);
@@ -57,6 +55,11 @@ export default function LiquidacionDetalle() {
   const { data: conceptos = [] } = useConceptosLiquidacion(liq?.id || '');
   const { data: pagos = [] } = usePagosByLiquidacion(liq?.id || '');
   const { data: allLiquidaciones = [] } = useLiquidaciones();
+  const { data: eventosPeriodo = [] } = useEventosPorPeriodo(liq?.contrato_id || '', liq?.periodo || '');
+  const { data: rendicion } = useRendicionByLiquidacion(liq?.id || '');
+  const { data: cobroComision } = useCobroComisionByLiquidacion(liq?.id || '');
+  const { data: consultaMora } = useConsultaMoraByLiquidacion(liq?.id || '');
+
   const { data: eventosPeriodo = [] } = useEventosPorPeriodo(liq?.contrato_id || '', liq?.periodo || '');
   const { data: rendicion } = useRendicionByLiquidacion(liq?.id || '');
   const { data: consultaMora } = useConsultaMoraByLiquidacion(liq?.id || '');
