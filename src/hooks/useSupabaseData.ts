@@ -146,7 +146,10 @@ export interface ConceptoLiquidacion {
   monto: number;
   responsable: string;
   aplica_al_inquilino: boolean;
+  cobrado_at?: string | null;
+  pago_id?: string | null;
 }
+
 
 export interface Pago {
   id: string;
