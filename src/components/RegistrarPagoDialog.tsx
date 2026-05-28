@@ -108,17 +108,19 @@ export default function RegistrarPagoDialog({
         liquidacion_id: liquidacionId,
         contrato_id: contratoId,
         monto: montoNum,
-        medio_pago: medioPago as any,
+        medio_pago: (esPagoDirecto ? 'Transferencia' : medioPago) as any,
         referencia: referencia || `PAG-${fecha.replace(/-/g, '')}`,
         fecha,
         estado: 'Confirmado' as any,
         observaciones,
-        genera_factura: debeFacturar,
-        tipo_factura: debeFacturar ? tipoFactura : null,
-        numero_factura: debeFacturar ? numeroFactura.trim() : '',
-        iva_comision: ivaComision,
+        genera_factura: esPagoDirecto ? false : debeFacturar,
+        tipo_factura: !esPagoDirecto && debeFacturar ? tipoFactura : null,
+        numero_factura: !esPagoDirecto && debeFacturar ? numeroFactura.trim() : '',
+        iva_comision: esPagoDirecto ? 0 : ivaComision,
+        tipo: esPagoDirecto ? 'pago_directo_propietario' : 'cobranza',
       } as any).select().single();
       if (pagoError) throw pagoError;
+
 
       // Imputar conceptos seleccionados al nuevo pago
       if (conceptoIds && conceptoIds.length > 0) {
