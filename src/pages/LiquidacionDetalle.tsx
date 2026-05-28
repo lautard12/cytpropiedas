@@ -12,6 +12,7 @@ import {
   useLiquidacion, useContrato, usePropiedad, usePropietario, useInquilino,
   useConceptosLiquidacion, usePagosByLiquidacion, useLiquidaciones,
   useEventosPorPeriodo, useRendicionByLiquidacion, useConsultaMoraByLiquidacion,
+  useCobroComisionByLiquidacion,
   formatCurrency, formatDate,
 } from '@/hooks/useSupabaseData';
 import {
@@ -22,10 +23,12 @@ import {
 import RegistrarPagoDialog from '@/components/RegistrarPagoDialog';
 import AnularPagoDialog from '@/components/AnularPagoDialog';
 import RendirPropietarioDialog from '@/components/RendirPropietarioDialog';
+import CobrarComisionDialog from '@/components/CobrarComisionDialog';
 import ConsultarMoraDialog from '@/components/ConsultarMoraDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
+
 
 const TIPO_ICON: Record<string, React.ElementType> = {
   punitorio: AlertTriangle,
@@ -39,6 +42,7 @@ export default function LiquidacionDetalle() {
   const navigate = useNavigate();
   const [pagoOpen, setPagoOpen] = useState(false);
   const [rendirOpen, setRendirOpen] = useState(false);
+  const [cobrarOpen, setCobrarOpen] = useState(false);
   const [consultaOpen, setConsultaOpen] = useState(false);
   const [resolviendo, setResolviendo] = useState(false);
   const [acreditando, setAcreditando] = useState(false);
@@ -56,7 +60,9 @@ export default function LiquidacionDetalle() {
   const { data: allLiquidaciones = [] } = useLiquidaciones();
   const { data: eventosPeriodo = [] } = useEventosPorPeriodo(liq?.contrato_id || '', liq?.periodo || '');
   const { data: rendicion } = useRendicionByLiquidacion(liq?.id || '');
+  const { data: cobroComision } = useCobroComisionByLiquidacion(liq?.id || '');
   const { data: consultaMora } = useConsultaMoraByLiquidacion(liq?.id || '');
+
 
   // IVA acumulado de los pagos
   const ivaComisionTotal = useMemo(
@@ -204,26 +210,48 @@ export default function LiquidacionDetalle() {
           <p className="mt-1 text-sm text-muted-foreground">{propiedad?.direccion} {propiedad?.unidad} · Inquilino: {inquilino?.nombre} · Propietario: {propietario?.nombre}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
-          <Badge className={estadoBadge}>{liq.estado}</Badge>
-          {(liq.estado === 'Pendiente' || liq.estado === 'Parcial') && (
-            <Button variant="outline" size="sm" onClick={handleNotificarWhatsApp}>
-              <MessageCircle className="h-4 w-4 mr-1" /> Avisar por WhatsApp
-            </Button>
-          )}
-          {(liq.estado === 'Pendiente' || liq.estado === 'Parcial' || liq.estado === 'Borrador') && (
-            <Button variant="outline" size="sm" onClick={() => setPagoOpen(true)}><CreditCard className="h-4 w-4 mr-1" /> Registrar pago</Button>
-          )}
-          {liq.estado === 'Cobrada' && (
-            <Button size="sm" onClick={handleAcreditar} disabled={acreditando}>
-              <CheckCircle className="h-4 w-4 mr-1" /> {acreditando ? 'Procesando...' : 'Marcar acreditada'}
-            </Button>
-          )}
-          {liq.estado === 'Acreditada' && (
-            <Button size="sm" onClick={() => setRendirOpen(true)}>
-              <Send className="h-4 w-4 mr-1" /> Rendir al propietario
-            </Button>
-          )}
+          {(() => {
+            const modalidad = (liq as any).destino_cobro ?? 'Inmobiliaria';
+            const esPropMode = modalidad === 'Propietario';
+            const estadoLabel = liq.estado === 'Transferida'
+              ? (esPropMode ? 'Comisión cobrada' : 'Rendida')
+              : liq.estado;
+            return (
+              <>
+                <Badge className={estadoBadge}>{estadoLabel}</Badge>
+                <Badge variant="outline" className={esPropMode ? 'border-status-warning/50 text-status-warning' : 'border-status-info/50 text-status-info'}>
+                  {esPropMode ? 'Cobra el propietario' : 'Cobra la inmobiliaria'}
+                </Badge>
+                {(liq.estado === 'Pendiente' || liq.estado === 'Parcial') && (
+                  <Button variant="outline" size="sm" onClick={handleNotificarWhatsApp}>
+                    <MessageCircle className="h-4 w-4 mr-1" /> Avisar por WhatsApp
+                  </Button>
+                )}
+                {(liq.estado === 'Pendiente' || liq.estado === 'Parcial' || liq.estado === 'Borrador') && (
+                  <Button variant="outline" size="sm" onClick={() => setPagoOpen(true)}>
+                    <CreditCard className="h-4 w-4 mr-1" /> {esPropMode ? 'Registrar pago directo' : 'Registrar pago'}
+                  </Button>
+                )}
+                {!esPropMode && liq.estado === 'Cobrada' && (
+                  <Button size="sm" onClick={handleAcreditar} disabled={acreditando}>
+                    <CheckCircle className="h-4 w-4 mr-1" /> {acreditando ? 'Procesando...' : 'Marcar acreditada'}
+                  </Button>
+                )}
+                {!esPropMode && liq.estado === 'Acreditada' && (
+                  <Button size="sm" onClick={() => setRendirOpen(true)}>
+                    <Send className="h-4 w-4 mr-1" /> Rendir al propietario
+                  </Button>
+                )}
+                {esPropMode && cobroComision && cobroComision.estado === 'Pendiente' && (
+                  <Button size="sm" onClick={() => setCobrarOpen(true)}>
+                    <DollarSign className="h-4 w-4 mr-1" /> Cobrar comisión al propietario
+                  </Button>
+                )}
+              </>
+            );
+          })()}
         </div>
+
       </div>
 
       {moraInfo && (

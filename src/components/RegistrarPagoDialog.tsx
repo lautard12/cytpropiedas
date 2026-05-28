@@ -27,6 +27,8 @@ interface Props {
   mediosPagoAceptados?: string[];
   destinoCobro?: string;
   diaVencimiento?: number;
+  /** Modalidad de cobro de la liquidación (snapshot). */
+  modalidadCobro?: 'Inmobiliaria' | 'Propietario';
   /** IDs de conceptos que se están imputando con este pago (opcional). */
   conceptoIds?: string[];
   /** Monto sugerido (suma de conceptos seleccionados). Si se pasa, prevalece sobre pendiente. */
@@ -38,9 +40,11 @@ const IVA_RATE = 0.21;
 export default function RegistrarPagoDialog({
   open, onOpenChange, liquidacionId, contratoId,
   totalCobrar, totalCobrado, pendiente, comisionTotal, periodoLabel,
-  mediosPagoAceptados, destinoCobro, diaVencimiento,
+  mediosPagoAceptados, destinoCobro, diaVencimiento, modalidadCobro,
   conceptoIds, montoSugerido,
 }: Props) {
+  const esPagoDirecto = modalidadCobro === 'Propietario';
+
 
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
@@ -93,10 +97,11 @@ export default function RegistrarPagoDialog({
       toast({ title: 'Atención', description: 'El monto supera el pendiente. Verificá el importe.', variant: 'destructive' });
       return;
     }
-    if (debeFacturar && !numeroFactura.trim()) {
+    if (!esPagoDirecto && debeFacturar && !numeroFactura.trim()) {
       toast({ title: 'Falta el número de factura', description: 'Ingresá el número de la factura A o B emitida.', variant: 'destructive' });
       return;
     }
+
 
     setLoading(true);
     try {
@@ -104,17 +109,19 @@ export default function RegistrarPagoDialog({
         liquidacion_id: liquidacionId,
         contrato_id: contratoId,
         monto: montoNum,
-        medio_pago: medioPago as any,
+        medio_pago: (esPagoDirecto ? 'Transferencia' : medioPago) as any,
         referencia: referencia || `PAG-${fecha.replace(/-/g, '')}`,
         fecha,
         estado: 'Confirmado' as any,
         observaciones,
-        genera_factura: debeFacturar,
-        tipo_factura: debeFacturar ? tipoFactura : null,
-        numero_factura: debeFacturar ? numeroFactura.trim() : '',
-        iva_comision: ivaComision,
+        genera_factura: esPagoDirecto ? false : debeFacturar,
+        tipo_factura: !esPagoDirecto && debeFacturar ? tipoFactura : null,
+        numero_factura: !esPagoDirecto && debeFacturar ? numeroFactura.trim() : '',
+        iva_comision: esPagoDirecto ? 0 : ivaComision,
+        tipo: esPagoDirecto ? 'pago_directo_propietario' : 'cobranza',
       } as any).select().single();
       if (pagoError) throw pagoError;
+
 
       // Imputar conceptos seleccionados al nuevo pago
       if (conceptoIds && conceptoIds.length > 0) {
@@ -162,12 +169,18 @@ export default function RegistrarPagoDialog({
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" /> Registrar pago
+            <CreditCard className="h-5 w-5" /> {esPagoDirecto ? 'Registrar pago directo al propietario' : 'Registrar pago'}
           </DialogTitle>
           <DialogDescription>
             Liquidación {periodoLabel} · Pendiente: <span className="font-semibold text-foreground">{formatCurrency(pendiente)}</span>
+            {esPagoDirecto && (
+              <span className="block mt-2 rounded-md border border-status-warning/40 bg-status-warning/10 px-2 py-1.5 text-xs text-foreground">
+                Este registro <strong>no representa ingreso de dinero a la inmobiliaria</strong>. El inquilino pagó directamente al propietario; se imputan los conceptos pero no afecta caja/banco.
+              </span>
+            )}
           </DialogDescription>
         </DialogHeader>
+
 
         <div className="space-y-4 py-2">
           <div className="grid grid-cols-3 gap-2 text-center text-xs">
@@ -198,38 +211,39 @@ export default function RegistrarPagoDialog({
               </p>
             )}
           </div>
+          {!esPagoDirecto && (
+            <div className="space-y-1.5">
+              <Label>Medio de pago *</Label>
+              <Select value={medioPago} onValueChange={setMedioPago}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {mediosDisponibles.map(m => (
+                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {destinoCobro && (
+                <p className="text-xs text-muted-foreground">
+                  Acuerdo: pagar a <strong>{destinoCobro}</strong>
+                  {mediosPagoAceptados && mediosPagoAceptados.length > 0 && (
+                    <> · Medios pactados: {mediosPagoAceptados.join(', ')}</>
+                  )}
+                </p>
+              )}
+              {!esTransferencia && (
+                <p className="text-xs text-muted-foreground">Sin facturación obligatoria — no se aplica IVA sobre la comisión.</p>
+              )}
+              {montoNum > 0 && montoNum < pendiente && (
+                <p className="text-xs text-status-warning flex items-start gap-1 mt-1">
+                  <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
+                  <span>Si el faltante se abona después del día {diaVencimiento ?? 10}, se podrán aplicar punitorios sobre ese saldo (previa consulta al propietario).</span>
+                </p>
+              )}
+            </div>
+          )}
 
-          <div className="space-y-1.5">
-            <Label>Medio de pago *</Label>
-            <Select value={medioPago} onValueChange={setMedioPago}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {mediosDisponibles.map(m => (
-                  <SelectItem key={m} value={m}>{m}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {destinoCobro && (
-              <p className="text-xs text-muted-foreground">
-                Acuerdo: pagar a <strong>{destinoCobro}</strong>
-                {mediosPagoAceptados && mediosPagoAceptados.length > 0 && (
-                  <> · Medios pactados: {mediosPagoAceptados.join(', ')}</>
-                )}
-              </p>
-            )}
-            {!esTransferencia && (
-              <p className="text-xs text-muted-foreground">Sin facturación obligatoria — no se aplica IVA sobre la comisión.</p>
-            )}
-            {montoNum > 0 && montoNum < pendiente && (
-              <p className="text-xs text-status-warning flex items-start gap-1 mt-1">
-                <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
-                <span>Si el faltante se abona después del día {diaVencimiento ?? 10}, se podrán aplicar punitorios sobre ese saldo (previa consulta al propietario).</span>
-              </p>
-            )}
-          </div>
-
-          {/* Facturación condicional */}
-          {esTransferencia && (
+          {/* Facturación condicional (solo modalidad Inmobiliaria) */}
+          {!esPagoDirecto && esTransferencia && (
             <div className="rounded-md border border-status-info/30 bg-status-info/5 p-3 space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="flex items-center gap-1.5 text-sm font-semibold">
@@ -263,6 +277,7 @@ export default function RegistrarPagoDialog({
               )}
             </div>
           )}
+
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">

@@ -64,6 +64,60 @@ export type Database = {
           },
         ]
       }
+      cobros_comision_propietario: {
+        Row: {
+          comprobante_url: string | null
+          created_at: string
+          estado: string
+          fecha_cobro: string | null
+          id: string
+          iva_comision: number
+          liquidacion_id: string
+          medio: Database["public"]["Enums"]["medio_pago"] | null
+          monto_comision: number
+          monto_gastos_reintegro: number
+          observaciones: string
+          propietario_id: string | null
+          referencia: string
+          total_cobrar: number
+          updated_at: string
+        }
+        Insert: {
+          comprobante_url?: string | null
+          created_at?: string
+          estado?: string
+          fecha_cobro?: string | null
+          id?: string
+          iva_comision?: number
+          liquidacion_id: string
+          medio?: Database["public"]["Enums"]["medio_pago"] | null
+          monto_comision?: number
+          monto_gastos_reintegro?: number
+          observaciones?: string
+          propietario_id?: string | null
+          referencia?: string
+          total_cobrar?: number
+          updated_at?: string
+        }
+        Update: {
+          comprobante_url?: string | null
+          created_at?: string
+          estado?: string
+          fecha_cobro?: string | null
+          id?: string
+          iva_comision?: number
+          liquidacion_id?: string
+          medio?: Database["public"]["Enums"]["medio_pago"] | null
+          monto_comision?: number
+          monto_gastos_reintegro?: number
+          observaciones?: string
+          propietario_id?: string | null
+          referencia?: string
+          total_cobrar?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       conceptos_liquidacion: {
         Row: {
           aplica_al_inquilino: boolean
@@ -494,6 +548,7 @@ export type Database = {
           comision_inmobiliaria: number
           contrato_id: string
           created_at: string
+          destino_cobro: string
           estado: Database["public"]["Enums"]["estado_liquidacion"]
           fecha_emision: string
           id: string
@@ -512,6 +567,7 @@ export type Database = {
           comision_inmobiliaria?: number
           contrato_id: string
           created_at?: string
+          destino_cobro?: string
           estado?: Database["public"]["Enums"]["estado_liquidacion"]
           fecha_emision?: string
           id?: string
@@ -530,6 +586,7 @@ export type Database = {
           comision_inmobiliaria?: number
           contrato_id?: string
           created_at?: string
+          destino_cobro?: string
           estado?: Database["public"]["Enums"]["estado_liquidacion"]
           fecha_emision?: string
           id?: string
@@ -613,6 +670,7 @@ export type Database = {
           numero_factura: string
           observaciones: string
           referencia: string
+          tipo: string
           tipo_factura: string | null
         }
         Insert: {
@@ -631,6 +689,7 @@ export type Database = {
           numero_factura?: string
           observaciones?: string
           referencia?: string
+          tipo?: string
           tipo_factura?: string | null
         }
         Update: {
@@ -649,6 +708,7 @@ export type Database = {
           numero_factura?: string
           observaciones?: string
           referencia?: string
+          tipo?: string
           tipo_factura?: string | null
         }
         Relationships: [
@@ -1257,6 +1317,18 @@ export type Database = {
       calcular_punitorio: {
         Args: { _fecha?: string; _liquidacion_id: string }
         Returns: number
+      }
+      confirmar_cobro_comision: {
+        Args: {
+          _cobro_id: string
+          _comprobante_url?: string
+          _fecha: string
+          _medio: Database["public"]["Enums"]["medio_pago"]
+          _monto_gastos_reintegro?: number
+          _observaciones?: string
+          _referencia: string
+        }
+        Returns: Json
       }
       has_role: {
         Args: {

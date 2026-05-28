@@ -175,7 +175,9 @@ export default function GenerarLiquidacion() {
         neto_propietario: nums.neto,
         estado: estadoFinal as any,
         observaciones,
-      }).select().single();
+        destino_cobro: (contrato as any).destino_cobro ?? 'Inmobiliaria',
+      } as any).select().single();
+
       if (liqErr) throw liqErr;
 
       // Insert conceptos (solo los que tienen monto > 0)

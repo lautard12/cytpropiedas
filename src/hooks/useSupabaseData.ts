@@ -137,6 +137,7 @@ export interface Liquidacion {
   neto_propietario: number;
   saldo_anterior: number;
   observaciones: string;
+  destino_cobro?: string;
 }
 
 export interface ConceptoLiquidacion {
@@ -165,7 +166,25 @@ export interface Pago {
   referencia: string;
   estado: string;
   observaciones: string;
+  tipo?: 'cobranza' | 'pago_directo_propietario';
 }
+
+export interface CobroComisionPropietario {
+  id: string;
+  liquidacion_id: string;
+  propietario_id: string | null;
+  monto_comision: number;
+  iva_comision: number;
+  monto_gastos_reintegro: number;
+  total_cobrar: number;
+  fecha_cobro: string | null;
+  medio: string | null;
+  referencia: string;
+  comprobante_url: string | null;
+  estado: 'Pendiente' | 'Cobrada';
+  observaciones: string;
+}
+
 
 export interface EventoContrato {
   id: string;
@@ -545,6 +564,23 @@ export function useRendiciones() {
     },
   });
 }
+
+export function useCobroComisionByLiquidacion(liquidacionId: string) {
+  return useQuery({
+    queryKey: ['cobros_comision_propietario', 'liquidacion', liquidacionId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('cobros_comision_propietario')
+        .select('*')
+        .eq('liquidacion_id', liquidacionId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as CobroComisionPropietario | null;
+    },
+    enabled: !!liquidacionId,
+  });
+}
+
 
 export function useRendicionByLiquidacion(liquidacionId: string) {
   return useQuery({
