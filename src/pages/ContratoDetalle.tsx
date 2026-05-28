@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,12 +17,16 @@ import {
 import {
   ArrowLeft, FileText, Calculator, Edit, CalendarDays, TrendingUp,
   RefreshCw, Percent, XCircle, ShieldCheck, DollarSign, AlertTriangle,
-  MessageSquare, Handshake, Paperclip, Clock, BarChart3, Zap,
+  MessageSquare, Handshake, Paperclip, Clock, BarChart3, Zap, Save, RotateCcw,
 } from 'lucide-react';
 import { differenceInMonths } from 'date-fns';
 import { GarantiasSection } from '@/components/contratos/GarantiasSection';
 import { RescindirDialog } from '@/components/contratos/RescindirDialog';
 import { RenovacionSection } from '@/components/contratos/RenovacionSection';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { mesesPorFrecuencia } from '@/lib/ajustes';
 
 const TIPO_ICON: Record<string, React.ElementType> = {
   inicio_contrato: FileText,
@@ -75,6 +81,95 @@ function TimelineEvent({ evento }: { evento: EventoContrato }) {
     </div>
   );
 }
+
+function FechaBaseAjustesEditor({ contrato }: { contrato: any }) {
+  const qc = useQueryClient();
+  const ciclo = mesesPorFrecuencia(contrato.frecuencia_ajuste);
+  const baseEfectiva = contrato.fecha_ajuste_override || contrato.fecha_inicio;
+  const [valor, setValor] = useState<string>(contrato.fecha_ajuste_override || '');
+  const [saving, setSaving] = useState(false);
+
+  if (!ciclo || ciclo <= 1) {
+    return (
+      <div className="rounded-md border p-3 bg-muted/30">
+        <p className="text-xs text-muted-foreground mb-1">Fecha base de ajustes</p>
+        <p className="text-sm">Este contrato tiene ajuste <strong>{contrato.frecuencia_ajuste || 'no configurado'}</strong>, no requiere ciclo de aviso.</p>
+      </div>
+    );
+  }
+
+  const guardar = async (nuevoValor: string | null) => {
+    setSaving(true);
+    const { error } = await supabase
+      .from('contratos')
+      .update({ fecha_ajuste_override: nuevoValor })
+      .eq('id', contrato.id);
+    setSaving(false);
+    if (error) { toast.error('No se pudo guardar: ' + error.message); return; }
+    toast.success(nuevoValor ? 'Fecha base de ajustes actualizada' : 'Override eliminado — vuelve a usar fecha de inicio');
+    qc.invalidateQueries({ queryKey: ['contrato', contrato.id] });
+    qc.invalidateQueries({ queryKey: ['contratos'] });
+    if (!nuevoValor) setValor('');
+  };
+
+  const usaOverride = !!contrato.fecha_ajuste_override;
+
+  return (
+    <div className="rounded-md border p-4 bg-card">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <p className="text-sm font-medium flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+            Fecha base de los ajustes
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Punto de partida del ciclo <strong>{contrato.frecuencia_ajuste}</strong> ({ciclo} meses). El sistema usa esta fecha para avisarte cuándo aplicar el aumento.
+          </p>
+        </div>
+        <Badge variant={usaOverride ? 'default' : 'outline'} className="shrink-0">
+          {usaOverride ? 'Override activo' : 'Usa fecha de inicio'}
+        </Badge>
+      </div>
+
+      <div className="grid sm:grid-cols-3 gap-3 text-sm">
+        <div>
+          <p className="text-xs text-muted-foreground">Fecha inicio contrato</p>
+          <p className="font-medium">{formatDate(contrato.fecha_inicio)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Base efectiva</p>
+          <p className="font-medium">{formatDate(baseEfectiva)}</p>
+        </div>
+        <div>
+          <Label htmlFor="override" className="text-xs text-muted-foreground">Override (opcional)</Label>
+          <Input
+            id="override"
+            type="date"
+            value={valor}
+            onChange={(e) => setValor(e.target.value)}
+            className="h-9"
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-2 mt-3">
+        <Button size="sm" onClick={() => guardar(valor || null)} disabled={saving || valor === (contrato.fecha_ajuste_override || '')}>
+          <Save className="h-3.5 w-3.5 mr-1" /> Guardar override
+        </Button>
+        {usaOverride && (
+          <Button size="sm" variant="outline" onClick={() => guardar(null)} disabled={saving}>
+            <RotateCcw className="h-3.5 w-3.5 mr-1" /> Volver a fecha de inicio
+          </Button>
+        )}
+      </div>
+
+      <p className="text-xs text-muted-foreground mt-3">
+        💡 Si en el contrato pactaron que los ajustes corren desde una fecha distinta a la de inicio (por ejemplo, "ajustes desde marzo aunque el contrato empezó en febrero"), cargá ese día acá.
+      </p>
+    </div>
+  );
+}
+
 
 export default function ContratoDetalle() {
   const { id } = useParams();
@@ -206,6 +301,10 @@ export default function ContratoDetalle() {
                     {contrato.tasa_mora_diaria ? `${contrato.tasa_mora_diaria}% (compuesto)` : 'Sin tasa configurada'}
                   </p>
                 </div>
+              </div>
+
+              <div className="mt-4">
+                <FechaBaseAjustesEditor contrato={contrato} />
               </div>
             </CardContent>
           </Card>
