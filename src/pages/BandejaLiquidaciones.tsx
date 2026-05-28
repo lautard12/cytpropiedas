@@ -111,9 +111,18 @@ export default function BandejaLiquidaciones() {
         : estado === 'Transferida' ? 'Transferida'
         : estado === 'Parcial' ? 'Parcial'
         : 'Generada';
-      return { contrato: c, liq, propiedad: prop, inquilino: inq, propietario: own, estado: adaptado as EstadoPeriodo };
+      const ajuste = getEstadoAjuste(c as any, periodo);
+      const preavisoEv = ajuste.tipo === 'preavisar'
+        ? preavisos.find(p => p.contrato_id === c.id && p.periodo === ajuste.periodoAjuste)
+        : undefined;
+      return {
+        contrato: c, liq, propiedad: prop, inquilino: inq, propietario: own,
+        estado: adaptado as EstadoPeriodo,
+        ajuste,
+        preavisoFecha: preavisoEv?.fecha ?? null,
+      };
     });
-  }, [contratosActivos, liquidaciones, periodo, propiedades, inquilinos, propietarios]);
+  }, [contratosActivos, liquidaciones, periodo, propiedades, inquilinos, propietarios, preavisos]);
 
   const filtered = useMemo(() => {
     const q = norm(search);
