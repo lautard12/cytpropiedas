@@ -470,11 +470,11 @@ export default function BandejaLiquidaciones() {
               {Array.from({ length: totalPages }, (_, i) => i + 1)
                 .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
                 .map((p, idx, arr) => (
-                  <>
+                  <Fragment key={p}>
                     {idx > 0 && arr[idx - 1] !== p - 1 && (
-                      <PaginationItem key={`gap-${p}`}><span className="px-2 text-muted-foreground">…</span></PaginationItem>
+                      <PaginationItem><span className="px-2 text-muted-foreground">…</span></PaginationItem>
                     )}
-                    <PaginationItem key={p}>
+                    <PaginationItem>
                       <PaginationLink
                         isActive={p === safePage}
                         onClick={() => setParam('page', String(p))}
@@ -483,7 +483,7 @@ export default function BandejaLiquidaciones() {
                         {p}
                       </PaginationLink>
                     </PaginationItem>
-                  </>
+                  </Fragment>
                 ))}
               <PaginationItem>
                 <PaginationNext
