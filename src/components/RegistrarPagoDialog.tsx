@@ -116,6 +116,16 @@ export default function RegistrarPagoDialog({
       } as any).select().single();
       if (pagoError) throw pagoError;
 
+      // Imputar conceptos seleccionados al nuevo pago
+      if (conceptoIds && conceptoIds.length > 0) {
+        const { error: impError } = await supabase
+          .from('conceptos_liquidacion')
+          .update({ cobrado_at: new Date().toISOString(), pago_id: nuevoPago.id } as any)
+          .in('id', conceptoIds);
+        if (impError) throw impError;
+      }
+
+
       const { error: liqError } = await supabase.from('liquidaciones').update({
         total_cobrado: nuevoTotalCobrado,
         pendiente: Math.max(0, nuevoPendiente),
