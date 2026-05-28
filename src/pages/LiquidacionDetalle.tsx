@@ -481,7 +481,10 @@ export default function LiquidacionDetalle() {
 
       <RegistrarPagoDialog
         open={pagoOpen}
-        onOpenChange={setPagoOpen}
+        onOpenChange={(open) => {
+          setPagoOpen(open);
+          if (!open) setSeleccionados(new Set());
+        }}
         liquidacionId={liq.id}
         contratoId={liq.contrato_id}
         totalCobrar={liq.total_cobrar}
@@ -492,7 +495,12 @@ export default function LiquidacionDetalle() {
         mediosPagoAceptados={contrato?.medios_pago_aceptados}
         destinoCobro={contrato?.destino_cobro}
         diaVencimiento={contrato?.dia_vencimiento}
+        conceptoIds={seleccionados.size > 0 ? Array.from(seleccionados) : undefined}
+        montoSugerido={seleccionados.size > 0
+          ? conceptos.filter(c => seleccionados.has(c.id)).reduce((s, c) => s + Number(c.monto || 0), 0)
+          : undefined}
       />
+
 
       {moraInfo && (
         <ConsultarMoraDialog
