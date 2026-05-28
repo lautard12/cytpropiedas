@@ -16,10 +16,21 @@ export default function Liquidaciones() {
   const navigate = useNavigate();
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [filtroPeriodo, setFiltroPeriodo] = useState('todos');
-
-  const { data: liquidaciones = [], isLoading } = useLiquidaciones();
-  const { data: contratos = [] } = useContratos();
   const { data: propiedades = [] } = usePropiedades();
+  const { data: inquilinos = [] } = useInquilinos();
+  const { data: allConceptos = [] } = useAllConceptos();
+
+  const conceptosPorLiq = allConceptos.reduce<Record<string, { total: number; cobrados: number; pendientes: string[] }>>((acc, c) => {
+    if (!c.aplica_al_inquilino) return acc;
+    if (!acc[c.liquidacion_id]) acc[c.liquidacion_id] = { total: 0, cobrados: 0, pendientes: [] };
+    acc[c.liquidacion_id].total += 1;
+    if (c.pago_id) acc[c.liquidacion_id].cobrados += 1;
+    else acc[c.liquidacion_id].pendientes.push(c.concepto);
+    return acc;
+  }, {});
+
+  if (isLoading) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
+
   const { data: inquilinos = [] } = useInquilinos();
 
   if (isLoading) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
