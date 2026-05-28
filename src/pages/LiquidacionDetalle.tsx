@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
+
 import {
   useLiquidacion, useContrato, usePropiedad, usePropietario, useInquilino,
   useConceptosLiquidacion, usePagosByLiquidacion, useLiquidaciones,
