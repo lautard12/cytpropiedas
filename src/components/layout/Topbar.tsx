@@ -20,7 +20,8 @@ const routeNames: Record<string, string> = {
   '/inquilinos': 'Inquilinos',
   '/reportes': 'Reportes',
   '/nuevo-contrato': 'Nuevo Contrato',
-  '/generar-liquidacion': 'Generar Liquidación',
+  '/generar-liquidacion': 'Generar Liquidaciones',
+  '/generar-liquidacion/nueva': 'Nueva Liquidación',
   '/mi-organizacion': 'Mi Organización',
   '/auditoria': 'Auditoría',
 };
