@@ -20,12 +20,15 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   useContratos, usePropiedades, usePropietarios, useInquilinos, useLiquidaciones,
+  usePreavisosAjuste,
   findById, formatCurrency,
 } from '@/hooks/useSupabaseData';
 import { Search, Calculator, Eye, CheckCircle2, AlertCircle, Clock, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { getEstadoAjuste } from '@/lib/ajustes';
+import { AjusteBadge } from '@/components/AjusteBadge';
 
 const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const PAGE_SIZE = 20;
