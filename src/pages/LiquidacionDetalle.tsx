@@ -41,7 +41,9 @@ export default function LiquidacionDetalle() {
   const [resolviendo, setResolviendo] = useState(false);
   const [acreditando, setAcreditando] = useState(false);
   const [anularPago, setAnularPago] = useState<{ id: string; monto: number } | null>(null);
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
+
   const { data: liq, isLoading } = useLiquidacion(id || '');
   const { data: contrato } = useContrato(liq?.contrato_id || '');
   const { data: propiedad } = usePropiedad(contrato?.propiedad_id || '');
