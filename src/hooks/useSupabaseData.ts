@@ -495,6 +495,20 @@ export function useConceptosLiquidacion(liquidacionId: string) {
   });
 }
 
+export function useAllConceptos() {
+  return useQuery({
+    queryKey: ['conceptos_liquidacion', 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('conceptos_liquidacion')
+        .select('id, liquidacion_id, monto, aplica_al_inquilino, pago_id, concepto');
+      if (error) throw error;
+      return data as ConceptoLiquidacion[];
+    },
+  });
+}
+
+
 export function usePagos() {
   return useQuery({
     queryKey: ['pagos'],
