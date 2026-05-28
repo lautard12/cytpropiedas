@@ -12,6 +12,7 @@ import {
   useLiquidacion, useContrato, usePropiedad, usePropietario, useInquilino,
   useConceptosLiquidacion, usePagosByLiquidacion, useLiquidaciones,
   useEventosPorPeriodo, useRendicionByLiquidacion, useConsultaMoraByLiquidacion,
+  useCobroComisionByLiquidacion,
   formatCurrency, formatDate,
 } from '@/hooks/useSupabaseData';
 import {
@@ -22,10 +23,12 @@ import {
 import RegistrarPagoDialog from '@/components/RegistrarPagoDialog';
 import AnularPagoDialog from '@/components/AnularPagoDialog';
 import RendirPropietarioDialog from '@/components/RendirPropietarioDialog';
+import CobrarComisionDialog from '@/components/CobrarComisionDialog';
 import ConsultarMoraDialog from '@/components/ConsultarMoraDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
+
 
 const TIPO_ICON: Record<string, React.ElementType> = {
   punitorio: AlertTriangle,
