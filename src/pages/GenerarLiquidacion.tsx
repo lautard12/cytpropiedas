@@ -42,6 +42,7 @@ export default function GenerarLiquidacion() {
   const { data: propiedades = [] } = usePropiedades();
   const { data: propietarios = [] } = usePropietarios();
   const { data: inquilinos = [] } = useInquilinos();
+  const { data: preavisos = [] } = usePreavisosAjuste();
 
   const contratosActivos = contratos.filter(c => c.estado === 'Activo' || c.estado === 'Por vencer');
 
