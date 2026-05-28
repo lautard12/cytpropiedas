@@ -158,6 +158,7 @@ export type Database = {
           estado: Database["public"]["Enums"]["estado_contrato"]
           expensas_extraordinarias: string
           expensas_ordinarias: string
+          fecha_ajuste_override: string | null
           fecha_fin: string
           fecha_inicio: string
           frecuencia_ajuste: string
@@ -193,6 +194,7 @@ export type Database = {
           estado?: Database["public"]["Enums"]["estado_contrato"]
           expensas_extraordinarias?: string
           expensas_ordinarias?: string
+          fecha_ajuste_override?: string | null
           fecha_fin: string
           fecha_inicio: string
           frecuencia_ajuste?: string
@@ -228,6 +230,7 @@ export type Database = {
           estado?: Database["public"]["Enums"]["estado_contrato"]
           expensas_extraordinarias?: string
           expensas_ordinarias?: string
+          fecha_ajuste_override?: string | null
           fecha_fin?: string
           fecha_inicio?: string
           frecuencia_ajuste?: string
