@@ -466,28 +466,59 @@ export default function LiquidacionDetalle() {
         </div>
 
         <div className="space-y-6">
-          <Card>
-            <CardHeader><CardTitle className="text-base">Resumen económico</CardTitle></CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Subtotal conceptos</span><span className="font-semibold">{formatCurrency(liq.subtotal)}</span></div>
-              <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Total a cobrar</span><span className="font-bold text-lg">{formatCurrency(liq.total_cobrar)}</span></div>
-              <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Cobrado</span><span className="text-status-success font-semibold">{formatCurrency(liq.total_cobrado)}</span></div>
-              <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Pendiente</span><span className={liq.pendiente > 0 ? 'text-status-danger font-semibold' : ''}>{formatCurrency(liq.pendiente)}</span></div>
-              <div className="h-px bg-border my-2"></div>
-              <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Comisión inmobiliaria</span><span className="text-status-info font-semibold">{formatCurrency(liq.comision_inmobiliaria)}</span></div>
-              {ivaComisionTotal > 0 && (
-                <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">IVA s/ comisión (facturado)</span><span className="text-status-info font-semibold">{formatCurrency(ivaComisionTotal)}</span></div>
-              )}
-              <div className="flex justify-between py-1.5 bg-muted/50 rounded px-2"><span className="font-semibold">Neto propietario</span><span className="font-bold">{formatCurrency(liq.neto_propietario)}</span></div>
-              {rendicion && (
-                <div className="mt-2 rounded-md border border-status-info/30 bg-status-info/5 p-2 text-xs space-y-0.5">
-                  <p className="font-semibold text-status-info">Rendición</p>
-                  <p>Acreditada: {formatDate(rendicion.fecha_acreditacion)}</p>
-                  {rendicion.fecha_transferencia && <p>Transferida: {formatDate(rendicion.fecha_transferencia)} · {rendicion.medio}{rendicion.referencia ? ` · ${rendicion.referencia}` : ''}</p>}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {(() => {
+            const esPropMode = ((liq as any).destino_cobro ?? 'Inmobiliaria') === 'Propietario';
+            const gastosReintegro = Number(cobroComision?.monto_gastos_reintegro || 0);
+            const ivaCobro = Number(cobroComision?.iva_comision || 0);
+            const totalCobrarProp = liq.comision_inmobiliaria + (ivaCobro || ivaComisionTotal) + gastosReintegro;
+            return (
+              <Card>
+                <CardHeader><CardTitle className="text-base">Resumen económico</CardTitle></CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Subtotal conceptos</span><span className="font-semibold">{formatCurrency(liq.subtotal)}</span></div>
+                  <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Total a cobrar al inquilino</span><span className="font-bold text-lg">{formatCurrency(liq.total_cobrar)}</span></div>
+                  <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">{esPropMode ? 'Informado como pagado' : 'Cobrado'}</span><span className="text-status-success font-semibold">{formatCurrency(liq.total_cobrado)}</span></div>
+                  <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Pendiente</span><span className={liq.pendiente > 0 ? 'text-status-danger font-semibold' : ''}>{formatCurrency(liq.pendiente)}</span></div>
+                  <div className="h-px bg-border my-2"></div>
+
+                  {!esPropMode && (
+                    <>
+                      <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Comisión inmobiliaria</span><span className="text-status-info font-semibold">{formatCurrency(liq.comision_inmobiliaria)}</span></div>
+                      {ivaComisionTotal > 0 && (
+                        <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">IVA s/ comisión (facturado)</span><span className="text-status-info font-semibold">{formatCurrency(ivaComisionTotal)}</span></div>
+                      )}
+                      <div className="flex justify-between py-1.5 bg-muted/50 rounded px-2"><span className="font-semibold">Neto propietario</span><span className="font-bold">{formatCurrency(liq.neto_propietario)}</span></div>
+                      {rendicion && (
+                        <div className="mt-2 rounded-md border border-status-info/30 bg-status-info/5 p-2 text-xs space-y-0.5">
+                          <p className="font-semibold text-status-info">Rendición</p>
+                          <p>Acreditada: {formatDate(rendicion.fecha_acreditacion)}</p>
+                          {rendicion.fecha_transferencia && <p>Transferida: {formatDate(rendicion.fecha_transferencia)} · {rendicion.medio}{rendicion.referencia ? ` · ${rendicion.referencia}` : ''}</p>}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {esPropMode && (
+                    <div className="rounded-md border border-status-warning/30 bg-status-warning/5 p-3 space-y-1.5">
+                      <p className="font-semibold text-status-warning text-xs uppercase tracking-wide">A cobrar al propietario</p>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Comisión inmobiliaria</span><span className="font-medium">{formatCurrency(liq.comision_inmobiliaria)}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">IVA s/ comisión</span><span className="font-medium">{formatCurrency(ivaCobro || ivaComisionTotal)}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Gastos a reintegrar</span><span className="font-medium">{formatCurrency(gastosReintegro)}</span></div>
+                      <div className="flex justify-between border-t border-status-warning/30 pt-1.5 mt-1.5"><span className="font-semibold">Total a cobrar</span><span className="font-bold">{formatCurrency(totalCobrarProp)}</span></div>
+                    </div>
+                  )}
+
+                  {esPropMode && cobroComision && (
+                    <div className={`mt-2 rounded-md border p-2 text-xs space-y-0.5 ${cobroComision.estado === 'Cobrada' ? 'border-status-success/30 bg-status-success/5' : 'border-status-warning/30 bg-status-warning/5'}`}>
+                      <p className={`font-semibold ${cobroComision.estado === 'Cobrada' ? 'text-status-success' : 'text-status-warning'}`}>Cobro de comisión · {cobroComision.estado}</p>
+                      {cobroComision.fecha_cobro && <p>Cobrada: {formatDate(cobroComision.fecha_cobro)} · {cobroComision.medio}{cobroComision.referencia ? ` · ${cobroComision.referencia}` : ''}</p>}
+                      {cobroComision.estado === 'Pendiente' && <p className="text-muted-foreground">Pendiente de cobrar al propietario.</p>}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
 
 
           <Card>
