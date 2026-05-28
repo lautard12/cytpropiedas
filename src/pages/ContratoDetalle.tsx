@@ -128,7 +128,7 @@ export default function ContratoDetalle() {
               <AlertTriangle className="h-4 w-4 mr-1 text-status-danger" /> Rescindir
             </Button>
           )}
-          <Button size="sm" onClick={() => navigate('/generar-liquidacion')}><Calculator className="h-4 w-4 mr-1" /> Generar liquidación</Button>
+          <Button size="sm" onClick={() => navigate(`/generar-liquidacion/nueva?contrato=${contrato.id}`)}><Calculator className="h-4 w-4 mr-1" /> Generar liquidación</Button>
         </div>
       </div>
 
