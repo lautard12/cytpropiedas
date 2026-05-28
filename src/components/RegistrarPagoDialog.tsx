@@ -210,38 +210,39 @@ export default function RegistrarPagoDialog({
               </p>
             )}
           </div>
+          {!esPagoDirecto && (
+            <div className="space-y-1.5">
+              <Label>Medio de pago *</Label>
+              <Select value={medioPago} onValueChange={setMedioPago}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {mediosDisponibles.map(m => (
+                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {destinoCobro && (
+                <p className="text-xs text-muted-foreground">
+                  Acuerdo: pagar a <strong>{destinoCobro}</strong>
+                  {mediosPagoAceptados && mediosPagoAceptados.length > 0 && (
+                    <> · Medios pactados: {mediosPagoAceptados.join(', ')}</>
+                  )}
+                </p>
+              )}
+              {!esTransferencia && (
+                <p className="text-xs text-muted-foreground">Sin facturación obligatoria — no se aplica IVA sobre la comisión.</p>
+              )}
+              {montoNum > 0 && montoNum < pendiente && (
+                <p className="text-xs text-status-warning flex items-start gap-1 mt-1">
+                  <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
+                  <span>Si el faltante se abona después del día {diaVencimiento ?? 10}, se podrán aplicar punitorios sobre ese saldo (previa consulta al propietario).</span>
+                </p>
+              )}
+            </div>
+          )}
 
-          <div className="space-y-1.5">
-            <Label>Medio de pago *</Label>
-            <Select value={medioPago} onValueChange={setMedioPago}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {mediosDisponibles.map(m => (
-                  <SelectItem key={m} value={m}>{m}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {destinoCobro && (
-              <p className="text-xs text-muted-foreground">
-                Acuerdo: pagar a <strong>{destinoCobro}</strong>
-                {mediosPagoAceptados && mediosPagoAceptados.length > 0 && (
-                  <> · Medios pactados: {mediosPagoAceptados.join(', ')}</>
-                )}
-              </p>
-            )}
-            {!esTransferencia && (
-              <p className="text-xs text-muted-foreground">Sin facturación obligatoria — no se aplica IVA sobre la comisión.</p>
-            )}
-            {montoNum > 0 && montoNum < pendiente && (
-              <p className="text-xs text-status-warning flex items-start gap-1 mt-1">
-                <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
-                <span>Si el faltante se abona después del día {diaVencimiento ?? 10}, se podrán aplicar punitorios sobre ese saldo (previa consulta al propietario).</span>
-              </p>
-            )}
-          </div>
-
-          {/* Facturación condicional */}
-          {esTransferencia && (
+          {/* Facturación condicional (solo modalidad Inmobiliaria) */}
+          {!esPagoDirecto && esTransferencia && (
             <div className="rounded-md border border-status-info/30 bg-status-info/5 p-3 space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="flex items-center gap-1.5 text-sm font-semibold">
@@ -275,6 +276,7 @@ export default function RegistrarPagoDialog({
               )}
             </div>
           )}
+
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
