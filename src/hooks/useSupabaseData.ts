@@ -558,9 +558,26 @@ export function useRendiciones() {
       const { data, error } = await (supabase as any)
         .from('rendiciones_propietario')
         .select('*')
-        .order('fecha_acreditacion', { ascending: false });
+    enabled: !!liquidacionId,
+  });
+}
+
+export function useCobroComisionByLiquidacion(liquidacionId: string) {
+  return useQuery({
+    queryKey: ['cobros_comision_propietario', 'liquidacion', liquidacionId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('cobros_comision_propietario')
+        .select('*')
+        .eq('liquidacion_id', liquidacionId)
+        .maybeSingle();
       if (error) throw error;
-      return (data ?? []) as Rendicion[];
+      return data as CobroComisionPropietario | null;
+    },
+    enabled: !!liquidacionId,
+  });
+}
+
     },
   });
 }
