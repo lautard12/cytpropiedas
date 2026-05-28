@@ -21,6 +21,7 @@ import PersonaDetalle from "./pages/PersonaDetalle";
 import Reportes from "./pages/Reportes";
 import NuevoContrato from "./pages/NuevoContrato";
 import GenerarLiquidacion from "./pages/GenerarLiquidacion";
+import BandejaLiquidaciones from "./pages/BandejaLiquidaciones";
 import MiOrganizacion from "./pages/MiOrganizacion";
 import Auditoria from "./pages/Auditoria";
 import NotFound from "./pages/NotFound";
