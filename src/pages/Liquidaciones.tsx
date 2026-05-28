@@ -97,6 +97,7 @@ export default function Liquidaciones() {
 
       <Card>
         <CardContent className="p-0">
+          <TooltipProvider delayDuration={150}>
           <Table>
             <TableHeader>
               <TableRow>
@@ -106,7 +107,7 @@ export default function Liquidaciones() {
                 <TableHead>Inquilino</TableHead>
                 <TableHead>Total a cobrar</TableHead>
                 <TableHead>Cobrado</TableHead>
-                <TableHead>Comisión</TableHead>
+                <TableHead className="w-40">Conceptos</TableHead>
                 <TableHead>Neto propietario</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead></TableHead>
@@ -117,6 +118,12 @@ export default function Liquidaciones() {
                 const ct = findById(contratos, l.contrato_id);
                 const prop = ct ? findById(propiedades, ct.propiedad_id) : undefined;
                 const inq = ct ? findById(inquilinos, ct.inquilino_id) : undefined;
+                const conc = conceptosPorLiq[l.id] || { total: 0, cobrados: 0, pendientes: [] };
+                const pct = conc.total > 0 ? (conc.cobrados / conc.total) * 100 : 0;
+                const barColor = conc.total === 0 ? 'bg-muted'
+                  : conc.cobrados === conc.total ? '[&>div]:bg-status-success'
+                  : conc.cobrados > 0 ? '[&>div]:bg-status-warning'
+                  : '[&>div]:bg-muted-foreground/40';
                 return (
                   <TableRow key={l.id} className="cursor-pointer" onClick={() => navigate(`/liquidaciones/${l.id}`)}>
                     <TableCell className="font-medium">{l.periodo_label}</TableCell>
@@ -125,7 +132,33 @@ export default function Liquidaciones() {
                     <TableCell>{inq?.nombre}</TableCell>
                     <TableCell>{formatCurrency(l.total_cobrar)}</TableCell>
                     <TableCell>{formatCurrency(l.total_cobrado)}</TableCell>
-                    <TableCell>{formatCurrency(l.comision_inmobiliaria)}</TableCell>
+                    <TableCell>
+                      {conc.total > 0 ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-medium">{conc.cobrados}/{conc.total}</span>
+                                {conc.pendientes.length > 0 && (
+                                  <span className="text-status-warning text-[10px]">Faltan {conc.pendientes.length}</span>
+                                )}
+                              </div>
+                              <Progress value={pct} className={`h-1.5 ${barColor}`} />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            {conc.pendientes.length === 0
+                              ? <p className="text-xs">Todos los conceptos cobrados</p>
+                              : <div className="text-xs space-y-0.5">
+                                  <p className="font-semibold mb-1">Pendientes:</p>
+                                  {conc.pendientes.map((p, i) => <p key={i}>• {p}</p>)}
+                                </div>}
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>{formatCurrency(l.neto_propietario)}</TableCell>
                     <TableCell><Badge className={estadoBadge(l.estado)}>{l.estado}</Badge></TableCell>
                     <TableCell><Button variant="ghost" size="sm"><Eye className="h-4 w-4" /></Button></TableCell>
@@ -134,8 +167,10 @@ export default function Liquidaciones() {
               })}
             </TableBody>
           </Table>
+          </TooltipProvider>
         </CardContent>
       </Card>
+
     </div>
   );
 }
