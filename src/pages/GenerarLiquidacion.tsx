@@ -9,12 +9,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useContratos, usePropiedades, usePropietarios, useInquilinos, findById, formatCurrency } from '@/hooks/useSupabaseData';
-import { ArrowLeft, Calculator, Save, Info, Plus, Trash2 } from 'lucide-react';
+import { useContratos, usePropiedades, usePropietarios, useInquilinos, usePreavisosAjuste, findById, formatCurrency } from '@/hooks/useSupabaseData';
+import { ArrowLeft, Calculator, Save, Info, Plus, Trash2, AlertTriangle, Bell } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { ContratoCombobox } from '@/components/ContratoCombobox';
+import { getEstadoAjuste } from '@/lib/ajustes';
+import { AjusteBadge } from '@/components/AjusteBadge';
 
 const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
