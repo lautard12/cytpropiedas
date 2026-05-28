@@ -192,7 +192,7 @@ export default function BandejaLiquidaciones() {
         comision_inmobiliaria: Number(r.contrato.alquiler_base) * (r.contrato.comision_porcentaje || 0) / 100,
         saldo_anterior: 0,
         neto_propietario: Number(r.contrato.alquiler_base) - (Number(r.contrato.alquiler_base) * (r.contrato.comision_porcentaje || 0) / 100),
-        estado: 'Pendiente' as const,
+        estado: 'Pendiente' as any,
         observaciones: 'Generada en lote — completar servicios y ajustes desde el detalle.',
       }));
 
