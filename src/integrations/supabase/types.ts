@@ -67,26 +67,32 @@ export type Database = {
       conceptos_liquidacion: {
         Row: {
           aplica_al_inquilino: boolean
+          cobrado_at: string | null
           concepto: string
           id: string
           liquidacion_id: string
           monto: number
+          pago_id: string | null
           responsable: string
         }
         Insert: {
           aplica_al_inquilino?: boolean
+          cobrado_at?: string | null
           concepto: string
           id?: string
           liquidacion_id: string
           monto?: number
+          pago_id?: string | null
           responsable?: string
         }
         Update: {
           aplica_al_inquilino?: boolean
+          cobrado_at?: string | null
           concepto?: string
           id?: string
           liquidacion_id?: string
           monto?: number
+          pago_id?: string | null
           responsable?: string
         }
         Relationships: [
