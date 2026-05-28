@@ -97,10 +97,11 @@ export default function RegistrarPagoDialog({
       toast({ title: 'Atención', description: 'El monto supera el pendiente. Verificá el importe.', variant: 'destructive' });
       return;
     }
-    if (debeFacturar && !numeroFactura.trim()) {
+    if (!esPagoDirecto && debeFacturar && !numeroFactura.trim()) {
       toast({ title: 'Falta el número de factura', description: 'Ingresá el número de la factura A o B emitida.', variant: 'destructive' });
       return;
     }
+
 
     setLoading(true);
     try {
