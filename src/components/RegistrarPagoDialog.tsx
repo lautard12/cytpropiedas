@@ -168,12 +168,18 @@ export default function RegistrarPagoDialog({
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" /> Registrar pago
+            <CreditCard className="h-5 w-5" /> {esPagoDirecto ? 'Registrar pago directo al propietario' : 'Registrar pago'}
           </DialogTitle>
           <DialogDescription>
             Liquidación {periodoLabel} · Pendiente: <span className="font-semibold text-foreground">{formatCurrency(pendiente)}</span>
+            {esPagoDirecto && (
+              <span className="block mt-2 rounded-md border border-status-warning/40 bg-status-warning/10 px-2 py-1.5 text-xs text-foreground">
+                Este registro <strong>no representa ingreso de dinero a la inmobiliaria</strong>. El inquilino pagó directamente al propietario; se imputan los conceptos pero no afecta caja/banco.
+              </span>
+            )}
           </DialogDescription>
         </DialogHeader>
+
 
         <div className="space-y-4 py-2">
           <div className="grid grid-cols-3 gap-2 text-center text-xs">
