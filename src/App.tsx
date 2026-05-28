@@ -21,6 +21,7 @@ import PersonaDetalle from "./pages/PersonaDetalle";
 import Reportes from "./pages/Reportes";
 import NuevoContrato from "./pages/NuevoContrato";
 import GenerarLiquidacion from "./pages/GenerarLiquidacion";
+import BandejaLiquidaciones from "./pages/BandejaLiquidaciones";
 import MiOrganizacion from "./pages/MiOrganizacion";
 import Auditoria from "./pages/Auditoria";
 import NotFound from "./pages/NotFound";
@@ -61,7 +62,8 @@ const App = () => (
               <Route path="/inquilinos/:id" element={<RedirectToPersona rol="inquilino" />} />
               <Route path="/reportes" element={<Reportes />} />
               <Route path="/nuevo-contrato" element={<NuevoContrato />} />
-              <Route path="/generar-liquidacion" element={<GenerarLiquidacion />} />
+              <Route path="/generar-liquidacion" element={<BandejaLiquidaciones />} />
+              <Route path="/generar-liquidacion/nueva" element={<GenerarLiquidacion />} />
               <Route path="/mi-organizacion" element={<ProtectedRoute requireAdmin><MiOrganizacion /></ProtectedRoute>} />
               <Route path="/auditoria" element={<ProtectedRoute requireAdmin><Auditoria /></ProtectedRoute>} />
             </Route>

@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ function buildPeriodos() {
 
 export default function GenerarLiquidacion() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
@@ -44,8 +45,10 @@ export default function GenerarLiquidacion() {
 
   const periodos = useMemo(() => buildPeriodos(), []);
   const periodoActual = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-  const [contratoId, setContratoId] = useState('');
-  const [periodo, setPeriodo] = useState(periodoActual);
+  const qpContrato = searchParams.get('contrato') || '';
+  const qpPeriodo = searchParams.get('periodo') || periodoActual;
+  const [contratoId, setContratoId] = useState(qpContrato);
+  const [periodo, setPeriodo] = useState(qpPeriodo);
   const [alquiler, setAlquiler] = useState('');
   const [expOrdinarias, setExpOrdinarias] = useState('');
   const [expExtraordinarias, setExpExtraordinarias] = useState('');
@@ -126,6 +129,17 @@ export default function GenerarLiquidacion() {
 
     setUltimaLiq({ periodo_label: ultLiq.periodo_label, alquiler: ct.alquiler_base });
   };
+
+  // Auto-cargar contrato si vino por ?contrato=
+  const autoLoadedRef = useRef(false);
+  useEffect(() => {
+    if (autoLoadedRef.current) return;
+    if (!qpContrato) return;
+    if (!contratos.length) return;
+    if (!contratos.find(c => c.id === qpContrato)) return;
+    autoLoadedRef.current = true;
+    handleContratoChange(qpContrato);
+  }, [qpContrato, contratos]);
 
   const nums = useMemo(() => {
     const n = (v: string) => Number(v) || 0;

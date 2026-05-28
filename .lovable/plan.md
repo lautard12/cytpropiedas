@@ -1,80 +1,73 @@
 
-# Plan: Notificación de cobro, mora con autorización y medios de pago pactados
+## Problema
 
-Basado en tus respuestas, cubrimos 4 aspectos del circuito de cobranza.
+El combobox + selector de período en `/generar-liquidacion` obliga a "adivinar" el contrato antes de ver nada. Con 20+ contratos ya cuesta; con 100+ es inviable. No muestra qué contratos ya están liquidados del mes ni cuáles faltan.
 
----
+## Solución propuesta
 
-## 1) Medios de pago pactados por contrato
+Reemplazar la pantalla actual por una **bandeja de liquidación mensual**: una tabla visual, paginada y filtrable que muestra **todos los contratos activos** y el **estado del período seleccionado**. El usuario elige el mes una sola vez arriba, y desde ahí ve de un vistazo qué falta liquidar.
 
-Hoy el `RegistrarPagoDialog` muestra los 5 medios siempre. Como cada inquilino tiene un acuerdo fijo, lo pactamos en el contrato y filtramos los medios al registrar pagos.
+### Layout
 
-**DB (`contratos`):**
-- `medios_pago_aceptados text[]` — array con los medios pactados (ej: `{Transferencia, Efectivo}`).
-- `destino_cobro text` — `'Inmobiliaria' | 'Propietario'` (a quién va dirigida la transferencia).
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│ Generar liquidaciones                                               │
+│                                                                     │
+│ Período: [ Noviembre 2025 ▾ ]   ← mes/año pickeable (default: actual)│
+│                                                                     │
+│ 🔍 [Buscar dirección / inquilino / código]   Estado: [Todos ▾]      │
+│ Tipo: [Todos ▾]   Propietario: [Todos ▾]                            │
+│                                                                     │
+│ Resumen del período: 18 pendientes · 4 generadas · 1 en mora        │
+│                                                                     │
+│ ┌─ ☐  Contrato         Propiedad          Inquilino   Alquiler  Estado período   Acción ─┐
+│ │  ☐  CT-2025-101 (V)  Bv. Oroño 1234 3°A F. Paz      $385.000  ● Pendiente      [Liquidar]│
+│ │  ☐  CT-2025-102 (C)  Pellegrini 2580   C. Ríos     $1.250.000 ✓ Generada #142  [Ver]    │
+│ │  ☐  CT-2024-008 (V)  Salta 1450 5°B    N. Acuña     $420.000  ⚠ En mora        [Liquidar]│
+│ │  ...                                                                                     │
+│ └────────────────────────────────────────────────────────────────────────────────────────┘
+│                                                                     │
+│ [☑ Seleccionar todos pendientes]   [Generar 18 liquidaciones ▾]    │
+│                                                                     │
+│           « 1  2  3  4  5  »      Mostrando 20 de 87                │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
-**UI:**
-- `NuevoContrato` paso "Reglas": multi-checkbox de medios aceptados + radio destino del cobro.
-- `RegistrarPagoDialog`: el `Select` de medio se filtra por los pactados. Cartel "Acuerdo: pagar a {Inmobiliaria/Propietario}".
-- `ContratoDetalle`: mostrar medios y destino en el resumen de configuración.
+### Comportamiento
 
----
+- **Período arriba, una vez**. Cambiar el mes recalcula el estado de toda la tabla.
+- **Cada fila = un contrato activo** con su estado para ese período:
+  - `Pendiente` (sin liquidación generada)
+  - `Generada` (link al detalle de la liquidación)
+  - `Cobrada` / `Parcial` / `En mora`
+- **Acción primaria por fila**:
+  - Si está pendiente → botón **Liquidar** abre un modal/drawer con el formulario actual de "Generar liquidación" ya prellenado (contrato + período). Confirma y vuelve a la lista actualizada.
+  - Si ya está generada → botón **Ver** lleva al detalle.
+- **Búsqueda y filtros**: texto libre (dirección, inquilino, código, propietario), filtro por estado del período, tipo de contrato y propietario.
+- **Acción masiva**: checkbox por fila + "Generar liquidaciones seleccionadas" para procesar todos los pendientes del mes en un click (modal de confirmación con totales estimados).
+- **Paginación** server-side de 20 por página + contador.
+- **Estado vacío** amigable cuando todos están liquidados ("✓ Todos los contratos del mes están liquidados").
 
-## 2) Mora — flujo con autorización del propietario
+### Ruta y navegación
 
-Hoy hay un botón "Aplicar punitorios" directo. Pero la realidad es: **vencimiento siempre día 10, sin gracia**, y **antes de aplicar mora hay que consultar al propietario**.
+- La ruta actual `/generar-liquidacion` pasa a renderizar esta nueva bandeja.
+- El formulario detallado que hoy ocupa la pantalla se convierte en un **drawer/dialog reutilizable** (`<GenerarLiquidacionDialog contratoId periodo />`) que se abre desde la bandeja o desde el detalle del contrato.
+- Botón "Nueva liquidación" en `/liquidaciones` lleva acá.
 
-**DB:**
-- Nueva tabla `consultas_mora`:
-  ```
-  id, liquidacion_id, contrato_id, fecha_consulta,
-  monto_estimado, dias_atraso,
-  estado text ('Pendiente' | 'Aprobada' | 'Rechazada'),
-  fecha_respuesta, observaciones, decidido_por
-  ```
-- `dias_gracia_mora = 0` por defecto (ya está).
+### Por qué esta solución
 
-**Funciones SQL:**
-- `solicitar_autorizacion_mora(_liq_id)` — crea consulta `Pendiente` + evento.
-- `resolver_consulta_mora(_consulta_id, _aprobada bool, _obs)` — si aprobada llama a `aplicar_punitorios`; si rechazada solo registra evento "punitorio condonado".
+- **Cero búsqueda a ciegas**: el usuario ve qué falta, no tiene que recordarlo.
+- **Visión operativa mensual**: la tabla refleja el "trabajo del mes" — es el flujo real de una administración.
+- **Escala a cientos de contratos** vía paginación + filtros, sin perder el combobox como acceso directo (queda dentro del dialog).
+- **Bulk action** ataca el caso real: a fin de mes querés liquidar todo lo activo de una.
 
-**UI en `LiquidacionDetalle`** (reemplaza el alert de mora actual):
-- **Sin consulta:** botón "Consultar al propietario" (dialog con resumen + observación).
-- **Pendiente:** badge "Esperando respuesta del propietario" + botones "Aprobar" / "Rechazar".
-- **Aprobada:** ejecuta `aplicar_punitorios` y muestra el concepto agregado.
-- **Rechazada:** muestra "Punitorio condonado por el propietario" con fecha y observación.
+## Detalles técnicos
 
----
+- Nueva página `src/pages/GenerarLiquidaciones.tsx` (plural) reemplaza la actual en la ruta `/generar-liquidacion`.
+- Mover el formulario actual a `src/components/GenerarLiquidacionDialog.tsx` (drawer en mobile, dialog en desktop).
+- Hook nuevo `useContratosConEstadoPeriodo(periodo)` que cruza `contratos` activos con `liquidaciones` del período y devuelve estado calculado.
+- Paginación client-side por ahora (con 87 contratos basta); listo para mover a server-side cuando crezca.
+- Reusar `ContratoCombobox` dentro del dialog para casos de "liquidar otro contrato" desde el detalle.
+- Filtros con estado en URL (`?periodo=2025-11&estado=pendiente`) para compartir/recargar.
 
-## 3) Notificación al inquilino — solo WhatsApp (manual)
-
-**Sin email por ahora** (lo dejamos para una siguiente etapa).
-
-**UI:**
-- Botón "Avisar por WhatsApp" en `LiquidacionDetalle` cuando estado es `Pendiente` o `Parcial`.
-- Genera link `https://wa.me/{telefono}?text={mensaje}` con plantilla:
-  > Hola {inquilino}, te recordamos que la liquidación de {periodo} de {direccion} vence el día {dia_venc}. Total: {monto}. Saldo pendiente: {pendiente}. Gracias!
-- Toma el teléfono del inquilino (`personas.telefono`); si no hay, deshabilita con tooltip.
-- Registra evento `notificacion_enviada` (canal: WhatsApp) en `eventos_contrato` para tener trazabilidad de avisos enviados.
-
----
-
-## 4) Pagos parciales — ajuste menor
-
-Hoy ya soporta pagos parciales (estado `Parcial`). Como aclaraste que **no es habitual y la mora se aplica solo sobre el faltante** (que ya es lo que hace), agrego solo:
-- En el dialog de pago, cuando se ingresa monto parcial: aclaración "Si el faltante se abona después del día {dia_venc}, se podrán aplicar punitorios sobre ese saldo (previa consulta al propietario)".
-- En el alert de mora: mostrar la fecha del último pago parcial confirmado para contexto.
-
----
-
-## Orden de implementación
-
-1. **Migración DB:** columnas en `contratos` (medios + destino), tabla `consultas_mora`, funciones `solicitar_autorizacion_mora` y `resolver_consulta_mora`.
-2. **Medios pactados:** UI en `NuevoContrato`, `RegistrarPagoDialog` y `ContratoDetalle`.
-3. **Mora con autorización:** rehacer alert en `LiquidacionDetalle` + nuevo `ConsultarMoraDialog`.
-4. **WhatsApp:** botón + generación de link + evento de auditoría.
-5. **Ajustes menores en pagos parciales.**
-
----
-
-¿Avanzamos?
+Si te cierra, lo armo así. Si querés cambiar algo (ej: que el período sea por fila en vez de global, o sacar la acción masiva), avisame antes de implementar.
