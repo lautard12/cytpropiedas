@@ -6,8 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useLiquidaciones, useContratos, usePropiedades, useInquilinos, findById, formatCurrency } from '@/hooks/useSupabaseData';
+import { useLiquidaciones, useContratos, usePropiedades, useInquilinos, useAllConceptos, findById, formatCurrency } from '@/hooks/useSupabaseData';
+import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Eye } from 'lucide-react';
+
 
 export default function Liquidaciones() {
   const navigate = useNavigate();
