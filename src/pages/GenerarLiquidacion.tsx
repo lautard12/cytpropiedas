@@ -404,10 +404,11 @@ export default function GenerarLiquidacion() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-base">Conceptos adicionales</CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">Reparaciones, plomería, cerrajería, gastos puntuales del período.</p>
+                <p className="text-xs text-muted-foreground mt-1">Reparaciones, plomería, cerrajería, gastos puntuales del período. Para gastos con lógica de reintegro o vinculados a un descuento al propietario, usá <strong>"Agregar gasto / reparación"</strong> en el detalle de la liquidación una vez generada.</p>
               </div>
               <Button variant="outline" size="sm" onClick={addExtra}><Plus className="h-4 w-4 mr-1" /> Agregar</Button>
             </CardHeader>
+
             <CardContent>
               {extras.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">Sin conceptos adicionales. Usá "Agregar" para sumar gastos puntuales (ej: reparación caldera).</p>
