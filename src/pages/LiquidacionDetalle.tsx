@@ -657,6 +657,17 @@ export default function LiquidacionDetalle() {
           monto={anularPago.monto}
         />
       )}
+
+      {liq && contrato && (
+        <ConceptoGastoDialog
+          open={gastoOpen}
+          onOpenChange={setGastoOpen}
+          contratoId={contrato.id}
+          liquidacionId={liq.id}
+          conceptosExistentes={conceptos}
+        />
+      )}
     </div>
+
   );
 }
