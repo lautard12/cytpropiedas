@@ -47,6 +47,8 @@ export default function LiquidacionDetalle() {
   const [rendirOpen, setRendirOpen] = useState(false);
   const [cobrarOpen, setCobrarOpen] = useState(false);
   const [consultaOpen, setConsultaOpen] = useState(false);
+  const [gastoOpen, setGastoOpen] = useState(false);
+
   const [resolviendo, setResolviendo] = useState(false);
   const [acreditando, setAcreditando] = useState(false);
   const [anularPago, setAnularPago] = useState<{ id: string; monto: number } | null>(null);
