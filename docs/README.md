@@ -39,6 +39,7 @@ liquidaciones mensuales y cobranzas.
 - [`flujos/05-ajustes-icl-ipc.md`](./flujos/05-ajustes-icl-ipc.md)
 - [`flujos/06-cierre-contrato.md`](./flujos/06-cierre-contrato.md)
 - [`flujos/07-deteccion-duplicados-personas.md`](./flujos/07-deteccion-duplicados-personas.md)
+- [`flujos/08-gastos-y-arreglos.md`](./flujos/08-gastos-y-arreglos.md) — Quién paga cada arreglo y cómo se carga en la liquidación.
 
 ### 6. Pantallas
 - [`04-pantallas.md`](./04-pantallas.md) — Mapa de rutas, propósito, datos consumidos.
