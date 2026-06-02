@@ -509,11 +509,31 @@ export default function LiquidacionDetalle() {
               <Card>
                 <CardHeader><CardTitle className="text-base">Resumen económico</CardTitle></CardHeader>
                 <CardContent className="space-y-2 text-sm">
-                  <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Subtotal conceptos</span><span className="font-semibold">{formatCurrency(liq.subtotal)}</span></div>
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Inquilino</p>
+                  <div className="flex justify-between py-1 border-b"><span className="text-muted-foreground">Subtotal a cobrar al inquilino</span><span className="font-semibold">{formatCurrency(desglose.cobrarInq)}</span></div>
+                  {(desglose.reintInq + desglose.reintProp) > 0 && (
+                    <div className="flex justify-between py-1 border-b"><span className="text-muted-foreground">Reintegros al inquilino</span><span className="font-semibold text-status-success">−{formatCurrency(desglose.reintInq + desglose.reintProp)}</span></div>
+                  )}
+                  {Number(liq.saldo_anterior || 0) !== 0 && (
+                    <div className="flex justify-between py-1 border-b"><span className="text-muted-foreground">Saldo anterior</span><span className="font-semibold">{formatCurrency(liq.saldo_anterior)}</span></div>
+                  )}
                   <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Total a cobrar al inquilino</span><span className="font-bold text-lg">{formatCurrency(liq.total_cobrar)}</span></div>
-                  <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">{esPropMode ? 'Informado como pagado' : 'Cobrado'}</span><span className="text-status-success font-semibold">{formatCurrency(liq.total_cobrado)}</span></div>
-                  <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Pendiente</span><span className={liq.pendiente > 0 ? 'text-status-danger font-semibold' : ''}>{formatCurrency(liq.pendiente)}</span></div>
+                  <div className="flex justify-between py-1 border-b"><span className="text-muted-foreground">{esPropMode ? 'Informado como pagado' : 'Cobrado'}</span><span className="text-status-success font-semibold">{formatCurrency(liq.total_cobrado)}</span></div>
+                  <div className="flex justify-between py-1 border-b"><span className="text-muted-foreground">Pendiente</span><span className={liq.pendiente > 0 ? 'text-status-danger font-semibold' : ''}>{formatCurrency(liq.pendiente)}</span></div>
                   <div className="h-px bg-border my-2"></div>
+
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">{esPropMode ? 'Propietario / Inmobiliaria' : 'Propietario'}</p>
+                  {desglose.gastosAdelantadosInmob > 0 && (
+                    <div className="flex justify-between py-1 border-b"><span className="text-muted-foreground">Gastos adelantados por inmobiliaria</span><span className="font-medium">{formatCurrency(desglose.gastosAdelantadosInmob)}</span></div>
+                  )}
+                  {desglose.gastosDescontables > 0 && (
+                    <div className="flex justify-between py-1 border-b"><span className="text-muted-foreground">Gastos a cargo del propietario (a descontar)</span><span className="font-medium">{formatCurrency(desglose.gastosDescontables)}</span></div>
+                  )}
+                  {desglose.reintProp > 0 && (
+                    <div className="flex justify-between py-1 border-b"><span className="text-muted-foreground">A reintegrar al propietario</span><span className="font-medium text-status-success">{formatCurrency(desglose.reintProp)}</span></div>
+                  )}
+
+
 
                   {!esPropMode && (
                     <>
