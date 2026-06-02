@@ -400,7 +400,22 @@ export default function GenerarLiquidacion() {
             </CardContent>
           </Card>
 
+          {contrato && pendientesContrato.filter(p => p.contrato_id === contrato.id && p.estado === 'Pendiente').length > 0 && (
+            <Alert className="border-status-info/40 bg-status-info/5">
+              <Info className="h-4 w-4 text-status-info" />
+              <AlertDescription>
+                <div className="font-medium mb-1">Conceptos pendientes del contrato que se aplicarán automáticamente:</div>
+                <ul className="text-sm list-disc ml-4">
+                  {pendientesContrato.filter(p => p.contrato_id === contrato.id && p.estado === 'Pendiente').map(p => (
+                    <li key={p.id}>{p.concepto} — {formatCurrency(p.monto)} <span className="text-muted-foreground">({p.tipo_impacto})</span></li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+
           <Card>
+
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-base">Conceptos adicionales</CardTitle>
