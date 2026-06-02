@@ -24,7 +24,10 @@ import RegistrarPagoDialog from '@/components/RegistrarPagoDialog';
 import AnularPagoDialog from '@/components/AnularPagoDialog';
 import RendirPropietarioDialog from '@/components/RendirPropietarioDialog';
 import CobrarComisionDialog from '@/components/CobrarComisionDialog';
+import ConceptoGastoDialog from '@/components/ConceptoGastoDialog';
 import ConsultarMoraDialog from '@/components/ConsultarMoraDialog';
+import { Plus, Wrench } from 'lucide-react';
+
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
