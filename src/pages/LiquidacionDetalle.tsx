@@ -75,6 +75,29 @@ export default function LiquidacionDetalle() {
     [pagos]
   );
 
+  // Desglose por tipo_impacto
+  const desglose = useMemo(() => {
+    const sum = (pred: (c: typeof conceptos[number]) => boolean) =>
+      conceptos.filter(pred).reduce((s, c) => s + Number(c.monto || 0), 0);
+    const cobrarInq = sum(c => (c as any).tipo_impacto === 'cobrar_al_inquilino');
+    const reintInq = sum(c => (c as any).tipo_impacto === 'reintegrar_al_inquilino');
+    const reintProp = sum(c => (c as any).tipo_impacto === 'reintegrar_al_propietario');
+    // gastos descontables: descontar_al_propietario MENOS los compensados por un reintegrar_al_inquilino vinculado
+    const compensadosIds = new Set(
+      conceptos
+        .filter(c => (c as any).tipo_impacto === 'reintegrar_al_inquilino' && (c as any).concepto_relacionado_id)
+        .map(c => (c as any).concepto_relacionado_id as string)
+    );
+    const gastosDescontables = conceptos
+      .filter(c => (c as any).tipo_impacto === 'descontar_al_propietario' && !compensadosIds.has(c.id))
+      .reduce((s, c) => s + Number(c.monto || 0), 0);
+    const gastosAdelantadosInmob = conceptos
+      .filter(c => (c as any).tipo_impacto === 'descontar_al_propietario')
+      .reduce((s, c) => s + Number(c.monto || 0), 0);
+    return { cobrarInq, reintInq, reintProp, gastosDescontables, gastosAdelantadosInmob };
+  }, [conceptos]);
+
+
   // Días de mora estimados
   const moraInfo = useMemo(() => {
     if (!liq || !contrato || liq.pendiente <= 0) return null;
