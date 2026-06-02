@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useContratos, usePropiedades, usePropietarios, useInquilinos, usePreavisosAjuste, findById, formatCurrency } from '@/hooks/useSupabaseData';
+import { useContratos, usePropiedades, usePropietarios, useInquilinos, usePreavisosAjuste, useConceptosPendientes, findById, formatCurrency } from '@/hooks/useSupabaseData';
 import { ArrowLeft, Calculator, Save, Info, Plus, Trash2, AlertTriangle, Bell } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,6 +43,8 @@ export default function GenerarLiquidacion() {
   const { data: propietarios = [] } = usePropietarios();
   const { data: inquilinos = [] } = useInquilinos();
   const { data: preavisos = [] } = usePreavisosAjuste();
+  const { data: pendientesContrato = [] } = useConceptosPendientes(undefined);
+
 
   const contratosActivos = contratos.filter(c => c.estado === 'Activo' || c.estado === 'Por vencer');
 
@@ -181,7 +183,13 @@ export default function GenerarLiquidacion() {
       if (liqErr) throw liqErr;
 
       // Insert conceptos (solo los que tienen monto > 0)
-      const conceptos = [
+      const mapImpacto = (resp: string): { tipo_impacto: string; responsable: string } => {
+        if (resp === 'Inquilino') return { tipo_impacto: 'cobrar_al_inquilino', responsable: 'Inquilino' };
+        if (resp === 'Propietario') return { tipo_impacto: 'descontar_al_propietario', responsable: 'Propietario' };
+        return { tipo_impacto: 'cobrar_al_inquilino', responsable: resp || 'Inquilino' };
+      };
+
+      const base = [
         { concepto: 'Alquiler', monto: n(alquiler), responsable: 'Inquilino' },
         { concepto: 'Expensas ordinarias', monto: n(expOrdinarias), responsable: contrato.expensas_ordinarias },
         { concepto: 'Expensas extraordinarias', monto: n(expExtraordinarias), responsable: contrato.expensas_extraordinarias },
@@ -192,20 +200,70 @@ export default function GenerarLiquidacion() {
         { concepto: 'Aguas Santafesinas', monto: n(aguasMonto), responsable: 'Inquilino' },
         { concepto: 'Seguro', monto: n(seguroMonto), responsable: contrato.seguro },
         { concepto: 'Ajustes', monto: n(ajustes), responsable: 'Inquilino' },
-        { concepto: 'Descuentos', monto: -n(descuentos), responsable: 'Inquilino' },
-        { concepto: 'Saldo anterior', monto: n(saldoAnterior), responsable: 'Inquilino' },
         ...extras
-          .filter(e => e.concepto.trim() && n(e.monto) !== 0)
+          .filter(e => e.concepto.trim() && n(e.monto) > 0)
           .map(e => ({ concepto: e.concepto.trim(), monto: n(e.monto), responsable: e.responsable })),
-      ].filter(c => c.monto !== 0).map(c => ({ ...c, liquidacion_id: liq.id, aplica_al_inquilino: c.responsable === 'Inquilino' }));
+      ]
+        .filter(c => c.monto > 0)
+        .map(c => {
+          const m = mapImpacto(c.responsable);
+          return {
+            liquidacion_id: liq.id,
+            concepto: c.concepto,
+            monto: c.monto,
+            responsable: m.responsable,
+            tipo_impacto: m.tipo_impacto,
+            pagado_por: m.tipo_impacto === 'descontar_al_propietario' ? 'Inmobiliaria' : 'Pendiente',
+            periodo_impacto: 'Actual',
+          };
+        });
 
-      if (conceptos.length > 0) {
-        const { error: cErr } = await supabase.from('conceptos_liquidacion').insert(conceptos);
+      // Descuentos se cargan como reintegrar_al_inquilino (monto positivo)
+      if (n(descuentos) > 0) {
+        base.push({
+          liquidacion_id: liq.id,
+          concepto: 'Descuentos',
+          monto: n(descuentos),
+          responsable: 'Inquilino',
+          tipo_impacto: 'reintegrar_al_inquilino',
+          pagado_por: 'Pendiente',
+          periodo_impacto: 'Actual',
+        });
+      }
+
+      if (base.length > 0) {
+        const { error: cErr } = await supabase.from('conceptos_liquidacion').insert(base as any);
         if (cErr) throw cErr;
       }
 
+      // Aplicar conceptos pendientes del contrato → insertarlos en la nueva liquidación y marcarlos Aplicado
+      const pendientesAAplicar = pendientesContrato.filter(p => p.contrato_id === contrato.id && p.estado === 'Pendiente');
+      if (pendientesAAplicar.length > 0) {
+        const filasPend = pendientesAAplicar.map(p => ({
+          liquidacion_id: liq.id,
+          concepto: p.concepto,
+          monto: p.monto,
+          responsable: p.tipo_impacto === 'cobrar_al_inquilino' || p.tipo_impacto === 'reintegrar_al_inquilino' ? 'Inquilino' : 'Propietario',
+          tipo_impacto: p.tipo_impacto,
+          pagado_por: p.pagado_por,
+          periodo_impacto: 'Actual',
+          comprobante_url: p.comprobante_url ?? null,
+          observaciones: p.observaciones,
+        }));
+        const { error: pe } = await supabase.from('conceptos_liquidacion').insert(filasPend as any);
+        if (pe) throw pe;
+        const ids = pendientesAAplicar.map(p => p.id);
+        await supabase
+          .from('conceptos_pendientes_contrato' as any)
+          .update({ estado: 'Aplicado', liquidacion_aplicada_id: liq.id, fecha_aplicacion: new Date().toISOString().split('T')[0] })
+          .in('id', ids);
+      }
+
+
       queryClient.invalidateQueries({ queryKey: ['liquidaciones'] });
       queryClient.invalidateQueries({ queryKey: ['conceptos_liquidacion'] });
+      queryClient.invalidateQueries({ queryKey: ['conceptos_pendientes_contrato'] });
+
 
       toast({ title: estado === 'borrador' ? 'Borrador guardado' : 'Liquidación generada', description: `Liquidación del contrato ${contrato.codigo} — ${periodoLabel}` });
       navigate('/liquidaciones');
@@ -342,14 +400,30 @@ export default function GenerarLiquidacion() {
             </CardContent>
           </Card>
 
+          {contrato && pendientesContrato.filter(p => p.contrato_id === contrato.id && p.estado === 'Pendiente').length > 0 && (
+            <Alert className="border-status-info/40 bg-status-info/5">
+              <Info className="h-4 w-4 text-status-info" />
+              <AlertDescription>
+                <div className="font-medium mb-1">Conceptos pendientes del contrato que se aplicarán automáticamente:</div>
+                <ul className="text-sm list-disc ml-4">
+                  {pendientesContrato.filter(p => p.contrato_id === contrato.id && p.estado === 'Pendiente').map(p => (
+                    <li key={p.id}>{p.concepto} — {formatCurrency(p.monto)} <span className="text-muted-foreground">({p.tipo_impacto})</span></li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+
           <Card>
+
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-base">Conceptos adicionales</CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">Reparaciones, plomería, cerrajería, gastos puntuales del período.</p>
+                <p className="text-xs text-muted-foreground mt-1">Reparaciones, plomería, cerrajería, gastos puntuales del período. Para gastos con lógica de reintegro o vinculados a un descuento al propietario, usá <strong>"Agregar gasto / reparación"</strong> en el detalle de la liquidación una vez generada.</p>
               </div>
               <Button variant="outline" size="sm" onClick={addExtra}><Plus className="h-4 w-4 mr-1" /> Agregar</Button>
             </CardHeader>
+
             <CardContent>
               {extras.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">Sin conceptos adicionales. Usá "Agregar" para sumar gastos puntuales (ej: reparación caldera).</p>

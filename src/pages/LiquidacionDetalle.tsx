@@ -24,7 +24,10 @@ import RegistrarPagoDialog from '@/components/RegistrarPagoDialog';
 import AnularPagoDialog from '@/components/AnularPagoDialog';
 import RendirPropietarioDialog from '@/components/RendirPropietarioDialog';
 import CobrarComisionDialog from '@/components/CobrarComisionDialog';
+import ConceptoGastoDialog from '@/components/ConceptoGastoDialog';
 import ConsultarMoraDialog from '@/components/ConsultarMoraDialog';
+import { Wrench } from 'lucide-react';
+
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
@@ -44,6 +47,8 @@ export default function LiquidacionDetalle() {
   const [rendirOpen, setRendirOpen] = useState(false);
   const [cobrarOpen, setCobrarOpen] = useState(false);
   const [consultaOpen, setConsultaOpen] = useState(false);
+  const [gastoOpen, setGastoOpen] = useState(false);
+
   const [resolviendo, setResolviendo] = useState(false);
   const [acreditando, setAcreditando] = useState(false);
   const [anularPago, setAnularPago] = useState<{ id: string; monto: number } | null>(null);
@@ -69,6 +74,29 @@ export default function LiquidacionDetalle() {
     () => pagos.filter(p => p.estado === 'Confirmado').reduce((s, p) => s + (Number(p.iva_comision) || 0), 0),
     [pagos]
   );
+
+  // Desglose por tipo_impacto
+  const desglose = useMemo(() => {
+    const sum = (pred: (c: typeof conceptos[number]) => boolean) =>
+      conceptos.filter(pred).reduce((s, c) => s + Number(c.monto || 0), 0);
+    const cobrarInq = sum(c => (c as any).tipo_impacto === 'cobrar_al_inquilino');
+    const reintInq = sum(c => (c as any).tipo_impacto === 'reintegrar_al_inquilino');
+    const reintProp = sum(c => (c as any).tipo_impacto === 'reintegrar_al_propietario');
+    // gastos descontables: descontar_al_propietario MENOS los compensados por un reintegrar_al_inquilino vinculado
+    const compensadosIds = new Set(
+      conceptos
+        .filter(c => (c as any).tipo_impacto === 'reintegrar_al_inquilino' && (c as any).concepto_relacionado_id)
+        .map(c => (c as any).concepto_relacionado_id as string)
+    );
+    const gastosDescontables = conceptos
+      .filter(c => (c as any).tipo_impacto === 'descontar_al_propietario' && !compensadosIds.has(c.id))
+      .reduce((s, c) => s + Number(c.monto || 0), 0);
+    const gastosAdelantadosInmob = conceptos
+      .filter(c => (c as any).tipo_impacto === 'descontar_al_propietario')
+      .reduce((s, c) => s + Number(c.monto || 0), 0);
+    return { cobrarInq, reintInq, reintProp, gastosDescontables, gastosAdelantadosInmob };
+  }, [conceptos]);
+
 
   // Días de mora estimados
   const moraInfo = useMemo(() => {
@@ -318,6 +346,11 @@ export default function LiquidacionDetalle() {
                     <Badge variant="outline" className="text-xs">
                       Cobrados {cobradosCount}/{totalCobrables}
                     </Badge>
+                    {liq.estado !== 'Transferida' && liq.estado !== 'Acreditada' && liq.estado !== 'Anulada' && (
+                      <Button size="sm" variant="outline" onClick={() => setGastoOpen(true)}>
+                        <Wrench className="h-4 w-4 mr-1" /> Agregar gasto / reparación
+                      </Button>
+                    )}
                     {seleccionados.size > 0 && (
                       <Button size="sm" onClick={() => setPagoOpen(true)}>
                         <CreditCard className="h-4 w-4 mr-1" />
@@ -329,6 +362,7 @@ export default function LiquidacionDetalle() {
                     )}
                   </div>
                 );
+
               })()}
             </CardHeader>
             <CardContent className="p-0">
@@ -475,11 +509,31 @@ export default function LiquidacionDetalle() {
               <Card>
                 <CardHeader><CardTitle className="text-base">Resumen económico</CardTitle></CardHeader>
                 <CardContent className="space-y-2 text-sm">
-                  <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Subtotal conceptos</span><span className="font-semibold">{formatCurrency(liq.subtotal)}</span></div>
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Inquilino</p>
+                  <div className="flex justify-between py-1 border-b"><span className="text-muted-foreground">Subtotal a cobrar al inquilino</span><span className="font-semibold">{formatCurrency(desglose.cobrarInq)}</span></div>
+                  {(desglose.reintInq + desglose.reintProp) > 0 && (
+                    <div className="flex justify-between py-1 border-b"><span className="text-muted-foreground">Reintegros al inquilino</span><span className="font-semibold text-status-success">−{formatCurrency(desglose.reintInq + desglose.reintProp)}</span></div>
+                  )}
+                  {Number(liq.saldo_anterior || 0) !== 0 && (
+                    <div className="flex justify-between py-1 border-b"><span className="text-muted-foreground">Saldo anterior</span><span className="font-semibold">{formatCurrency(liq.saldo_anterior)}</span></div>
+                  )}
                   <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Total a cobrar al inquilino</span><span className="font-bold text-lg">{formatCurrency(liq.total_cobrar)}</span></div>
-                  <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">{esPropMode ? 'Informado como pagado' : 'Cobrado'}</span><span className="text-status-success font-semibold">{formatCurrency(liq.total_cobrado)}</span></div>
-                  <div className="flex justify-between py-1.5 border-b"><span className="text-muted-foreground">Pendiente</span><span className={liq.pendiente > 0 ? 'text-status-danger font-semibold' : ''}>{formatCurrency(liq.pendiente)}</span></div>
+                  <div className="flex justify-between py-1 border-b"><span className="text-muted-foreground">{esPropMode ? 'Informado como pagado' : 'Cobrado'}</span><span className="text-status-success font-semibold">{formatCurrency(liq.total_cobrado)}</span></div>
+                  <div className="flex justify-between py-1 border-b"><span className="text-muted-foreground">Pendiente</span><span className={liq.pendiente > 0 ? 'text-status-danger font-semibold' : ''}>{formatCurrency(liq.pendiente)}</span></div>
                   <div className="h-px bg-border my-2"></div>
+
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">{esPropMode ? 'Propietario / Inmobiliaria' : 'Propietario'}</p>
+                  {desglose.gastosAdelantadosInmob > 0 && (
+                    <div className="flex justify-between py-1 border-b"><span className="text-muted-foreground">Gastos adelantados por inmobiliaria</span><span className="font-medium">{formatCurrency(desglose.gastosAdelantadosInmob)}</span></div>
+                  )}
+                  {desglose.gastosDescontables > 0 && (
+                    <div className="flex justify-between py-1 border-b"><span className="text-muted-foreground">Gastos a cargo del propietario (a descontar)</span><span className="font-medium">{formatCurrency(desglose.gastosDescontables)}</span></div>
+                  )}
+                  {desglose.reintProp > 0 && (
+                    <div className="flex justify-between py-1 border-b"><span className="text-muted-foreground">A reintegrar al propietario</span><span className="font-medium text-status-success">{formatCurrency(desglose.reintProp)}</span></div>
+                  )}
+
+
 
                   {!esPropMode && (
                     <>
@@ -603,6 +657,17 @@ export default function LiquidacionDetalle() {
           monto={anularPago.monto}
         />
       )}
+
+      {liq && contrato && (
+        <ConceptoGastoDialog
+          open={gastoOpen}
+          onOpenChange={setGastoOpen}
+          contratoId={contrato.id}
+          liquidacionId={liq.id}
+          conceptosExistentes={conceptos}
+        />
+      )}
     </div>
+
   );
 }
