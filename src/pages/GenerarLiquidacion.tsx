@@ -262,6 +262,8 @@ export default function GenerarLiquidacion() {
 
       queryClient.invalidateQueries({ queryKey: ['liquidaciones'] });
       queryClient.invalidateQueries({ queryKey: ['conceptos_liquidacion'] });
+      queryClient.invalidateQueries({ queryKey: ['conceptos_pendientes_contrato'] });
+
 
       toast({ title: estado === 'borrador' ? 'Borrador guardado' : 'Liquidación generada', description: `Liquidación del contrato ${contrato.codigo} — ${periodoLabel}` });
       navigate('/liquidaciones');
