@@ -140,6 +140,15 @@ export interface Liquidacion {
   destino_cobro?: string;
 }
 
+export type TipoImpactoConcepto =
+  | 'cobrar_al_inquilino'
+  | 'descontar_al_propietario'
+  | 'reintegrar_al_inquilino'
+  | 'reintegrar_al_propietario'
+  | 'informativo';
+
+export type PagadoPorConcepto = 'Inquilino' | 'Propietario' | 'Inmobiliaria' | 'Pendiente';
+
 export interface ConceptoLiquidacion {
   id: string;
   liquidacion_id: string;
@@ -149,7 +158,32 @@ export interface ConceptoLiquidacion {
   aplica_al_inquilino: boolean;
   cobrado_at?: string | null;
   pago_id?: string | null;
+  pagado_por?: PagadoPorConcepto;
+  tipo_impacto?: TipoImpactoConcepto;
+  periodo_impacto?: 'Actual' | 'ProximoPeriodo';
+  comprobante_url?: string | null;
+  observaciones?: string;
+  concepto_relacionado_id?: string | null;
 }
+
+export interface ConceptoPendienteContrato {
+  id: string;
+  contrato_id: string;
+  origen_concepto_id?: string | null;
+  origen_liquidacion_id?: string | null;
+  concepto: string;
+  monto: number;
+  tipo_impacto: TipoImpactoConcepto;
+  pagado_por: PagadoPorConcepto;
+  observaciones: string;
+  comprobante_url?: string | null;
+  estado: 'Pendiente' | 'Aplicado' | 'Anulado';
+  liquidacion_aplicada_id?: string | null;
+  fecha_aplicacion?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 
 
 export interface Pago {
