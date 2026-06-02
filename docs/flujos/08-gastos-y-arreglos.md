@@ -1,215 +1,303 @@
 # Flujo 08 — Gastos, arreglos y reintegros en la liquidación
 
-Este documento explica **cómo se determina quién paga un gasto** (un arreglo de
-plomería, un service del termotanque, una reparación edilicia, un impuesto, una
-expensa extraordinaria, etc.) y **cómo ese gasto entra a la liquidación
-mensual** según las reglas del contrato y la modalidad de cobro
-(`Inmobiliaria` / `Propietario`).
+Cómo se decide **quién paga un gasto** (reparación, service, impuesto,
+expensa extraordinaria, etc.), **quién lo adelanta** y **cómo impacta** en la
+liquidación, sin riesgo de doble descuento ni montos negativos.
 
 > Regla mental rápida:
-> 1. ¿Quién es el **responsable** del gasto según el contrato? (Inquilino / Propietario / Compartido)
-> 2. ¿Quién **adelantó** la plata? (Inquilino, Propietario o la Inmobiliaria)
-> 3. Según eso, el gasto se **cobra al inquilino**, se **descuenta del neto al propietario** o se **reintegra**.
+> 1. **Responsable**: ¿a quién le corresponde el gasto? (Inquilino / Propietario / Compartido)
+> 2. **Pagado por**: ¿quién puso la plata? (Inquilino / Propietario / Inmobiliaria / Pendiente)
+> 3. El sistema **deriva automáticamente** cómo se cobra, descuenta o reintegra.
 
 ---
 
-## 1. Quién se hace cargo: reglas del contrato
+## 1. Reglas del contrato
 
-Cada contrato define, en su tab **Configuración Contractual Vigente**, quién
-asume cada tipo de gasto recurrente. Estos campos viven en `public.contratos`:
+Tab **Configuración Contractual Vigente** (`public.contratos`):
 
-| Campo | Valores típicos | Qué representa |
+| Campo | Valores | Qué representa |
 |---|---|---|
-| `expensas_ordinarias` | `Inquilino` / `Propietario` | Expensas mensuales del consorcio. Por ley de alquileres (Vivienda) suelen ir a cargo del inquilino. |
-| `expensas_extraordinarias` | `Propietario` / `Inquilino` | Obras, refacciones del edificio, fondos especiales. Por defecto **Propietario**. |
-| `tgi` (TGI / ABL) | `Inquilino` / `Propietario` | Impuesto inmobiliario municipal. |
+| `expensas_ordinarias` | `Inquilino` / `Propietario` | Expensas mensuales del consorcio. |
+| `expensas_extraordinarias` | `Propietario` / `Inquilino` | Obras, refacciones, fondos especiales. Default **Propietario**. |
+| `tgi` (TGI / ABL) | `Inquilino` / `Propietario` | Impuesto inmobiliario. |
 | `api` | `Inquilino` / `Propietario` | Aporte Patronal Inmobiliario (Santa Fe). |
-| `seguro` | `Inquilino` / `Propietario` / `No aplica` | Seguro de incendio / integral. |
-| `servicios` | `Inquilino` / `Propietario` | Luz, gas, agua, internet (lo normal: inquilino). |
+| `seguro` | `Inquilino` / `Propietario` / `No aplica` | Seguro integral. |
+| `servicios` | `Inquilino` / `Propietario` | Luz, gas, agua, internet. |
+| `destino_cobro` | `Inmobiliaria` / `Propietario` | Modalidad de cobro (afecta el cierre financiero). |
 
-Estos valores se **leen al generar la liquidación** y determinan qué conceptos
-se agregan automáticamente y con qué `responsable`.
+### Reparaciones puntuales (no recurrentes)
 
-### Reparaciones y arreglos puntuales (no recurrentes)
+Cuando no hay regla fija, la operadora aplica el criterio legal estándar (uso
+normal → inquilino; estructural → propietario; urgentes adelantadas → se
+reintegran). Las cláusulas particulares del contrato prevalecen.
 
-No hay una regla fija en el contrato para cada arreglo posible (un caño que
-pierde, un calefón roto, una persiana). La operadora aplica el **criterio
-legal/contractual estándar**:
+---
 
-| Tipo de arreglo | Por defecto lo paga | Por qué |
+## 2. Modelo de datos extendido
+
+### 2.1 `conceptos_liquidacion`
+
+Campos nuevos:
+
+| Campo | Valores | Significado |
 |---|---|---|
-| Mantenimiento por **uso normal** (cambio de lamparitas, juntas, destapaciones simples, pintura de desgaste) | **Inquilino** | Conservación corriente. |
-| **Roturas por mal uso** del inquilino | **Inquilino** | Daño imputable. |
-| **Reparaciones estructurales** (cañerías, techos, instalación eléctrica, calefón, termotanque, electrodomésticos provistos) | **Propietario** | Conservación de la cosa locada. |
-| **Vicios ocultos** o anteriores al contrato | **Propietario** | Responsabilidad del dueño. |
-| Reparaciones **urgentes** que adelanta el inquilino | Se **reintegra al inquilino** si corresponde al propietario | Art. 1209 CCyC. |
-| **Cláusulas particulares** del contrato | Lo que diga el contrato | Prevalece sobre el default. |
+| `pagado_por` | `Inquilino` / `Propietario` / `Inmobiliaria` / `Pendiente` | Quién puso la plata. |
+| `tipo_impacto` | ver tabla abajo | Cómo impacta en los totales. |
+| `periodo_impacto` | `Actual` / `ProximoPeriodo` | Si pertenece a este mes o queda diferido. |
+| `comprobante_url` | URL | Foto/PDF del comprobante. |
+| `observaciones` | texto | Aclaraciones. |
+| `concepto_relacionado_id` | uuid | Vínculo a otro concepto que **compensa** este (par a par). |
 
-> Si hay duda, la operadora consulta a las partes antes de cargar el concepto.
-> Las cláusulas particulares quedan en `contratos.clausulas_particulares` y
-> `reglas_observaciones` como referencia.
+### 2.2 Regla dura: `monto >= 0` (siempre positivo)
 
----
+El **signo** lo deriva el `tipo_impacto`. Si una operación reduce lo que paga
+el inquilino (descuento, reintegro), **no se guarda negativo**; se guarda
+positivo y el cálculo lo resta.
 
-## 2. Cómo entra el gasto a la liquidación
+| `tipo_impacto` | Efecto en el cálculo |
+|---|---|
+| `cobrar_al_inquilino` | `+monto` al total a cobrar al inquilino |
+| `reintegrar_al_inquilino` | `−monto` del total a cobrar al inquilino |
+| `descontar_al_propietario` | `+monto` a descontar del neto / sumar al cobro al propietario |
+| `reintegrar_al_propietario` | `−monto` al inquilino **y** reconocimiento a favor del propietario |
+| `informativo` | No afecta totales (queda como evento/comprobante) |
 
-Toda la liquidación se compone de **conceptos** en
-`public.conceptos_liquidacion`. Cada concepto tiene dos campos clave:
+`aplica_al_inquilino` se deriva automáticamente por trigger desde `tipo_impacto`.
 
-```
-responsable           text   -- 'Inquilino' | 'Propietario' | 'Compartido'
-aplica_al_inquilino   bool   -- ¿se cobra al inquilino en esta liquidación?
-```
+### 2.3 Tabla `conceptos_pendientes_contrato`
 
-La combinación de esos dos campos define **dónde impacta** el gasto:
+Los gastos marcados con `periodo_impacto = ProximoPeriodo` **no** se insertan
+en una liquidación futura inexistente. Se acumulan acá con estado
+`Pendiente`, y al generar la próxima liquidación se vuelcan automáticamente y
+pasan a `Aplicado`. También se usa para arrastrar saldo a favor del inquilino
+(ver §4.4).
 
-| Caso | `responsable` | `aplica_al_inquilino` | Efecto |
-|---|---|---|---|
-| **A.** Gasto típico del inquilino (alquiler, expensas ord., ABL si así está pactado, servicios) | `Inquilino` | `true` | Suma al `total_cobrar` del inquilino. No afecta neto al propietario. |
-| **B.** Gasto del propietario que la inmobiliaria adelantó o que sale del cobro (expensas extraordinarias, arreglo estructural, seguro a cargo del dueño) | `Propietario` | `false` | **NO** se le cobra al inquilino. Se **descuenta del neto al propietario** al rendir. |
-| **C.** Arreglo que correspondía al propietario pero **adelantó el inquilino** y se le reintegra | `Propietario` | `false` + concepto **negativo** “Reintegro a inquilino” `aplica_al_inquilino=true` con signo negativo | Se descuenta del total a cobrar al inquilino y se descuenta del neto al propietario. |
-| **D.** Gasto compartido (ej.: 50/50 una mejora) | `Compartido` | `true` (la parte del inquilino) + segundo concepto `Propietario` / `false` (la parte del dueño) | Se parte en dos líneas. |
-
-> Regla de oro: **un concepto a cargo del propietario nunca se le cobra al
-> inquilino**. Si el inquilino adelantó la plata, se carga como **reintegro**
-> aparte, no se mezcla.
-
-### Fórmulas internas
-
-```
-subtotal              = Σ conceptos donde aplica_al_inquilino = true
-total_cobrar          = subtotal + saldo_anterior
-gastos_propietario    = Σ conceptos donde responsable = 'Propietario'
-                        y aplica_al_inquilino = false
-comision_inmobiliaria = alquiler_base * comision% * (iva ? 1.21 : 1)
-neto_propietario      = total_cobrado
-                        - comision_inmobiliaria
-                        - gastos_propietario
-```
-
-Si `gastos_propietario` supera lo cobrado en el mes, `neto_propietario` puede
-ser cero o negativo: en ese caso **se arrastra como saldo a favor/contra del
-propietario** al período siguiente (queda asentado en observaciones; no se
-fuerza un valor negativo).
+| Estado | Significado |
+|---|---|
+| `Pendiente` | Esperando próxima liquidación del contrato. |
+| `Aplicado` | Ya se incorporó a una liquidación (`liquidacion_aplicada_id`). |
+| `Anulado` | Descartado por la operadora. |
 
 ---
 
-## 3. Modalidad de cobro y el destino del gasto
+## 3. Matriz de derivación (UI guiada)
 
-El campo `contratos.destino_cobro` (y su snapshot en
-`liquidaciones.destino_cobro`) define dos circuitos distintos:
-
-### 3.1 Modalidad `Inmobiliaria` (default)
-
-- El inquilino paga **a la inmobiliaria**.
-- La inmobiliaria descuenta comisión + gastos a cargo del propietario.
-- Se **rinde al propietario** el neto (tabla `rendiciones_propietario`).
-- Estado terminal de la liquidación: **`Transferida`** ("Rendida al propietario").
-
-Ejemplo: arreglo de termotanque de $80.000 que paga la inmobiliaria al
-plomero por cuenta del propietario.
+La operadora **no elige `tipo_impacto`**. Responde dos preguntas y el sistema
+lo deriva:
 
 ```
-Conceptos:
-- Alquiler                350.000   responsable=Inquilino     aplica=true
-- Expensas ord.            60.000   responsable=Inquilino     aplica=true
-- Arreglo termotanque      80.000   responsable=Propietario   aplica=false
-
-subtotal              = 410.000
-total_cobrar          = 410.000
-comision (8%)         =  28.000
-gastos_propietario    =  80.000
-neto_propietario      = 410.000 − 28.000 − 80.000 = 302.000
+Responsable | Pagado por   | tipo_impacto generado
+------------+--------------+----------------------------------
+Inquilino   | Inmobiliaria | cobrar_al_inquilino
+Inquilino   | Inquilino    | informativo (cada uno pagó lo suyo)
+Inquilino   | Propietario  | cobrar_al_inquilino  +  reintegrar_al_propietario  (par vinculado)
+Propietario | Inmobiliaria | descontar_al_propietario
+Propietario | Inquilino    | reintegrar_al_inquilino  (se sugiere vincular al descontar_al_propietario si existe)
+Propietario | Propietario  | informativo
+Compartido  | *            | se divide en dos partes y se aplica la matriz a cada una
+Cualquiera  | Pendiente    | informativo (queda hasta definir)
 ```
 
-Al rendir se transfieren **$302.000** al propietario y se adjunta el
-comprobante del arreglo.
+El diálogo guiado vive en `src/components/ConceptoGastoDialog.tsx` y se abre:
 
-### 3.2 Modalidad `Propietario`
-
-- El inquilino paga **directo al propietario** (pago tipo
-  `pago_directo_propietario` — no entra a caja de la inmobiliaria, no suma a la
-  facturación de la administradora).
-- La inmobiliaria **no rinde nada**: solo **cobra su comisión + IVA +
-  eventuales reintegros** al propietario (tabla
-  `cobros_comision_propietario`).
-- Estado terminal de la liquidación: **`Cobrada`** (etiquetada en UI como
-  "Comisión cobrada").
-- **Nunca** se usa la palabra "rendición" en esta modalidad.
-
-Ejemplo: mismo arreglo de $80.000, pero esta vez lo pagó la **inmobiliaria** y
-hay que reintegrárselo cuando cobre la comisión.
-
-```
-Liquidación:
-- Alquiler                350.000   responsable=Inquilino     aplica=true (cobra el dueño)
-- Expensas ord.            60.000   responsable=Inquilino     aplica=true (cobra el dueño)
-- Arreglo termotanque      80.000   responsable=Propietario   aplica=false (lo adelantó la inmobiliaria)
-
-comision (8% s/alquiler) =  28.000
-iva_comision (21%)       =   5.880
-gastos_reintegro         =  80.000
-
-A cobrar al propietario  = 28.000 + 5.880 + 80.000 = 113.880
-```
-
-En la pantalla de detalle aparece el bloque **"A cobrar al propietario"** con
-ese total y el botón **"Cobrar comisión"** que registra el cobro en
-`cobros_comision_propietario` (estado Pendiente → Cobrada).
-
-Si el arreglo lo pagó el **propietario directamente** al plomero, no se carga
-como concepto: queda asentado en observaciones / eventos del contrato y no
-modifica los números de la liquidación.
+- Desde **Detalle de Liquidación** (`/liquidaciones/:id`) → botón **“Agregar
+  gasto / reparación”**.
+- Para conceptos a aplicar el mes que viene → se guardan en
+  `conceptos_pendientes_contrato`.
 
 ---
 
-## 4. Paso a paso en la UI
+## 4. Cálculo (función `recalcular_liquidacion`)
 
-1. **Generar liquidación** (`/generar-liquidacion`)
-   - Se eligen contrato + período.
-   - El sistema precarga los conceptos automáticos según las reglas del
-     contrato (alquiler, expensas, ABL, API, seguro, servicios) con su
-     `responsable` correcto.
-2. **Agregar el arreglo** como concepto manual:
-   - Si lo paga el inquilino → `responsable = Inquilino`, `aplica = true`.
-   - Si lo paga el propietario y lo adelantó la inmobiliaria →
-     `responsable = Propietario`, `aplica = false`. Adjuntar comprobante en
-     observaciones / documentos.
-   - Si lo adelantó el inquilino y se le reintegra → agregar concepto
-     `Reintegro` negativo `aplica = true` + concepto `Propietario`/`false` por
-     el mismo importe (deja la traza contable).
-3. **Emitir** la liquidación (`Borrador → Pendiente`).
-4. **Cobrar** del inquilino (`RegistrarPagoDialog`). El estado pasa a
-   `Parcial` o `Cobrada`.
-5. **Cierre financiero**:
-   - Modalidad `Inmobiliaria`: botón **Rendir al propietario** →
-     `Transferida`.
-   - Modalidad `Propietario`: botón **Cobrar comisión** → registra cobro en
-     `cobros_comision_propietario`.
+Se invoca por trigger en cualquier INSERT/UPDATE/DELETE sobre
+`conceptos_liquidacion`. Pasos:
+
+### 4.1 Detalle al inquilino
+
+```
+subtotal_inquilino      = Σ cobrar_al_inquilino
+reintegros_al_inquilino = Σ reintegrar_al_inquilino + Σ reintegrar_al_propietario
+total_cobrar_bruto      = subtotal_inquilino − reintegros_al_inquilino + saldo_anterior
+total_cobrar            = MAX(0, total_cobrar_bruto)
+saldo_a_favor_inquilino = MAX(0, −total_cobrar_bruto)
+```
+
+### 4.2 Detalle propietario / inmobiliaria
+
+```
+gastos_descontables = Σ descontar_al_propietario
+                      EXCLUYENDO los compensados por un reintegrar_al_inquilino
+                      vinculado (concepto_relacionado_id)
+gastos_a_reintegrar = Σ reintegrar_al_propietario
+comision            = alquiler_base * comision_% * (iva ? 1.21 : 1)
+```
+
+### 4.3 Cierre por modalidad
+
+```
+Modalidad Inmobiliaria (rendición):
+  neto_propietario =
+        total_cobrado
+      − comision
+      − gastos_descontables
+      + gastos_a_reintegrar
+
+Modalidad Propietario (cobro de comisión):
+  total_cobrar_al_propietario =
+        comision + iva_comision
+      + gastos_descontables       -- los adelantó la inmobiliaria
+      − gastos_a_reintegrar       -- el dueño ya cobró del inquilino
+```
+
+### 4.4 Saldo a favor del inquilino
+
+Si `total_cobrar_bruto < 0`, la liquidación queda con `total_cobrar = 0` y se
+**genera automáticamente** un registro en `conceptos_pendientes_contrato` con
+`tipo_impacto = reintegrar_al_inquilino` por `saldo_a_favor_inquilino`. Se
+aplicará al generar la próxima liquidación del contrato.
 
 ---
 
-## 5. Errores comunes a evitar
+## 5. Anti-doble-descuento (par a par)
 
-- ❌ Cargar un arreglo del propietario con `aplica_al_inquilino = true` "para
-  que el inquilino lo pague". Si correspondía al propietario y se decidió
-  cobrárselo al inquilino, **modificar primero la regla del contrato** o
-  dejarlo explícito como acuerdo particular en observaciones.
-- ❌ En modalidad `Propietario`, registrar el cobro del inquilino como pago
-  normal de la inmobiliaria. Debe usarse el flujo **"pago directo al
-  propietario"** (`tipo = 'pago_directo_propietario'`) para no inflar la
-  facturación de la administradora.
-- ❌ Hablar de "rendición" cuando el contrato es modalidad `Propietario`. El
-  término correcto es **"cobro de comisión"**.
-- ❌ Mezclar reintegros con conceptos del inquilino sin discriminar. Cada
-  reintegro debe ser una línea propia y trazable a su comprobante.
+La validación **no es global**. Funciona por vínculo concepto-a-concepto:
+
+- Cuando se inserta un `reintegrar_al_inquilino` referenciando un
+  `descontar_al_propietario` (vía `concepto_relacionado_id`), el cálculo
+  **excluye** ese `descontar_al_propietario` de `gastos_descontables`. Queda
+  solo el reintegro al inquilino como compensación → el propietario lo
+  reconoce una vez, no dos.
+- Si no se vincula y existe un `descontar_al_propietario` del mismo monto sin
+  par, la UI muestra una alerta destructiva pidiendo confirmar o vincular.
+- Conceptos vinculados deben tener el mismo monto.
 
 ---
 
-## 6. Referencias
+## 6. Ejemplos
+
+### 6.1 Modalidad Inmobiliaria — termotanque pagado por la inmobiliaria
+
+```
+Concepto                         | tipo_impacto             | monto
+---------------------------------|--------------------------|--------
+Alquiler                         | cobrar_al_inquilino      | 350.000
+Expensas ord.                    | cobrar_al_inquilino      |  60.000
+Arreglo termotanque (Inmob.)     | descontar_al_propietario |  80.000
+
+subtotal_inquilino  = 410.000
+total_cobrar        = 410.000
+comision (8%)       =  28.000
+gastos_descontables =  80.000
+neto_propietario    = 410.000 − 28.000 − 80.000 = 302.000
+```
+
+### 6.2 Modalidad Propietario — termotanque adelantado por la inmobiliaria
+
+Mismo ejemplo pero con `destino_cobro = Propietario`:
+
+```
+total_cobrar_al_propietario =
+   28.000 (comisión)
+ +  5.880 (IVA)
+ + 80.000 (gastos descontables)
+ = 113.880
+```
+
+### 6.3 Reintegro al inquilino vinculado (arreglo urgente que pagó él)
+
+El inquilino adelantó al plomero $80.000 que correspondían al propietario.
+
+```
+1) Crear concepto base:
+   "Arreglo cañería"  | descontar_al_propietario | 80.000  (pagado_por=Inquilino) → id=A
+2) Crear concepto vinculado:
+   "Reintegro inquilino" | reintegrar_al_inquilino | 80.000 | concepto_relacionado_id=A
+```
+
+Cálculo: `gastos_descontables` excluye A porque tiene un vínculo. La única
+compensación al propietario es el reintegro al inquilino:
+
+```
+total_cobrar_inquilino reduce en 80.000
+neto_propietario reduce en 80.000   (no se descuenta dos veces)
+```
+
+### 6.4 Propietario pagó un gasto del inquilino
+
+El propietario le pagó al inquilino una multa de $20.000 que correspondía al
+inquilino.
+
+```
+Concepto                        | tipo_impacto              | monto
+--------------------------------|---------------------------|------
+Multa adelantada por propietario| cobrar_al_inquilino       | 20.000
+↳ vinculado                     | reintegrar_al_propietario | 20.000
+```
+
+El inquilino paga los $20.000 extra y se reconocen a favor del propietario en
+el cálculo (suma al neto a rendir, o resta al cobro al propietario).
+
+### 6.5 Saldo a favor del inquilino
+
+Reintegros del mes ($500.000) > total a cobrar ($350.000):
+
+```
+total_cobrar_bruto      = 350.000 − 500.000 = −150.000
+total_cobrar            =       0
+saldo_a_favor_inquilino = 150.000
+→ se crea conceptos_pendientes_contrato {reintegrar_al_inquilino, 150.000}
+```
+
+El próximo mes la nueva liquidación lo aplica automáticamente.
+
+---
+
+## 7. Resumen económico en pantalla
+
+`/liquidaciones/:id` muestra dos bloques:
+
+```
+─ Inquilino
+   Subtotal a cobrar al inquilino       $ ...
+   Reintegros al inquilino             −$ ...
+   Saldo anterior                       $ ...
+   Total a cobrar al inquilino          $ ...
+   Cobrado                              $ ...
+   Pendiente                            $ ...
+
+─ Propietario / Inmobiliaria
+   Gastos adelantados por inmobiliaria  $ ...
+   Gastos a cargo del propietario       $ ...   (los descontables)
+   A reintegrar al propietario          $ ...
+   Comisión inmobiliaria                $ ...
+   IVA s/ comisión                      $ ...
+
+   Modalidad Inmobiliaria:
+      Neto a transferir al propietario  $ ...
+   Modalidad Propietario:
+      Total a cobrar al propietario     $ ...
+```
+
+---
+
+## 8. Errores comunes a evitar
+
+- ❌ Cargar montos negativos. La DB lo rechaza (`CHECK monto >= 0`). Usar
+  `reintegrar_al_inquilino` o `reintegrar_al_propietario`.
+- ❌ Crear un reintegro al inquilino sin vincular el `descontar_al_propietario`
+  asociado: el propietario terminaría compensando dos veces.
+- ❌ Insertar conceptos del "próximo período" en una liquidación que aún no
+  existe. Para eso está `conceptos_pendientes_contrato`.
+- ❌ En modalidad Propietario, usar la palabra "rendición". El término
+  correcto es **cobro de comisión** (incluye comisión + IVA + gastos
+  descontables − reintegros al propietario).
+
+---
+
+## 9. Referencias
 
 - Reglas del contrato: [`../03-modelo-de-datos.md`](../03-modelo-de-datos.md)
 - Generación de la liquidación: [`02-generacion-liquidacion.md`](./02-generacion-liquidacion.md)
 - Cobranzas: [`03-cobranza-y-pagos.md`](./03-cobranza-y-pagos.md)
-- Rendición al propietario (modalidad Inmobiliaria): [`04-rendicion-al-propietario.md`](./04-rendicion-al-propietario.md)
-- Glosario (TGI, API, comisión, neto, etc.): [`../05-glosario.md`](../05-glosario.md)
+- Rendición al propietario: [`04-rendicion-al-propietario.md`](./04-rendicion-al-propietario.md)
+- Glosario: [`../05-glosario.md`](../05-glosario.md)
