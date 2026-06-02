@@ -346,6 +346,11 @@ export default function LiquidacionDetalle() {
                     <Badge variant="outline" className="text-xs">
                       Cobrados {cobradosCount}/{totalCobrables}
                     </Badge>
+                    {liq.estado !== 'Transferida' && liq.estado !== 'Acreditada' && liq.estado !== 'Anulada' && (
+                      <Button size="sm" variant="outline" onClick={() => setGastoOpen(true)}>
+                        <Wrench className="h-4 w-4 mr-1" /> Agregar gasto / reparación
+                      </Button>
+                    )}
                     {seleccionados.size > 0 && (
                       <Button size="sm" onClick={() => setPagoOpen(true)}>
                         <CreditCard className="h-4 w-4 mr-1" />
@@ -357,6 +362,7 @@ export default function LiquidacionDetalle() {
                     )}
                   </div>
                 );
+
               })()}
             </CardHeader>
             <CardContent className="p-0">
