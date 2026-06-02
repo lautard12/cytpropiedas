@@ -122,37 +122,151 @@ export type Database = {
         Row: {
           aplica_al_inquilino: boolean
           cobrado_at: string | null
+          comprobante_url: string | null
           concepto: string
+          concepto_relacionado_id: string | null
+          created_at: string
           id: string
           liquidacion_id: string
           monto: number
+          observaciones: string
+          pagado_por: string
           pago_id: string | null
+          periodo_impacto: string
           responsable: string
+          tipo_impacto: string
+          updated_at: string
         }
         Insert: {
           aplica_al_inquilino?: boolean
           cobrado_at?: string | null
+          comprobante_url?: string | null
           concepto: string
+          concepto_relacionado_id?: string | null
+          created_at?: string
           id?: string
           liquidacion_id: string
           monto?: number
+          observaciones?: string
+          pagado_por?: string
           pago_id?: string | null
+          periodo_impacto?: string
           responsable?: string
+          tipo_impacto?: string
+          updated_at?: string
         }
         Update: {
           aplica_al_inquilino?: boolean
           cobrado_at?: string | null
+          comprobante_url?: string | null
           concepto?: string
+          concepto_relacionado_id?: string | null
+          created_at?: string
           id?: string
           liquidacion_id?: string
           monto?: number
+          observaciones?: string
+          pagado_por?: string
           pago_id?: string | null
+          periodo_impacto?: string
           responsable?: string
+          tipo_impacto?: string
+          updated_at?: string
         }
         Relationships: [
           {
+            foreignKeyName: "conceptos_liquidacion_concepto_relacionado_id_fkey"
+            columns: ["concepto_relacionado_id"]
+            isOneToOne: false
+            referencedRelation: "conceptos_liquidacion"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "conceptos_liquidacion_liquidacion_id_fkey"
             columns: ["liquidacion_id"]
+            isOneToOne: false
+            referencedRelation: "liquidaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conceptos_pendientes_contrato: {
+        Row: {
+          comprobante_url: string | null
+          concepto: string
+          contrato_id: string
+          created_at: string
+          estado: string
+          fecha_aplicacion: string | null
+          id: string
+          liquidacion_aplicada_id: string | null
+          monto: number
+          observaciones: string
+          origen_concepto_id: string | null
+          origen_liquidacion_id: string | null
+          pagado_por: string
+          tipo_impacto: string
+          updated_at: string
+        }
+        Insert: {
+          comprobante_url?: string | null
+          concepto: string
+          contrato_id: string
+          created_at?: string
+          estado?: string
+          fecha_aplicacion?: string | null
+          id?: string
+          liquidacion_aplicada_id?: string | null
+          monto?: number
+          observaciones?: string
+          origen_concepto_id?: string | null
+          origen_liquidacion_id?: string | null
+          pagado_por?: string
+          tipo_impacto?: string
+          updated_at?: string
+        }
+        Update: {
+          comprobante_url?: string | null
+          concepto?: string
+          contrato_id?: string
+          created_at?: string
+          estado?: string
+          fecha_aplicacion?: string | null
+          id?: string
+          liquidacion_aplicada_id?: string | null
+          monto?: number
+          observaciones?: string
+          origen_concepto_id?: string | null
+          origen_liquidacion_id?: string | null
+          pagado_por?: string
+          tipo_impacto?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conceptos_pendientes_contrato_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conceptos_pendientes_contrato_liquidacion_aplicada_id_fkey"
+            columns: ["liquidacion_aplicada_id"]
+            isOneToOne: false
+            referencedRelation: "liquidaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conceptos_pendientes_contrato_origen_concepto_id_fkey"
+            columns: ["origen_concepto_id"]
+            isOneToOne: false
+            referencedRelation: "conceptos_liquidacion"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conceptos_pendientes_contrato_origen_liquidacion_id_fkey"
+            columns: ["origen_liquidacion_id"]
             isOneToOne: false
             referencedRelation: "liquidaciones"
             referencedColumns: ["id"]
@@ -1342,6 +1456,10 @@ export type Database = {
         Returns: Json
       }
       marcar_garantias_vencidas: { Args: never; Returns: number }
+      recalcular_liquidacion: {
+        Args: { _liquidacion_id: string }
+        Returns: Json
+      }
       rendir_propietario: {
         Args: {
           _comprobante_url?: string
