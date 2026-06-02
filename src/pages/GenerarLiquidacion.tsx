@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useContratos, usePropiedades, usePropietarios, useInquilinos, usePreavisosAjuste, findById, formatCurrency } from '@/hooks/useSupabaseData';
+import { useContratos, usePropiedades, usePropietarios, useInquilinos, usePreavisosAjuste, useConceptosPendientes, findById, formatCurrency } from '@/hooks/useSupabaseData';
 import { ArrowLeft, Calculator, Save, Info, Plus, Trash2, AlertTriangle, Bell } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
