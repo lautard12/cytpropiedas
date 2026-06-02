@@ -562,6 +562,21 @@ export function useAllConceptos() {
 }
 
 
+export function useConceptosPendientes(contratoId?: string) {
+  return useQuery({
+    queryKey: ['conceptos_pendientes_contrato', contratoId ?? 'all'],
+    queryFn: async () => {
+      let q = supabase.from('conceptos_pendientes_contrato' as any).select('*').order('created_at', { ascending: true });
+      if (contratoId) q = q.eq('contrato_id', contratoId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as unknown as ConceptoPendienteContrato[];
+    },
+    enabled: contratoId === undefined ? true : !!contratoId,
+  });
+}
+
+
 export function usePagos() {
   return useQuery({
     queryKey: ['pagos'],
