@@ -30,15 +30,27 @@ y comisión inmobiliaria.
    | Seguro | `seguro='Inquilino'` | Inquilino |
    | Servicios | `servicios='Inquilino'` | Inquilino |
    | Expensas extraordinarias | `=='Inquilino'` (raro) | según |
-5. Operadora puede agregar / quitar / editar conceptos.
-6. Sumar **saldo anterior**: `Σ pendiente` de liquidaciones previas no anuladas.
-7. Calcular:
-   - `subtotal = Σ conceptos.aplica_al_inquilino * monto`
-   - `total_cobrar = subtotal + saldo_anterior`
+5. Operadora puede agregar / quitar / editar conceptos. Los gastos puntuales
+   (reparaciones, expensas extraordinarias, reintegros) se cargan vía el
+   **diálogo guiado `ConceptoGastoDialog`** que deriva `tipo_impacto` /
+   `pagado_por` y guarda montos siempre positivos.
+6. **Aplicar conceptos pendientes**: se vuelcan automáticamente las filas de
+   `conceptos_pendientes_contrato` con `estado='Pendiente'` para este contrato
+   (reintegros diferidos, saldo a favor del inquilino arrastrado). Pasan a
+   `estado='Aplicado'` con `liquidacion_aplicada_id`.
+7. Sumar **saldo anterior**: `Σ pendiente` de liquidaciones previas no anuladas.
+8. Calcular vía función `recalcular_liquidacion()` (ver
+   [`08-gastos-y-arreglos.md §4`](./08-gastos-y-arreglos.md)):
+   - `subtotal_inquilino   = Σ cobrar_al_inquilino`
+   - `reintegros_inquilino = Σ reintegrar_al_inquilino + Σ reintegrar_al_propietario`
+   - `total_cobrar         = MAX(0, subtotal − reintegros + saldo_anterior)`
    - `comision_inmobiliaria = alquiler * comision% * (iva ? 1.21 : 1)`
-8. `POST /liquidaciones` con `estado='Pendiente'`.
-9. `POST /conceptos_liquidacion` (batch).
-10. Trigger `log_liquidacion_evento` registra entrada `liquidacion_emitida`.
+   - Modalidad Inmobiliaria → `neto_propietario`; Modalidad Propietario →
+     `total_cobrar_al_propietario`.
+9. `POST /liquidaciones` con `estado='Pendiente'`.
+10. `POST /conceptos_liquidacion` (batch).
+11. Trigger `recalcular_liquidacion` actualiza totales; trigger
+    `log_liquidacion_evento` registra `liquidacion_emitida`.
 
 ## Side-effects
 

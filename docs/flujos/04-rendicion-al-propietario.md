@@ -11,7 +11,16 @@ trazabilidad.
 ## Pasos
 
 1. Operadora abre la liquidación.
-2. Calcula neto = `total_cobrado − comision_inmobiliaria − Σ conceptos a cargo del propietario`.
+2. El neto ya está calculado por `recalcular_liquidacion()` según la modalidad
+   del contrato (`destino_cobro`):
+   - **Inmobiliaria**:
+     `neto_propietario = total_cobrado − comisión − gastos_descontables + gastos_a_reintegrar`
+   - **Propietario** (cobra él directo):
+     `total_cobrar_al_propietario = comisión + IVA + gastos_descontables − gastos_a_reintegrar`
+
+   Donde `gastos_descontables` excluye los `descontar_al_propietario` que ya
+   tienen un `reintegrar_al_inquilino` vinculado (anti-doble-descuento; ver
+   [`08-gastos-y-arreglos.md §5`](./08-gastos-y-arreglos.md)).
 3. Realiza la transferencia bancaria por fuera del sistema.
 4. Marca como rendida:
    ```

@@ -175,9 +175,33 @@ Vincula una persona con la sucursal donde trabaja y registra su ciclo laboral (a
 | id | uuid PK | |
 | liquidacion_id | uuid FK | on delete cascade |
 | concepto | text | "Alquiler", "ABL", "Expensas", "Ajuste ICL"... |
-| monto | numeric | |
-| responsable | text | `Inquilino` / `Propietario` |
-| aplica_al_inquilino | boolean | si suma al `total_cobrar` |
+| monto | numeric | **siempre ≥ 0** (`CHECK monto >= 0`). El signo se deriva del `tipo_impacto`. |
+| responsable | text | `Inquilino` / `Propietario` / `Compartido` |
+| aplica_al_inquilino | boolean | **derivado por trigger** desde `tipo_impacto`. |
+| **pagado_por** | text | `Inquilino` / `Propietario` / `Inmobiliaria` / `Pendiente` — quién puso la plata. |
+| **tipo_impacto** | text | `cobrar_al_inquilino` / `reintegrar_al_inquilino` / `descontar_al_propietario` / `reintegrar_al_propietario` / `informativo`. |
+| **periodo_impacto** | text | `Actual` / `ProximoPeriodo`. |
+| **concepto_relacionado_id** | uuid FK → conceptos_liquidacion | Par a par para evitar doble descuento. |
+| **comprobante_url** | text | Adjunto opcional. |
+| **observaciones** | text | |
+
+> Detalle de la matriz de derivación y reglas de cálculo: ver [`flujos/08-gastos-y-arreglos.md`](./flujos/08-gastos-y-arreglos.md).
+
+### `conceptos_pendientes_contrato`
+Buffer de conceptos diferidos (impacto en próximo período o saldo a favor del inquilino arrastrado).
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| id | uuid PK | |
+| contrato_id | uuid FK → contratos | |
+| concepto | text | |
+| monto | numeric | siempre ≥ 0 |
+| tipo_impacto | text | mismos valores que en `conceptos_liquidacion` |
+| pagado_por | text | |
+| estado | text | `Pendiente` / `Aplicado` / `Anulado` |
+| liquidacion_aplicada_id | uuid FK → liquidaciones | seteado al aplicarse |
+| fecha_aplicacion | date | |
+| comprobante_url, observaciones | text | |
 
 ### `pagos`
 | Columna | Tipo | Notas |
