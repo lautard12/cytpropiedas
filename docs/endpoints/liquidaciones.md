@@ -64,26 +64,54 @@ Body:
 ```
 
 ### 3.2 Insertar conceptos
+`monto` SIEMPRE positivo. El signo lo deriva `tipo_impacto`. `aplica_al_inquilino`
+se deriva por trigger desde `tipo_impacto`.
+
 ```
 POST /rest/v1/conceptos_liquidacion
 Body:
 [
-  { "liquidacion_id": "uuid", "concepto": "Alquiler",        "monto": 350000, "responsable": "Inquilino", "aplica_al_inquilino": true },
-  { "liquidacion_id": "uuid", "concepto": "Expensas ordin.", "monto":  60000, "responsable": "Inquilino", "aplica_al_inquilino": true },
-  { "liquidacion_id": "uuid", "concepto": "ABL",             "monto":  15000, "responsable": "Inquilino", "aplica_al_inquilino": true }
+  { "liquidacion_id":"uuid", "concepto":"Alquiler",      "monto":350000, "responsable":"Inquilino",   "pagado_por":"Inmobiliaria", "tipo_impacto":"cobrar_al_inquilino",      "periodo_impacto":"Actual" },
+  { "liquidacion_id":"uuid", "concepto":"Expensas ord.", "monto": 60000, "responsable":"Inquilino",   "pagado_por":"Inmobiliaria", "tipo_impacto":"cobrar_al_inquilino",      "periodo_impacto":"Actual" },
+  { "liquidacion_id":"uuid", "concepto":"Termotanque",   "monto": 80000, "responsable":"Propietario", "pagado_por":"Inmobiliaria", "tipo_impacto":"descontar_al_propietario", "periodo_impacto":"Actual" }
 ]
 ```
 
-### Cálculo (frontend)
+### 3.3 Conceptos pendientes (diferidos / arrastre)
+Antes de calcular totales, se vuelcan los pendientes del contrato:
+
 ```
-subtotal              = Σ conceptos.aplica_al_inquilino * monto
-total_cobrar          = subtotal + saldo_anterior
-comision_inmobiliaria = alquiler_base * comision_porcentaje / 100
-                        + (iva ? * 1.21 : 0)
-pendiente             = total_cobrar - total_cobrado
-neto_propietario      = total_cobrado - comision_inmobiliaria
-                        - Σ conceptos a cargo del propietario
+GET   /rest/v1/conceptos_pendientes_contrato?contrato_id=eq.X&estado=eq.Pendiente
+POST  /rest/v1/conceptos_liquidacion        (batch con los datos derivados)
+PATCH /rest/v1/conceptos_pendientes_contrato?id=in.(...)
+Body: { "estado":"Aplicado", "liquidacion_aplicada_id":"uuid", "fecha_aplicacion":"..." }
 ```
+
+### Cálculo (función SQL `recalcular_liquidacion()`)
+Se ejecuta por trigger ante cualquier cambio en `conceptos_liquidacion`.
+
+```
+subtotal_inquilino   = Σ monto WHERE tipo_impacto='cobrar_al_inquilino'
+reintegros_inquilino = Σ monto WHERE tipo_impacto IN
+                                ('reintegrar_al_inquilino','reintegrar_al_propietario')
+total_cobrar_bruto   = subtotal_inquilino − reintegros_inquilino + saldo_anterior
+total_cobrar         = GREATEST(0, total_cobrar_bruto)
+saldo_a_favor_inq.   = GREATEST(0, −total_cobrar_bruto)   → conceptos_pendientes_contrato
+
+gastos_descontables  = Σ descontar_al_propietario
+                       EXCLUYENDO los compensados por concepto_relacionado_id
+gastos_a_reintegrar  = Σ reintegrar_al_propietario
+comision             = alquiler_base * comision% * (iva ? 1.21 : 1)
+
+-- Modalidad Inmobiliaria
+neto_propietario          = total_cobrado − comision − gastos_descontables + gastos_a_reintegrar
+-- Modalidad Propietario
+total_cobrar_propietario  = comision + iva_comision + gastos_descontables − gastos_a_reintegrar
+
+pendiente            = total_cobrar − total_cobrado
+```
+
+Detalle completo y matriz de derivación: [`../flujos/08-gastos-y-arreglos.md`](../flujos/08-gastos-y-arreglos.md).
 
 ### Constraints
 - `UNIQUE(contrato_id, periodo)` evita duplicar liquidación del mismo mes ⇒ `409`.
