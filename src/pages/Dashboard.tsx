@@ -29,7 +29,13 @@ export default function Dashboard() {
 
   const loading = loadingCt || loadingLiq;
 
-  const liqsMarzo = liquidaciones.filter(l => l.periodo === '2025-03');
+  // Período actual: el más reciente con liquidaciones registradas
+  const periodoActual = liquidaciones.length > 0
+    ? [...new Set(liquidaciones.map(l => l.periodo))].sort().reverse()[0]
+    : new Date().toISOString().slice(0, 7);
+  const periodoLabel = liquidaciones.find(l => l.periodo === periodoActual)?.periodo_label
+    ?? periodoActual;
+  const liqsMarzo = liquidaciones.filter(l => l.periodo === periodoActual);
 
   const totalCobrado = liqsMarzo.reduce((s, l) => s + l.total_cobrado, 0);
   const totalPendiente = liqsMarzo.reduce((s, l) => s + l.pendiente, 0);
