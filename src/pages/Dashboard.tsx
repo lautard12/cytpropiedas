@@ -29,7 +29,13 @@ export default function Dashboard() {
 
   const loading = loadingCt || loadingLiq;
 
-  const liqsMarzo = liquidaciones.filter(l => l.periodo === '2025-03');
+  // Período actual: el más reciente con liquidaciones registradas
+  const periodoActual = liquidaciones.length > 0
+    ? [...new Set(liquidaciones.map(l => l.periodo))].sort().reverse()[0]
+    : new Date().toISOString().slice(0, 7);
+  const periodoLabel = liquidaciones.find(l => l.periodo === periodoActual)?.periodo_label
+    ?? periodoActual;
+  const liqsMarzo = liquidaciones.filter(l => l.periodo === periodoActual);
 
   const totalCobrado = liqsMarzo.reduce((s, l) => s + l.total_cobrado, 0);
   const totalPendiente = liqsMarzo.reduce((s, l) => s + l.pendiente, 0);
@@ -73,7 +79,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Resumen de administración — Marzo 2025</p>
+        <p className="text-muted-foreground">Resumen de administración — {periodoLabel}</p>
       </div>
 
       {/* KPIs */}
@@ -96,7 +102,7 @@ export default function Dashboard() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-status-info" />
-            Resultado Financiero de la Administración — Marzo 2025
+            Resultado Financiero de la Administración — {periodoLabel}
           </CardTitle>
         </CardHeader>
         <CardContent>
