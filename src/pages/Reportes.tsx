@@ -141,7 +141,7 @@ export default function Reportes() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Comisión por contrato — {periodo === '2025-03' ? 'Marzo 2025' : 'Febrero 2025'}</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Comisión por contrato — {periodoLabel(periodoActivo)}</CardTitle></CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
