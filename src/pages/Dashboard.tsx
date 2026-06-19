@@ -1,5 +1,9 @@
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -8,15 +12,25 @@ import {
   formatCurrency, formatDate, findById, evolucionMensual,
 } from '@/hooks/useSupabaseData';
 import {
-  DollarSign, Clock, TrendingUp, Users, FileText, AlertTriangle, Activity,
+  DollarSign, Clock, TrendingUp, Users, FileText, AlertTriangle, Activity, CalendarIcon,
 } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import type { DateRange } from 'react-day-picker';
+import { cn } from '@/lib/utils';
 
 const PIE_COLORS = ['hsl(142, 71%, 45%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)'];
+
+// Convierte un periodo 'YYYY-MM' al primer día del mes
+const periodoToDate = (p: string) => new Date(`${p}-01T00:00:00`);
+// Inicio/fin de mes
+const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
+const endOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -29,22 +43,44 @@ export default function Dashboard() {
 
   const loading = loadingCt || loadingLiq;
 
-  // Período actual: el más reciente con liquidaciones registradas
-  const periodoActual = liquidaciones.length > 0
-    ? [...new Set(liquidaciones.map(l => l.periodo))].sort().reverse()[0]
-    : new Date().toISOString().slice(0, 7);
-  const periodoLabel = liquidaciones.find(l => l.periodo === periodoActual)?.periodo_label
-    ?? periodoActual;
-  const liqsMarzo = liquidaciones.filter(l => l.periodo === periodoActual);
+  // Rango por defecto: último mes con liquidaciones (un solo mes)
+  const periodosDisponibles = useMemo(
+    () => [...new Set(liquidaciones.map(l => l.periodo))].sort(),
+    [liquidaciones]
+  );
+  const periodoUltimo = periodosDisponibles[periodosDisponibles.length - 1] ?? new Date().toISOString().slice(0, 7);
+  const defaultRange: DateRange = {
+    from: startOfMonth(periodoToDate(periodoUltimo)),
+    to: endOfMonth(periodoToDate(periodoUltimo)),
+  };
+  const [range, setRange] = useState<DateRange | undefined>(defaultRange);
+  const rangeFrom = range?.from ?? defaultRange.from!;
+  const rangeTo = range?.to ?? range?.from ?? defaultRange.to!;
 
-  const totalCobrado = liqsMarzo.reduce((s, l) => s + l.total_cobrado, 0);
-  const totalPendiente = liqsMarzo.reduce((s, l) => s + l.pendiente, 0);
-  const totalComision = liqsMarzo.reduce((s, l) => s + l.comision_inmobiliaria, 0);
-  const totalNetoPropietarios = liqsMarzo.reduce((s, l) => s + l.neto_propietario, 0);
+  // Liquidaciones dentro del rango (por mes del periodo)
+  const liqsRango = liquidaciones.filter(l => {
+    const d = periodoToDate(l.periodo);
+    return d >= startOfMonth(rangeFrom) && d <= endOfMonth(rangeTo);
+  });
+
+  const rangeLabel = (() => {
+    const f = format(rangeFrom, 'MMM yyyy', { locale: es });
+    const t = format(rangeTo, 'MMM yyyy', { locale: es });
+    return f === t ? f : `${f} – ${t}`;
+  })();
+
+  const totalCobrado = liqsRango.reduce((s, l) => s + l.total_cobrado, 0);
+  const totalPendiente = liqsRango.reduce((s, l) => s + l.pendiente, 0);
+  const totalComision = liqsRango.reduce((s, l) => s + l.comision_inmobiliaria, 0);
+  const totalNetoPropietarios = liqsRango.reduce((s, l) => s + l.neto_propietario, 0);
   const contratosActivos = contratos.filter(c => c.estado === 'Activo' || c.estado === 'Por vencer').length;
-  const inquilinosMora = liqsMarzo.filter(l => l.estado === 'Pendiente' || l.estado === 'Parcial').length;
-  const pendienteTransferencia = liqsMarzo.filter(l => l.estado === 'Cobrada').reduce((s, l) => s + l.neto_propietario, 0);
+  const inquilinosMora = liqsRango.filter(l => l.estado === 'Pendiente' || l.estado === 'Parcial').length;
+  const pendienteTransferencia = liqsRango.filter(l => l.estado === 'Cobrada').reduce((s, l) => s + l.neto_propietario, 0);
   const gastosRetenidos = Math.max(totalCobrado - totalNetoPropietarios - totalComision, 0);
+
+  // Aliases para no romper el resto del archivo
+  const liqsMarzo = liqsRango;
+  const periodoLabel = rangeLabel;
 
   const pieData = [
     { name: 'Cobrado', value: totalCobrado },
