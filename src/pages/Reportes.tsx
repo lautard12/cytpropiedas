@@ -14,7 +14,6 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 import { useNavigate } from 'react-router-dom';
 
 export default function Reportes() {
-  const [periodo, setPeriodo] = useState('2025-03');
   const navigate = useNavigate();
 
   const { data: contratos = [], isLoading: loadingCt } = useContratos();
@@ -22,9 +21,19 @@ export default function Reportes() {
   const { data: propiedades = [] } = usePropiedades();
   const { data: propietarios = [] } = usePropietarios();
   const { data: eventosRecientes = [] } = useEventosRecientes(20);
+
+  // Períodos disponibles (orden descendente)
+  const periodosDisponibles = [...new Set(liquidaciones.map(l => l.periodo))].sort().reverse();
+  const periodoDefault = periodosDisponibles[0] ?? new Date().toISOString().slice(0, 7);
+  const [periodo, setPeriodo] = useState<string>('');
+  const periodoActivo = periodo || periodoDefault;
+
+  const periodoLabel = (p: string) =>
+    liquidaciones.find(l => l.periodo === p)?.periodo_label ?? p;
+
   if (loadingCt || loadingLiq) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
 
-  const liqsPeriodo = liquidaciones.filter(l => l.periodo === periodo);
+  const liqsPeriodo = liquidaciones.filter(l => l.periodo === periodoActivo);
 
   const totalCobrado = liqsPeriodo.reduce((s, l) => s + l.total_cobrado, 0);
   const totalPendiente = liqsPeriodo.reduce((s, l) => s + l.pendiente, 0);
@@ -56,14 +65,20 @@ export default function Reportes() {
           <h1 className="text-2xl font-bold tracking-tight">Reportes</h1>
           <p className="text-muted-foreground">Análisis financiero y operativo</p>
         </div>
-        <Select value={periodo} onValueChange={setPeriodo}>
+        <Select value={periodoActivo} onValueChange={setPeriodo}>
           <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="2025-03">Marzo 2025</SelectItem>
-            <SelectItem value="2025-02">Febrero 2025</SelectItem>
+            {periodosDisponibles.length === 0 ? (
+              <SelectItem value={periodoActivo}>{periodoLabel(periodoActivo)}</SelectItem>
+            ) : (
+              periodosDisponibles.map(p => (
+                <SelectItem key={p} value={p}>{periodoLabel(p)}</SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
       </div>
+
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
@@ -126,7 +141,7 @@ export default function Reportes() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Comisión por contrato — {periodo === '2025-03' ? 'Marzo 2025' : 'Febrero 2025'}</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Comisión por contrato — {periodoLabel(periodoActivo)}</CardTitle></CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
