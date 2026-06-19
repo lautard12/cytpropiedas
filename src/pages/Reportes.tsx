@@ -65,14 +65,18 @@ export default function Reportes() {
           <h1 className="text-2xl font-bold tracking-tight">Reportes</h1>
           <p className="text-muted-foreground">Análisis financiero y operativo</p>
         </div>
-        <Select value={periodo} onValueChange={setPeriodo}>
+        <Select value={periodoActivo} onValueChange={setPeriodo}>
           <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="2025-03">Marzo 2025</SelectItem>
-            <SelectItem value="2025-02">Febrero 2025</SelectItem>
+            {periodosDisponibles.length === 0 ? (
+              <SelectItem value={periodoActivo}>{periodoLabel(periodoActivo)}</SelectItem>
+            ) : (
+              periodosDisponibles.map(p => (
+                <SelectItem key={p} value={p}>{periodoLabel(p)}</SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
-      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
