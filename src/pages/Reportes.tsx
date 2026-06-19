@@ -14,7 +14,6 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 import { useNavigate } from 'react-router-dom';
 
 export default function Reportes() {
-  const [periodo, setPeriodo] = useState('2025-03');
   const navigate = useNavigate();
 
   const { data: contratos = [], isLoading: loadingCt } = useContratos();
@@ -22,9 +21,19 @@ export default function Reportes() {
   const { data: propiedades = [] } = usePropiedades();
   const { data: propietarios = [] } = usePropietarios();
   const { data: eventosRecientes = [] } = useEventosRecientes(20);
+
+  // Períodos disponibles (orden descendente)
+  const periodosDisponibles = [...new Set(liquidaciones.map(l => l.periodo))].sort().reverse();
+  const periodoDefault = periodosDisponibles[0] ?? new Date().toISOString().slice(0, 7);
+  const [periodo, setPeriodo] = useState<string>('');
+  const periodoActivo = periodo || periodoDefault;
+
+  const periodoLabel = (p: string) =>
+    liquidaciones.find(l => l.periodo === p)?.periodo_label ?? p;
+
   if (loadingCt || loadingLiq) return <div className="space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
 
-  const liqsPeriodo = liquidaciones.filter(l => l.periodo === periodo);
+  const liqsPeriodo = liquidaciones.filter(l => l.periodo === periodoActivo);
 
   const totalCobrado = liqsPeriodo.reduce((s, l) => s + l.total_cobrado, 0);
   const totalPendiente = liqsPeriodo.reduce((s, l) => s + l.pendiente, 0);
