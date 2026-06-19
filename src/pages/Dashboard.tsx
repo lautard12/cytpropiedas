@@ -102,7 +102,7 @@ export default function Dashboard() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-status-info" />
-            Resultado Financiero de la Administración — Marzo 2025
+            Resultado Financiero de la Administración — {periodoLabel}
           </CardTitle>
         </CardHeader>
         <CardContent>
